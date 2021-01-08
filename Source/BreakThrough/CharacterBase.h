@@ -24,25 +24,31 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 	float Weight = 1;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 	float WalkSpeed = 1;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 	float WalkBackSpeed = 1;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 	float RunSpeed = 2;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+	float BlitzDashForce = 2;
+
 	//x dictates horizontal acceleration, z dictates vertical acceleration
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 	FVector BackDashForce;
 
 	//x dictates horizontal acceleration during forward/backward jumps, z dictates vertical acceleration
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 	FVector JumpForce;
+
+	UPROPERTY(EditAnywhere)
+	bool bFacingRight = true;
 
 protected:
 	// Called when the game starts or when spawned
@@ -75,8 +81,6 @@ protected:
 	bool bIsHDown;
 	bool bIsBDown;
 
-	bool bFacingRight;
-
 	//booleans to track to actions available to the character
 	bool bAcceptMove;
 	bool bAcceptGuard;
@@ -91,12 +95,18 @@ protected:
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	UPaperSpriteComponent* PushBox;
+	UCapsuleComponent* PushBox;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	UCapsuleComponent* CapsuleComp;
+	UCapsuleComponent* PushBoxTrigger;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UPaperSpriteComponent* PushBoxSprite;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	USkeletalMeshComponent* BaseMesh;
+
+	void HorizontalInput(float AxisValue);
+	void VerticalInput(float AxisValue);
 
 };
