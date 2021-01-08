@@ -6,7 +6,7 @@
 #include "GameFramework/Pawn.h"
 #include "PaperSpriteComponent.h"
 #include "Components/CapsuleComponent.h"
-#include "Math/Vector.h"
+#include "Math/Vector2D.h"
 #include "CharacterBase.generated.h"
 
 UCLASS()
@@ -34,18 +34,21 @@ public:
 	float WalkBackSpeed = 1;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	float RunSpeed = 2;
+	float RunAcceleration = .2f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+	float MaxRunSpeed = 2;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 	float BlitzDashForce = 2;
 
-	//x dictates horizontal acceleration, z dictates vertical acceleration
+	//x dictates horizontal acceleration, y dictates vertical acceleration
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	FVector BackDashForce;
+	FVector2D BackDashForce;
 
-	//x dictates horizontal acceleration during forward/backward jumps, z dictates vertical acceleration
+	//x dictates horizontal acceleration during forward/backward jumps, y dictates vertical acceleration
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	FVector JumpForce;
+	FVector2D JumpForce;
 
 	UPROPERTY(EditAnywhere)
 	bool bFacingRight = true;
@@ -53,6 +56,9 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	int32 Health;
+	int32 MaxHealth = 1000;
 
 	int32 InputTime = 12;
 	// ints to denote active time on directional inputs
@@ -82,16 +88,16 @@ protected:
 	bool bIsBDown;
 
 	//booleans to track to actions available to the character
-	bool bAcceptMove;
-	bool bAcceptGuard;
-	bool bAcceptLight;
-	bool bAcceptMedium;
-	bool bAcceptHeavy;
-	bool bAcceptBreak;
-	bool bAcceptCommandNormal;
-	bool bAcceptSpecial;
-	bool bAcceptSuper;
-	bool bAcceptBlitz;
+	bool bAcceptMove = true;
+	bool bAcceptGuard = true;
+	bool bAcceptLight = true;
+	bool bAcceptMedium = true;
+	bool bAcceptHeavy = true;
+	bool bAcceptBreak = true;
+	bool bAcceptCommandNormal = true;
+	bool bAcceptSpecial = true;
+	bool bAcceptSuper = true;
+	bool bAcceptBlitz = true;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -108,5 +114,22 @@ private:
 
 	void HorizontalInput(float AxisValue);
 	void VerticalInput(float AxisValue);
+	void MoveForward();
+	void MoveBackward();
+
+	void LightPress();
+	void MediumPress();
+	void HeavyPress();
+	void BreakPress();
+	void LightRelease();
+	void MediumRelease();
+	void HeavyRelease();
+	void BreakRelease();
+	void LMPress();
+	void HBPress();
+	void MHPress();
+	void LBPress();
+
+	void TurnAroundCheck();
 
 };

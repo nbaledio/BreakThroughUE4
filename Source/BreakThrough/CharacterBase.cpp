@@ -19,7 +19,7 @@ ACharacterBase::ACharacterBase()
 	PushBoxSprite->SetupAttachment(RootComponent);
 
 	BaseMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Character Mesh"));
-	BaseMesh->SetupAttachment(RootComponent);
+	BaseMesh->SetupAttachment(PushBoxTrigger);
 }
 
 // Called when the game starts or when spawned
@@ -34,6 +34,7 @@ void ACharacterBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	TurnAroundCheck();
 }
 
 // Called to bind functionality to input
@@ -43,6 +44,18 @@ void ACharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 	PlayerInputComponent->BindAxis(TEXT("Horizontal"), this, &ACharacterBase::HorizontalInput);
 	PlayerInputComponent->BindAxis(TEXT("Vertical"), this, &ACharacterBase::VerticalInput);
+	PlayerInputComponent->BindAction(TEXT("Square"), IE_Pressed, this, &ACharacterBase::LightPress);
+	PlayerInputComponent->BindAction(TEXT("Square"), IE_Released, this, &ACharacterBase::LightRelease);
+	PlayerInputComponent->BindAction(TEXT("Triangle"), IE_Pressed, this, &ACharacterBase::MediumPress);
+	PlayerInputComponent->BindAction(TEXT("Triangle"), IE_Released, this, &ACharacterBase::MediumRelease);
+	PlayerInputComponent->BindAction(TEXT("Circle"), IE_Pressed, this, &ACharacterBase::HeavyPress);
+	PlayerInputComponent->BindAction(TEXT("Circle"), IE_Released, this, &ACharacterBase::HeavyRelease);
+	PlayerInputComponent->BindAction(TEXT("Cross"), IE_Pressed, this, &ACharacterBase::BreakPress);
+	PlayerInputComponent->BindAction(TEXT("Cross"), IE_Released, this, &ACharacterBase::BreakRelease);
+	PlayerInputComponent->BindAction(TEXT("R1"), IE_Pressed, this, &ACharacterBase::LMPress);
+	PlayerInputComponent->BindAction(TEXT("R2"), IE_Pressed, this, &ACharacterBase::HBPress);
+	PlayerInputComponent->BindAction(TEXT("L1"), IE_Pressed, this, &ACharacterBase::LBPress);
+	PlayerInputComponent->BindAction(TEXT("L2"), IE_Pressed, this, &ACharacterBase::MHPress);
 
 }
 
@@ -67,97 +80,201 @@ void ACharacterBase::HorizontalInput(float AxisValue)
 	{
 		if (bFacingRight)
 		{
-			if (InputComponent->GetAxisValue(TEXT("Vertical")) > .25f)
-			{
-				Dir9 = InputTime;//Up and forward
-				UE_LOG(LogTemp, Warning, TEXT("Dir9 set."));
-			}		
-			else if (InputComponent->GetAxisValue(TEXT("Vertical")) < -.25f)
-			{
-				Dir3 = InputTime; // Down and Forward
-				UE_LOG(LogTemp, Warning, TEXT("Dir3 set."));
-			}
-			else
-			{
-				Dir6 = InputTime; //Pure forward
-				UE_LOG(LogTemp, Warning, TEXT("Dir6 set."));
-			}
+			MoveForward();
 		}
 		else
 		{
-			if (InputComponent->GetAxisValue(TEXT("Vertical")) > .25f)
-			{
-				Dir7 = InputTime; //Up and Backward
-				UE_LOG(LogTemp, Warning, TEXT("Dir7 set."));
-			}
-			else if (InputComponent->GetAxisValue(TEXT("Vertical")) < -.25f)
-			{
-				Dir1 = InputTime; //Down and Backward
-				UE_LOG(LogTemp, Warning, TEXT("Dir1 set."));
-			}
-			else
-			{
-				Dir4 = InputTime; //Pure backward
-				UE_LOG(LogTemp, Warning, TEXT("Dir4 set."));
-			}
+			MoveBackward();
 		}
 	}
 	else if (AxisValue < -.25f)
 	{
 		if (!bFacingRight)
 		{
-			if (InputComponent->GetAxisValue(TEXT("Vertical")) > .25f)
-			{
-				Dir9 = InputTime;//Up and forward
-				UE_LOG(LogTemp, Warning, TEXT("Dir9 set."));
-			}
-			else if (InputComponent->GetAxisValue(TEXT("Vertical")) < -.25f)
-			{
-				Dir3 = InputTime; // Down and Forward
-				UE_LOG(LogTemp, Warning, TEXT("Dir3 set."));
-			}
-			else
-			{
-				Dir6 = InputTime; //Pure forward
-				UE_LOG(LogTemp, Warning, TEXT("Dir6 set."));
-			}
+			MoveForward();
 		}
 		else
 		{
-			if (InputComponent->GetAxisValue(TEXT("Vertical")) > .25f)
-			{
-				Dir7 = InputTime; //Up and Backward
-				UE_LOG(LogTemp, Warning, TEXT("Dir7 set."));
-			}
-			else if (InputComponent->GetAxisValue(TEXT("Vertical")) < -.25f)
-			{
-				Dir1 = InputTime; //Down and Backward
-				UE_LOG(LogTemp, Warning, TEXT("Dir1 set."));
-			}
-			else
-			{
-				Dir4 = InputTime; //Pure backward
-				UE_LOG(LogTemp, Warning, TEXT("Dir4 set."));
-			}
+			MoveBackward();
 		}
 	}
 }
 
 void ACharacterBase::VerticalInput(float AxisValue)
 {
-	if (InputComponent->GetAxisValue(TEXT("Vertical")) < .25f && InputComponent->GetAxisValue(TEXT("Vertical")) > - .25f )
+	if (InputComponent->GetAxisValue(TEXT("Horizontal")) < .25f && InputComponent->GetAxisValue(TEXT("Horizontal")) > - .25f )
 	{
 		if (AxisValue > .25f)
 		{
 			Dir8 = InputTime;
-			UE_LOG(LogTemp, Warning, TEXT("Dir8 set."));
 		}
 		else if (AxisValue < -.25f)
 		{
 			Dir2 = InputTime;
-			UE_LOG(LogTemp, Warning, TEXT("Dir2 set."));
 		}
 	}
 
 }
 
+void ACharacterBase::MoveForward()
+{
+	if (InputComponent->GetAxisValue(TEXT("Vertical")) > .25f)
+	{
+		Dir9 = InputTime; //Up and forward
+	}
+	else if (InputComponent->GetAxisValue(TEXT("Vertical")) < -.25f)
+	{
+		Dir3 = InputTime; // Down and Forward
+	}
+	else
+	{
+		Dir6 = InputTime; //Pure forward
+	}
+}
+
+void ACharacterBase::MoveBackward()
+{
+	if (InputComponent->GetAxisValue(TEXT("Vertical")) > .25f)
+	{
+		Dir7 = InputTime; //Up and Backward
+	}
+	else if (InputComponent->GetAxisValue(TEXT("Vertical")) < -.25f)
+	{
+		Dir1 = InputTime; //Down and Backward
+	}
+	else
+	{
+		Dir4 = InputTime; //Pure backward
+	}
+}
+
+void ACharacterBase::LightPress()
+{
+	if (!bIsLDown)
+	{
+		LPressed = InputTime;
+		bIsLDown = true;
+	}
+}
+
+void ACharacterBase::LightRelease()
+{
+	if (bIsLDown)
+	{
+		LReleased = InputTime;
+		bIsLDown = false;
+	}
+}
+
+void ACharacterBase::MediumPress()
+{
+	if (!bIsMDown)
+	{
+		MPressed = InputTime;
+		bIsMDown = true;
+	}
+}
+
+void ACharacterBase::MediumRelease()
+{
+	if (bIsMDown)
+	{
+		MReleased = InputTime;
+		bIsMDown = false;
+	}
+}
+
+void ACharacterBase::HeavyPress()
+{
+	if (!bIsHDown)
+	{
+		HPressed = InputTime;
+		bIsHDown = true;
+	}
+}
+
+void ACharacterBase::HeavyRelease()
+{
+	if (bIsHDown)
+	{
+		HReleased = InputTime;
+		bIsHDown = false;
+	}
+}
+
+void ACharacterBase::BreakPress()
+{
+	if (!bIsBDown)
+	{
+		BPressed = InputTime;
+		bIsBDown = true;
+	}
+}
+
+void ACharacterBase::BreakRelease()
+{
+	if (bIsBDown)
+	{
+		BReleased = InputTime;
+		bIsBDown = false;
+	}
+}
+
+void ACharacterBase::LMPress()
+{
+	if (!bIsLDown && !bIsMDown)
+	{
+		LPressed = InputTime;
+		MPressed = InputTime;
+	}
+}
+
+void ACharacterBase::HBPress()
+{
+	if (!bIsHDown && !bIsBDown)
+	{
+		HPressed = InputTime;
+		BPressed = InputTime;
+	}
+}
+
+void ACharacterBase::MHPress()
+{
+	if (!bIsMDown && !bIsHDown)
+	{
+		MPressed = InputTime;
+		HPressed = InputTime;
+	}
+}
+
+void ACharacterBase::LBPress()
+{
+	if (!bIsLDown && !bIsBDown)
+	{
+		LPressed = InputTime;
+		BPressed = InputTime;
+	}
+}
+
+void ACharacterBase::TurnAroundCheck()
+{
+	if (!bFacingRight && PushBoxTrigger->GetRelativeScale3D().X != -1)
+	{
+		PushBoxTrigger->SetRelativeScale3D(FVector(-1, 1, 1));
+		//Trigger turnaround animation if in idle stand or crouch;
+	}
+	else if (bFacingRight && PushBoxTrigger->GetRelativeScale3D().X != 1)
+	{
+		PushBoxTrigger->SetRelativeScale3D(FVector(1, 1, 1));
+		//Trigger turnaround animation if in idle stand or crouch;
+	}
+}
+
+/*void ACharacterBase::CheckOpponentFacing()
+{
+	called if bAcceptMove or from specific anim notifies
+	if (opponent location.x > this location.x)
+		bFacingRight = true;
+	else if (opponent location < this location.x)
+		bFacingRight = false;
+}*/
