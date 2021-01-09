@@ -3,6 +3,16 @@
 
 #include "CharacterBase.h"
 
+//Define Collision Channels
+#define ECC_HitBox			ECC_GameTraceChannel1
+#define ECC_HurtBox			ECC_GameTraceChannel2
+#define ECC_PushBox			ECC_GameTraceChannel3
+#define ECC_GuardBox		ECC_GameTraceChannel4
+#define ECC_Wall			ECC_GameTraceChannel5
+#define ECC_Floor			ECC_GameTraceChannel6
+#define ECC_PushTrigger		ECC_GameTraceChannel7
+
+
 // Sets default values
 ACharacterBase::ACharacterBase()
 {
@@ -14,7 +24,7 @@ ACharacterBase::ACharacterBase()
 
 	PushBoxTrigger = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Push Trigger"));
 	PushBoxTrigger->SetupAttachment(RootComponent);
-	PushBox->OnComponentBeginOverlap.AddDynamic(this, &ACharacterBase::SurfaceOverlapCheck);
+	PushBoxTrigger->OnComponentBeginOverlap.AddDynamic(this, &ACharacterBase::SurfaceOverlapEnter);
 
 	PersonalCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Personal Camera"));
 	PersonalCamera->SetupAttachment(RootComponent);
@@ -30,6 +40,9 @@ ACharacterBase::ACharacterBase()
 void ACharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	Velocity = FVector(0, 0, 0);
+	PushBox->OnComponentHit.AddDynamic(this, &ACharacterBase::OnSurfaceHit);
 	
 }
 
@@ -39,6 +52,12 @@ void ACharacterBase::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	TurnAroundCheck();
+
+	if (HitStop == 0 && bIsAirborne)
+		Velocity.Z += (Weight * GravityScale * -10.f);
+
+	AddActorLocalOffset(Velocity/60.f, true);
+
 }
 
 // Called to bind functionality to input
@@ -274,12 +293,50 @@ void ACharacterBase::TurnAroundCheck()
 	}
 }
 
-void ACharacterBase::SurfaceOverlapCheck(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void ACharacterBase::SurfaceOverlapEnter(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	//check if PushBoxTrigger has overlapped with the floor or wall and apply appropriate behavior
 	//check if overlapping with other Character's PushBoxTrigger and apply appropriate action based on state (character push, teleporting to prevent characters from occupying same space, etc.)
 	//character pushing idea: (if both grounded, opponent velocity.x is zero, and self velocity.x is forward, make opponent's velocity half of self velocity)
-		UE_LOG(LogTemp, Warning, TEXT("OtherComponent: %s"), *OtherComp->GetName());
+		//UE_LOG(LogTemp, Warning, TEXT("OtherComponent: %s"), *OtherComp->GetName());
+	/*if (OtherComp->GetCollisionObjectType() == ECC_Floor)
+	{
+		bIsAirborne = false;
+		UE_LOG(LogTemp, Warning, TEXT("PushBox has hit floor."));
+	}*/
+		
+}
+
+void ACharacterBase::SurfaceOverlapExit(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	//check if PushBoxTrigger has overlapped with the floor or wall and apply appropriate behavior
+	//check if overlapping with other Character's PushBoxTrigger and apply appropriate action based on state (character push, teleporting to prevent characters from occupying same space, etc.)
+	//character pushing idea: (if both grounded, opponent velocity.x is zero, and self velocity.x is forward, make opponent's velocity half of self velocity)
+	UE_LOG(LogTemp, Warning, TEXT("OtherComponent: %s"), *OtherComp->GetName());
+	if (OtherComp->GetCollisionObjectType() == ECC_Floor)
+	{
+		bIsAirborne = true;
+		UE_LOG(LogTemp, Warning, TEXT("Character has left floor."));
+	}
+	else if (OtherComp->GetCollisionObjectType() == ECC_Wall)
+	{
+		bTouchingWall = false;
+	}
+}
+
+void ACharacterBase::OnSurfaceHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (OtherComp->GetCollisionObjectType() == ECC_Floor)
+	{
+		bIsAirborne = false;
+		Velocity.Z = 0;
+		UE_LOG(LogTemp, Warning, TEXT("PushBox has hit floor."));
+	}
+	else if (OtherComp->GetCollisionObjectType() == ECC_Wall)
+	{
+		bTouchingWall = true;
+		Velocity.X = 0;
+	}
 }
 
 /*void ACharacterBase::CheckOpponentFacing()

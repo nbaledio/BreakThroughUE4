@@ -7,7 +7,7 @@
 #include "PaperSpriteComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Camera/CameraComponent.h"
-#include "Math/Vector2D.h"
+#include "Math/Vector.h"
 #include "CharacterBase.generated.h"
 
 UCLASS()
@@ -34,7 +34,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
 	int32 Health;
-
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
 	int32 MaxHealth = 1000;
 
@@ -65,7 +64,7 @@ protected:
 	float AnimSpeed = 1.f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-	bool bIsAirborne;
+	bool bIsAirborne = true;
 
 	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
 	bool bIsBlitzed;
@@ -82,20 +81,20 @@ protected:
 	float MaxRunSpeed = 2;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 	float BlitzDashForce = 2;
-	//x dictates horizontal acceleration, y dictates vertical acceleration
+	//x dictates horizontal acceleration, z dictates vertical acceleration. y should never be changed or touched
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	FVector2D BackDashForce;
-	//x dictates horizontal acceleration during forward/backward jumps, y dictates vertical acceleration
+	FVector BackDashForce;
+	//x dictates horizontal acceleration during forward/backward jumps, z dictates vertical acceleration, y should never be changed or touched
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	FVector2D JumpForce;
+	FVector JumpForce;
 
 	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
-	FVector2D Velocity;
+	FVector Velocity;
 
-	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
-	FVector2D KnockBack;
+	UPROPERTY(VisibleAnywhere, Category = "Movement Properties") //keeps track of acceleration to apply once hitstop is zero
+	FVector KnockBack;
 
-
+	float GravityScale = 1;
 
 	int32 InputTime = 12;
 	// ints to denote active time on directional inputs
@@ -140,6 +139,7 @@ protected:
 	bool bIsRunning = true;
 	bool bArmorActive = false;
 	bool bCounterHitState = false;
+	bool bTouchingWall = false;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -180,6 +180,12 @@ private:
 	void TurnAroundCheck();
 
 	UFUNCTION()
-	void SurfaceOverlapCheck(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	void SurfaceOverlapEnter(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void SurfaceOverlapExit(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnSurfaceHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
 };
