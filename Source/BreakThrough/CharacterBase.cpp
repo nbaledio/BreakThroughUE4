@@ -14,9 +14,13 @@ ACharacterBase::ACharacterBase()
 
 	PushBoxTrigger = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Push Trigger"));
 	PushBoxTrigger->SetupAttachment(RootComponent);
+	PushBox->OnComponentBeginOverlap.AddDynamic(this, &ACharacterBase::SurfaceOverlapCheck);
+
+	PersonalCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Personal Camera"));
+	PersonalCamera->SetupAttachment(RootComponent);
 
 	PushBoxSprite = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Push Box Sprite"));
-	PushBoxSprite->SetupAttachment(RootComponent);
+	PushBoxSprite->SetupAttachment(PushBoxTrigger);
 
 	BaseMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Character Mesh"));
 	BaseMesh->SetupAttachment(PushBoxTrigger);
@@ -268,6 +272,14 @@ void ACharacterBase::TurnAroundCheck()
 		PushBoxTrigger->SetRelativeScale3D(FVector(1, 1, 1));
 		//Trigger turnaround animation if in idle stand or crouch;
 	}
+}
+
+void ACharacterBase::SurfaceOverlapCheck(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	//check if PushBoxTrigger has overlapped with the floor or wall and apply appropriate behavior
+	//check if overlapping with other Character's PushBoxTrigger and apply appropriate action based on state (character push, teleporting to prevent characters from occupying same space, etc.)
+	//character pushing idea: (if both grounded, opponent velocity.x is zero, and self velocity.x is forward, make opponent's velocity half of self velocity)
+		UE_LOG(LogTemp, Warning, TEXT("OtherComponent: %s"), *OtherComp->GetName());
 }
 
 /*void ACharacterBase::CheckOpponentFacing()

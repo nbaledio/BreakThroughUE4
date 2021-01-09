@@ -6,6 +6,7 @@
 #include "GameFramework/Pawn.h"
 #include "PaperSpriteComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Camera/CameraComponent.h"
 #include "Math/Vector2D.h"
 #include "CharacterBase.generated.h"
 
@@ -24,41 +25,77 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	float Weight = 1;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	float WalkSpeed = 1;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	float WalkBackSpeed = 1;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	float RunAcceleration = .2f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	float MaxRunSpeed = 2;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	float BlitzDashForce = 2;
-
-	//x dictates horizontal acceleration, y dictates vertical acceleration
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	FVector2D BackDashForce;
-
-	//x dictates horizontal acceleration during forward/backward jumps, y dictates vertical acceleration
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	FVector2D JumpForce;
-
-	UPROPERTY(EditAnywhere)
-	bool bFacingRight = true;
-
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UCameraComponent* PersonalCamera;
+
+	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
 	int32 Health;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
 	int32 MaxHealth = 1000;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
+	float CurrentValor;
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
+	float Valor100;
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
+	float Valor50;
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
+	float Valor25;
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
+	float Valor10;
+
+	UPROPERTY(EditAnywhere, Category = "Battle Stats")
+	bool bFacingRight = true;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+	int32 HitStun = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+	int32 BlockStun = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+	int32 LandingLag = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+	int32 HitStop = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+	float AnimSpeed = 1.f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+	bool bIsAirborne;
+
+	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
+	bool bIsBlitzed;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+	float Weight = 1;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+	float WalkSpeed = 1;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+	float WalkBackSpeed = 1;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+	float RunAcceleration = .2f;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+	float MaxRunSpeed = 2;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+	float BlitzDashForce = 2;
+	//x dictates horizontal acceleration, y dictates vertical acceleration
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+	FVector2D BackDashForce;
+	//x dictates horizontal acceleration during forward/backward jumps, y dictates vertical acceleration
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+	FVector2D JumpForce;
+
+	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
+	FVector2D Velocity;
+
+	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
+	FVector2D KnockBack;
+
+
 
 	int32 InputTime = 12;
 	// ints to denote active time on directional inputs
@@ -89,6 +126,7 @@ protected:
 
 	//booleans to track to actions available to the character
 	bool bAcceptMove = true;
+	bool bAcceptJump = true;
 	bool bAcceptGuard = true;
 	bool bAcceptLight = true;
 	bool bAcceptMedium = true;
@@ -98,6 +136,10 @@ protected:
 	bool bAcceptSpecial = true;
 	bool bAcceptSuper = true;
 	bool bAcceptBlitz = true;
+
+	bool bIsRunning = true;
+	bool bArmorActive = false;
+	bool bCounterHitState = false;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -111,6 +153,11 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	USkeletalMeshComponent* BaseMesh;
+
+	//keeps track of whether an attack has already hit something
+	//attack effects are only applied based on the first overlap interaction with the attack (!bAttackMadeContact)
+	bool bAttackMadeContact = false;
+	//int32 Contacts = 0; //possibly unnecessary
 
 	void HorizontalInput(float AxisValue);
 	void VerticalInput(float AxisValue);
@@ -131,5 +178,8 @@ private:
 	void LBPress();
 
 	void TurnAroundCheck();
+
+	UFUNCTION()
+	void SurfaceOverlapCheck(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 };
