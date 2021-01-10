@@ -1,6 +1,5 @@
 // Copyright ShatterPoint Games. All Rights Reserved.
 
-
 #include "CharacterBase.h"
 
 //Define Collision Channels
@@ -34,6 +33,44 @@ ACharacterBase::ACharacterBase()
 
 	BaseMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Character Mesh"));
 	BaseMesh->SetupAttachment(PushBoxTrigger);
+
+	HitBoxFolder = CreateDefaultSubobject<USceneComponent>(TEXT("Hitboxes"));
+	HitBoxFolder->SetupAttachment(PushBoxTrigger);
+
+	HitBox0 = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Hitbox 0"));
+	HitBox0->SetupAttachment(HitBoxFolder);
+	HitBox1 = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Hitbox 1"));
+	HitBox1->SetupAttachment(HitBoxFolder);
+	HitBox2 = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Hitbox 2"));
+	HitBox2->SetupAttachment(HitBoxFolder);
+	HitBox3 = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Hitbox 3"));
+	HitBox3->SetupAttachment(HitBoxFolder);
+	HitBox4 = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Hitbox 4"));
+	HitBox4->SetupAttachment(HitBoxFolder);
+	HitBox5 = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Hitbox 5"));
+	HitBox5->SetupAttachment(HitBoxFolder);
+	HitBox6 = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Hitbox 6"));
+	HitBox6->SetupAttachment(HitBoxFolder);
+
+	HurtBoxFolder = CreateDefaultSubobject<USceneComponent>(TEXT("Hurtboxes"));
+	HurtBoxFolder->SetupAttachment(PushBoxTrigger);
+
+	UpperBody0 = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Upper Body 0"));
+	UpperBody0->SetupAttachment(HurtBoxFolder);
+	UpperBody1 = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Upper Body 1"));
+	UpperBody1->SetupAttachment(HurtBoxFolder);
+	UpperBody2 = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Upper Body 2"));
+	UpperBody2->SetupAttachment(HurtBoxFolder);
+
+	LowerBody0 = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Lower Body 0"));
+	LowerBody0->SetupAttachment(HurtBoxFolder);
+	LowerBody1 = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Lower Body 1"));
+	LowerBody1->SetupAttachment(HurtBoxFolder);
+	LowerBody2 = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Lower Body 2"));
+	LowerBody2->SetupAttachment(HurtBoxFolder);
+
+	GuardBox = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Guard Box"));
+	GuardBox->SetupAttachment(PushBoxTrigger);
 }
 
 // Called when the game starts or when spawned
@@ -43,6 +80,7 @@ void ACharacterBase::BeginPlay()
 
 	Velocity = FVector(0, 0, 0);
 	PushBox->OnComponentHit.AddDynamic(this, &ACharacterBase::OnSurfaceHit);
+	ClearHitBox();
 	
 }
 
@@ -236,6 +274,48 @@ void ACharacterBase::MoveBackward()
 	}
 }
 
+void ACharacterBase::InputCountdown()
+{
+	if (Dir1 > 0)
+		Dir1--;
+	if (Dir2 > 0)
+		Dir2--;
+	if (Dir3 > 0)
+		Dir3--;
+	if (Dir4 > 0)
+		Dir4--;
+	if (Dir6 > 0)
+		Dir6--;
+	if (Dir7 > 0)
+		Dir7--;
+	if (Dir8 > 0)
+		Dir8--;
+	if (Dir9 > 0)
+		Dir9--;
+	if (DoubleDir2 > 0)
+		DoubleDir2--;
+	if (DoubleDir6 > 0)
+		DoubleDir6--;
+	if (DoubleDir4 > 0)
+		DoubleDir4--;
+	if (LPressed > 0)
+		LPressed--;
+	if (MPressed > 0)
+		MPressed--;
+	if (HPressed > 0)
+		HPressed--;
+	if (BPressed > 0)
+		BPressed--;
+	if (LReleased > 0)
+		LReleased--;
+	if (MReleased > 0)
+		MReleased--;
+	if (HReleased > 0)
+		HReleased--;
+	if (BReleased > 0)
+		BReleased--;
+}
+
 void ACharacterBase::LightPress()
 {
 	if (!bIsLDown)
@@ -358,48 +438,6 @@ void ACharacterBase::TurnAroundCheck()
 	}
 }
 
-void ACharacterBase::InputCountdown()
-{
-	if (Dir1 > 0)
-		Dir1--;
-	if (Dir2 > 0)
-		Dir2--;
-	if (Dir3 > 0)
-		Dir3--;
-	if (Dir4 > 0)
-		Dir4--;
-	if (Dir6 > 0)
-		Dir6--;
-	if (Dir7 > 0)
-		Dir7--;
-	if (Dir8 > 0)
-		Dir8--;
-	if (Dir9 > 0)
-		Dir9--;
-	if (DoubleDir2 > 0)
-		DoubleDir2--;
-	if (DoubleDir6 > 0)
-		DoubleDir6--;
-	if (DoubleDir4 > 0)
-		DoubleDir4--;
-	if (LPressed > 0)
-		LPressed--;
-	if (MPressed > 0)
-		MPressed--;
-	if (HPressed > 0)
-		HPressed--;
-	if (BPressed > 0)
-		BPressed--;
-	if (LReleased > 0)
-		LReleased--;
-	if (MReleased > 0)
-		MReleased--;
-	if (HReleased > 0)
-		HReleased--;
-	if (BReleased > 0)
-		BReleased--;
-}
-
 void ACharacterBase::SurfaceOverlapEnter(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	//check if PushBoxTrigger has overlapped with the floor or wall and apply appropriate behavior
@@ -424,6 +462,120 @@ void ACharacterBase::SurfaceOverlapExit(UPrimitiveComponent* OverlappedComp, AAc
 	{
 		bTouchingWall = false;
 	}
+}
+
+void ACharacterBase::ClearHitBox()
+{
+	HitBox0->SetVisibility(false);
+	HitBox1->SetVisibility(false);
+	HitBox2->SetVisibility(false);
+	HitBox3->SetVisibility(false);
+	HitBox4->SetVisibility(false);
+	HitBox5->SetVisibility(false);
+	HitBox6->SetVisibility(false);
+
+	HitBox0->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitBox1->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitBox2->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitBox3->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitBox4->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitBox5->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HitBox6->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	bAttackMadeContact = false;
+
+	bJumpCancellable = false;
+	bLightCancellable = false;
+	bMediumCancellable = false;
+	bHeavyCancellable = false;
+	bBreakCancellable = false;
+	bCommandNormalCancellable = false;
+	bSpecialCancellable = false;
+	bSuperCancellable = false;
+
+	BaseDamage = 0;
+	DurabilityDamage = 0;
+	ResolveDamage = 0;
+	AttackLevel = 0;
+	AttackHeight = Mid;
+	BaseHitStun = 0;
+	BaseHitStop = 0;
+	InitProration = 1.f;
+	ForcedProration = 1.f;
+
+	PotentialKnockBack = FVector(0,0,0);
+	PotentialAirKnockBack = FVector(0,0,0);
+
+	bCanGroundBounce = false;
+	bCanWallBounce = false;
+	bCanWallStick = false;
+	bCanShatter = false;
+	AdditionalEffect = None;
+}
+
+void ACharacterBase::ClearHurtBox()
+{
+	UpperBody0->SetVisibility(false);
+	UpperBody1->SetVisibility(false);
+	UpperBody2->SetVisibility(false);
+	LowerBody0->SetVisibility(false);
+	LowerBody1->SetVisibility(false);
+	LowerBody2->SetVisibility(false);
+
+	UpperBody0->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	UpperBody1->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	UpperBody2->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	LowerBody0->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	LowerBody1->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	LowerBody2->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
+
+void ACharacterBase::DisableAllActions(bool bDisableBlitz)
+{
+	bAcceptMove = false;
+	bAcceptJump = false;
+	bAcceptGuard = false;
+	bAcceptLight = false;
+	bAcceptMedium = false;
+	bAcceptHeavy = false;
+	bAcceptBreak = false;
+	bAcceptCommandNormal = false;
+	bAcceptSpecial = false;
+	bAcceptSuper = false;
+	bAcceptBlitz = !bDisableBlitz;
+
+	bIsRunning = false;
+	bArmorActive = false;
+	bCounterHitState = false;
+}
+
+void ACharacterBase::EnableAllActions()
+{
+	bAcceptMove = true;
+	bAcceptJump = true;
+	bAcceptGuard = true;
+	bAcceptLight = true;
+	bAcceptMedium = true;
+	bAcceptHeavy = true;
+	bAcceptBreak = true;
+	bAcceptCommandNormal = true;
+	bAcceptSpecial = true;
+	bAcceptSuper = true;
+	bAcceptBlitz = true;
+
+	bArmorActive = false;
+	bCounterHitState = false;
+	bGroundBounceState = false;
+	bWallBounceState = false;
+	bWallStickState = false;
+}
+
+void ACharacterBase::ActivateCollisionBox(OUT UPaperSpriteComponent* Collider)
+{
+	//Can be used to set hitbox and hurtbox to active
+	Collider->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	//Also add whether to display perhaps based on an option in GameMode? 
+	//if (/*add condition*/) {Collider->SetVisibility(true)}
 }
 
 void ACharacterBase::OnSurfaceHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
