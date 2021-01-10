@@ -59,6 +59,8 @@ protected:
 	int32 LandingLag = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	int32 HitStop = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+	int32 BlitzDashTime = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	float AnimSpeed = 1.f;
@@ -67,7 +69,7 @@ protected:
 	bool bIsAirborne = true;
 
 	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
-	bool bIsBlitzed;
+	int32 SlowMoTime = 0;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 	float Weight = 1;
@@ -106,6 +108,10 @@ protected:
 	int32 Dir7 = 0;
 	int32 Dir8 = 0;
 	int32 Dir9 = 0;
+	int32 DoubleDir2 = 0;
+	int32 DoubleDir6 = 0;
+	int32 DoubleDir4 = 0;
+	
 
 	// ints to denote active time on button inputs
 	int32 LPressed = 0;
@@ -163,6 +169,7 @@ private:
 	void VerticalInput(float AxisValue);
 	void MoveForward();
 	void MoveBackward();
+	void InputCountdown();
 
 	void LightPress();
 	void MediumPress();

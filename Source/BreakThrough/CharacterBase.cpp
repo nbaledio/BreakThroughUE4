@@ -53,11 +53,62 @@ void ACharacterBase::Tick(float DeltaTime)
 
 	TurnAroundCheck();
 
-	if (HitStop == 0 && bIsAirborne)
-		Velocity.Z += (Weight * GravityScale * -10.f);
+	/*if (Dir2 > 0 && Dir3 > 0 && Dir6 > 0 && Dir6 > Dir3 && Dir3 > Dir2) //Testing for specific directional inputs
+	{
+		Dir2 = 0;
+		Dir3 = 0;
+		Dir6 = 0;
+		UE_LOG(LogTemp, Warning, TEXT("QCF inputted"));
+	}
+	if (Dir2 > 0 && Dir3 > 0 && Dir6 > 0 && Dir3 > Dir2 && Dir2 > Dir6)
+	{
+		Dir2 = 0;
+		Dir3 = 0;
+		Dir6 = 0;
+		UE_LOG(LogTemp, Warning, TEXT("DP inputted"));
+	}*/
+	if (bAcceptMove && !bIsAirborne)
+	{
+		if (Dir6 >= InputTime - 1)
+		{
+			if (bFacingRight)
+				Velocity.X = WalkSpeed;
+			else
+				Velocity.X = -WalkSpeed;
+			//play walkforward anim
+		}
+		else if (Dir4 >= InputTime - 1)
+		{
+			if (bFacingRight)
+				Velocity.X = -WalkBackSpeed;
+			else
+				Velocity.X = WalkBackSpeed;
+			//play walkback anim
+		}
+		else
+		{
+			Velocity.X = 0;
+		}
+	}
 
-	AddActorLocalOffset(Velocity/60.f, true);
+	if (HitStop == 0)
+	{
+		if (bIsAirborne && BlitzDashTime == 0) //apply gravity while character is airborne and not defying gravity
+		{
+			float GravCalc = (Weight * GravityScale * -10.f);
+			if (SlowMoTime > 0)
+				GravCalc /= 2;
 
+			Velocity.Z += GravCalc;
+		}
+
+		if (SlowMoTime > 0)
+			AddActorLocalOffset(Velocity / 120.f, true);
+		else
+			AddActorLocalOffset(Velocity / 60.f, true);
+	}
+
+	InputCountdown();
 }
 
 // Called to bind functionality to input
@@ -133,6 +184,11 @@ void ACharacterBase::VerticalInput(float AxisValue)
 		}
 		else if (AxisValue < -.25f)
 		{
+			if (Dir2 < InputTime - 1 && Dir2 > 0 && DoubleDir2 == 0)
+			{
+				DoubleDir2 = InputTime;
+			}
+
 			Dir2 = InputTime;
 		}
 	}
@@ -151,6 +207,11 @@ void ACharacterBase::MoveForward()
 	}
 	else
 	{
+		if (Dir6 < InputTime - 1 && Dir6 > 0 && DoubleDir6 == 0)
+		{
+			DoubleDir6 = InputTime;
+		}
+			
 		Dir6 = InputTime; //Pure forward
 	}
 }
@@ -167,6 +228,10 @@ void ACharacterBase::MoveBackward()
 	}
 	else
 	{
+		if (Dir4 < InputTime - 1 && Dir4 > 0 && DoubleDir4 == 0)
+		{
+			DoubleDir4 = InputTime;
+		}		
 		Dir4 = InputTime; //Pure backward
 	}
 }
@@ -293,17 +358,54 @@ void ACharacterBase::TurnAroundCheck()
 	}
 }
 
+void ACharacterBase::InputCountdown()
+{
+	if (Dir1 > 0)
+		Dir1--;
+	if (Dir2 > 0)
+		Dir2--;
+	if (Dir3 > 0)
+		Dir3--;
+	if (Dir4 > 0)
+		Dir4--;
+	if (Dir6 > 0)
+		Dir6--;
+	if (Dir7 > 0)
+		Dir7--;
+	if (Dir8 > 0)
+		Dir8--;
+	if (Dir9 > 0)
+		Dir9--;
+	if (DoubleDir2 > 0)
+		DoubleDir2--;
+	if (DoubleDir6 > 0)
+		DoubleDir6--;
+	if (DoubleDir4 > 0)
+		DoubleDir4--;
+	if (LPressed > 0)
+		LPressed--;
+	if (MPressed > 0)
+		MPressed--;
+	if (HPressed > 0)
+		HPressed--;
+	if (BPressed > 0)
+		BPressed--;
+	if (LReleased > 0)
+		LReleased--;
+	if (MReleased > 0)
+		MReleased--;
+	if (HReleased > 0)
+		HReleased--;
+	if (BReleased > 0)
+		BReleased--;
+}
+
 void ACharacterBase::SurfaceOverlapEnter(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	//check if PushBoxTrigger has overlapped with the floor or wall and apply appropriate behavior
 	//check if overlapping with other Character's PushBoxTrigger and apply appropriate action based on state (character push, teleporting to prevent characters from occupying same space, etc.)
 	//character pushing idea: (if both grounded, opponent velocity.x is zero, and self velocity.x is forward, make opponent's velocity half of self velocity)
 		//UE_LOG(LogTemp, Warning, TEXT("OtherComponent: %s"), *OtherComp->GetName());
-	/*if (OtherComp->GetCollisionObjectType() == ECC_Floor)
-	{
-		bIsAirborne = false;
-		UE_LOG(LogTemp, Warning, TEXT("PushBox has hit floor."));
-	}*/
 		
 }
 
@@ -326,6 +428,7 @@ void ACharacterBase::SurfaceOverlapExit(UPrimitiveComponent* OverlappedComp, AAc
 
 void ACharacterBase::OnSurfaceHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
+	//character-surface interactions (i.e. wall bounce, wall stick, ground bounce, knockdown, landing)
 	if (OtherComp->GetCollisionObjectType() == ECC_Floor)
 	{
 		bIsAirborne = false;
