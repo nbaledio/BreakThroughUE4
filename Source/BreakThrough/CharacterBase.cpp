@@ -24,6 +24,7 @@ ACharacterBase::ACharacterBase()
 	PushBoxTrigger = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Push Trigger"));
 	PushBoxTrigger->SetupAttachment(RootComponent);
 	PushBoxTrigger->OnComponentBeginOverlap.AddDynamic(this, &ACharacterBase::SurfaceOverlapEnter);
+	PushBoxTrigger->OnComponentEndOverlap.AddDynamic(this, &ACharacterBase::SurfaceOverlapExit);
 
 	PersonalCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Personal Camera"));
 	PersonalCamera->SetupAttachment(RootComponent);
@@ -126,14 +127,46 @@ void ACharacterBase::Tick(float DeltaTime)
 		else
 		{
 			Velocity.X = 0;
+			//idle anim
 		}
+	}
+	if (bAcceptJump && JumpsUsed < MaxJumps && (Dir7 > 0 || Dir8 > 0 || Dir9 > 0) && (!bIsAirborne||(bIsAirborne && bAirJump)))
+	{
+		if (!bIsRunning || (Dir7 > Dir8 && Dir7 > Dir9)) //preserve horizontal velocity only if jumping with a running start
+			Velocity.X = 0;
+		if (bIsAirborne && JumpsUsed == 0)
+			JumpsUsed++;
+
+		if (Dir9 > Dir8 && Dir9 > Dir7) //if most recent input is jumping forward
+		{
+			if (bFacingRight)
+				Velocity.X += JumpForce.X;
+			else
+				Velocity.X -= JumpForce.X;
+			//play/set bool jumpforward
+		}
+		else if (Dir7 > Dir8 && Dir7 > Dir9) //if most recent input is jumping back
+		{
+			if (bFacingRight)
+				Velocity.X -= JumpForce.X;
+			else
+				Velocity.X += JumpForce.X;
+			//play/set bool jump back
+		}
+
+		//play/trigger jump anim
+		Velocity.Z = JumpForce.Z;
+		bIsAirborne = true;
+		bIsRunning = false;
+		bAirJump = false;
+		JumpsUsed++;
 	}
 
 	if (HitStop == 0)
 	{
 		if (bIsAirborne && BlitzDashTime == 0) //apply gravity while character is airborne and not defying gravity
 		{
-			float GravCalc = (Weight * GravityScale * -10.f);
+			float GravCalc = (Weight * GravityScale * -10.f)/60.f;
 			if (SlowMoTime > 0)
 				GravCalc /= 2;
 
@@ -141,9 +174,9 @@ void ACharacterBase::Tick(float DeltaTime)
 		}
 
 		if (SlowMoTime > 0)
-			AddActorLocalOffset(Velocity / 120.f, true);
+			AddActorLocalOffset(Velocity * 100 / 120.f, true);
 		else
-			AddActorLocalOffset(Velocity / 60.f, true);
+			AddActorLocalOffset(Velocity * 100/ 60.f, true);
 	}
 
 	InputCountdown();
@@ -218,6 +251,10 @@ void ACharacterBase::VerticalInput(float AxisValue)
 	{
 		if (AxisValue > .25f)
 		{
+			if (bIsAirborne && Dir8 < InputTime - 1)
+			{
+				bAirJump = true;
+			}
 			Dir8 = InputTime;
 		}
 		else if (AxisValue < -.25f)
@@ -237,6 +274,10 @@ void ACharacterBase::MoveForward()
 {
 	if (InputComponent->GetAxisValue(TEXT("Vertical")) > .25f)
 	{
+		if (bIsAirborne && Dir9 < InputTime - 1)
+		{
+			bAirJump = true;
+		}
 		Dir9 = InputTime; //Up and forward
 	}
 	else if (InputComponent->GetAxisValue(TEXT("Vertical")) < -.25f)
@@ -258,6 +299,10 @@ void ACharacterBase::MoveBackward()
 {
 	if (InputComponent->GetAxisValue(TEXT("Vertical")) > .25f)
 	{
+		if (bIsAirborne && Dir7 < InputTime - 1)
+		{
+			bAirJump = true;
+		}
 		Dir7 = InputTime; //Up and Backward
 	}
 	else if (InputComponent->GetAxisValue(TEXT("Vertical")) < -.25f)
@@ -447,7 +492,7 @@ void ACharacterBase::SurfaceOverlapEnter(UPrimitiveComponent* OverlappedComp, AA
 		
 }
 
-void ACharacterBase::SurfaceOverlapExit(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void ACharacterBase::SurfaceOverlapExit(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	//check if PushBoxTrigger has overlapped with the floor or wall and apply appropriate behavior
 	//check if overlapping with other Character's PushBoxTrigger and apply appropriate action based on state (character push, teleporting to prevent characters from occupying same space, etc.)
@@ -585,6 +630,7 @@ void ACharacterBase::OnSurfaceHit(UPrimitiveComponent* HitComp, AActor* OtherAct
 	{
 		bIsAirborne = false;
 		Velocity.Z = 0;
+		JumpsUsed = 0;
 		UE_LOG(LogTemp, Warning, TEXT("PushBox has hit floor."));
 	}
 	else if (OtherComp->GetCollisionObjectType() == ECC_Wall)

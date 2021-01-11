@@ -130,6 +130,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	int32 ShatteredTime = 0;
 
+	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
+	int32 JumpsUsed = 0;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	float AnimSpeed = 1.f;
 
@@ -157,6 +160,8 @@ protected:
 	float MaxRunSpeed = 2;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 	float BlitzDashForce = 2;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+	int32 MaxJumps = 2;
 	//x dictates horizontal acceleration, z dictates vertical acceleration. y should never be changed or touched
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 	FVector BackDashForce;
@@ -188,6 +193,7 @@ protected:
 	int32 DoubleDir2 = 0;
 	int32 DoubleDir6 = 0;
 	int32 DoubleDir4 = 0;
+	bool bAirJump = false;
 	
 
 	// ints to denote active time on button inputs
@@ -314,7 +320,7 @@ private:
 	void SurfaceOverlapEnter(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	UFUNCTION()
-	void SurfaceOverlapExit(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	void SurfaceOverlapExit(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	UFUNCTION()
 	void OnSurfaceHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
