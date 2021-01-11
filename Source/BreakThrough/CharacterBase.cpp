@@ -1,6 +1,7 @@
 // Copyright ShatterPoint Games. All Rights Reserved.
 
 #include "CharacterBase.h"
+#include "GenericPlatform/GenericPlatformMath.h"
 
 //Define Collision Channels
 #define ECC_HitBox			ECC_GameTraceChannel1
@@ -24,7 +25,6 @@ ACharacterBase::ACharacterBase()
 	PushBoxTrigger = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Push Trigger"));
 	PushBoxTrigger->SetupAttachment(RootComponent);
 	PushBoxTrigger->OnComponentBeginOverlap.AddDynamic(this, &ACharacterBase::SurfaceOverlapEnter);
-	PushBoxTrigger->OnComponentEndOverlap.AddDynamic(this, &ACharacterBase::SurfaceOverlapExit);
 
 	PersonalCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Personal Camera"));
 	PersonalCamera->SetupAttachment(RootComponent);
@@ -81,6 +81,7 @@ void ACharacterBase::BeginPlay()
 
 	Velocity = FVector(0, 0, 0);
 	PushBox->OnComponentHit.AddDynamic(this, &ACharacterBase::OnSurfaceHit);
+	PushBoxTrigger->OnComponentEndOverlap.AddDynamic(this, &ACharacterBase::SurfaceOverlapExit);
 	ClearHitBox();
 	
 }
@@ -108,7 +109,28 @@ void ACharacterBase::Tick(float DeltaTime)
 	}*/
 	if (bAcceptMove && !bIsAirborne)
 	{
-		if (Dir6 >= InputTime - 1)
+		if (DoubleDir6 > 0)
+		{
+			DoubleDir6 = 0;
+			bIsRunning = true;
+			bAcceptMove = false;
+			//bAcceptGuard = false;
+			//bArmorActive = true;
+		}
+		else if (DoubleDir4 > 0)
+		{
+			DoubleDir4 = 0;
+			if (bFacingRight)
+				Velocity.X = -BackDashForce.X;
+			else
+				Velocity.X = BackDashForce.X;
+
+			Velocity.Z = BackDashForce.Z;
+			bAcceptMove = false; //remove after testing
+			//DisableAllActions(false);
+			//backdash animation
+		}
+		else if (Dir6 >= InputTime - 1)
 		{
 			if (bFacingRight)
 				Velocity.X = WalkSpeed;
@@ -130,36 +152,45 @@ void ACharacterBase::Tick(float DeltaTime)
 			//idle anim
 		}
 	}
-	if (bAcceptJump && JumpsUsed < MaxJumps && (Dir7 > 0 || Dir8 > 0 || Dir9 > 0) && (!bIsAirborne||(bIsAirborne && bAirJump)))
+
+	Guarding();
+	Jumping();
+
+	if (bIsRunning)
 	{
-		if (!bIsRunning || (Dir7 > Dir8 && Dir7 > Dir9)) //preserve horizontal velocity only if jumping with a running start
+		if (bFacingRight)
+		{
+			if (Velocity.X < WalkSpeed)
+				Velocity.X = WalkSpeed;
+
+			Velocity.X += RunAcceleration; ///60.f;
+
+			Velocity.X = FMath::Min(Velocity.X, MaxRunSpeed);
+		}
+		else
+		{
+			if (Velocity.X > -WalkSpeed)
+				Velocity.X = -WalkSpeed;
+
+			Velocity.X -= RunAcceleration; ///60.f;
+
+			Velocity.X = FMath::Max(Velocity.X, MaxRunSpeed);
+		}
+			
+		if (Dir6 < InputTime - 1) //stop running if forward direction is no longer being held
+		{
+			bIsRunning = false;
+		}
+	}
+	else if (!bAcceptMove && !bIsRunning && !bIsAirborne) //braking/friction to slow down character when not accelerating
+	{
+		if (FMath::Abs(Velocity.X) > 1.f) // 1 is not necessarily the final value, just for testing
+			Velocity.X *= .95f;//test values once more things are put in place
+		else
+		{
 			Velocity.X = 0;
-		if (bIsAirborne && JumpsUsed == 0)
-			JumpsUsed++;
-
-		if (Dir9 > Dir8 && Dir9 > Dir7) //if most recent input is jumping forward
-		{
-			if (bFacingRight)
-				Velocity.X += JumpForce.X;
-			else
-				Velocity.X -= JumpForce.X;
-			//play/set bool jumpforward
+			bAcceptMove = true; //remove after testing
 		}
-		else if (Dir7 > Dir8 && Dir7 > Dir9) //if most recent input is jumping back
-		{
-			if (bFacingRight)
-				Velocity.X -= JumpForce.X;
-			else
-				Velocity.X += JumpForce.X;
-			//play/set bool jump back
-		}
-
-		//play/trigger jump anim
-		Velocity.Z = JumpForce.Z;
-		bIsAirborne = true;
-		bIsRunning = false;
-		bAirJump = false;
-		JumpsUsed++;
 	}
 
 	if (HitStop == 0)
@@ -172,6 +203,8 @@ void ACharacterBase::Tick(float DeltaTime)
 
 			Velocity.Z += GravCalc;
 		}
+		if (!bIsAirborne && Velocity.Z > 0)
+			bIsAirborne = true;
 
 		if (SlowMoTime > 0)
 			AddActorLocalOffset(Velocity * 100 / 120.f, true);
@@ -483,30 +516,65 @@ void ACharacterBase::TurnAroundCheck()
 	}
 }
 
-void ACharacterBase::SurfaceOverlapEnter(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void ACharacterBase::Guarding()
 {
-	//check if PushBoxTrigger has overlapped with the floor or wall and apply appropriate behavior
-	//check if overlapping with other Character's PushBoxTrigger and apply appropriate action based on state (character push, teleporting to prevent characters from occupying same space, etc.)
-	//character pushing idea: (if both grounded, opponent velocity.x is zero, and self velocity.x is forward, make opponent's velocity half of self velocity)
-		//UE_LOG(LogTemp, Warning, TEXT("OtherComponent: %s"), *OtherComp->GetName());
-		
+	if (bAcceptGuard)
+	{
+		if (!bIsAirborne && (Dir1 >= InputTime - 1 || Dir2 >= InputTime - 1 || Dir3 >= InputTime - 1))
+		{
+			//on the ground and holding a downward direction means the character is crouching
+			bIsCrouching = true;
+		}
+
+		if (Dir7 >= InputTime - 1 || Dir4 >= InputTime - 1 || Dir1 >= InputTime - 1)
+		{
+			//holding a backward direction while able to guard keeps the character's guard up
+			bIsGuarding = true;
+		}
+	}
 }
 
-void ACharacterBase::SurfaceOverlapExit(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+void ACharacterBase::Jumping()
 {
-	//check if PushBoxTrigger has overlapped with the floor or wall and apply appropriate behavior
-	//check if overlapping with other Character's PushBoxTrigger and apply appropriate action based on state (character push, teleporting to prevent characters from occupying same space, etc.)
-	//character pushing idea: (if both grounded, opponent velocity.x is zero, and self velocity.x is forward, make opponent's velocity half of self velocity)
-	UE_LOG(LogTemp, Warning, TEXT("OtherComponent: %s"), *OtherComp->GetName());
-	if (OtherComp->GetCollisionObjectType() == ECC_Floor)
+	if (bAcceptJump && JumpsUsed < MaxJumps && (Dir7 > 0 || Dir8 > 0 || Dir9 > 0) && (!bIsAirborne || (bIsAirborne && bAirJump)))
 	{
+		if (!bIsRunning || (Dir7 > Dir8 && Dir7 > Dir9)) //preserve horizontal velocity only if jumping with a running start
+			Velocity.X = 0;
+		if (bIsAirborne && JumpsUsed == 0)
+			JumpsUsed++;
+
+		if (Dir9 > Dir8 && Dir9 > Dir7) //if most recent input is jumping forward
+		{
+			if (bFacingRight)
+				Velocity.X += JumpForce.X;
+			else
+				Velocity.X -= JumpForce.X;
+			//play/set bool jumpforward
+		}
+		else if (Dir7 > Dir8 && Dir7 > Dir9) //if most recent input is jumping back
+		{
+			if (bFacingRight)
+				Velocity.X -= JumpForce.X;
+			else
+				Velocity.X += JumpForce.X;
+			//play/set bool jump back
+		}
+
+		//play/trigger jump anim
+		Velocity.Z = JumpForce.Z;
 		bIsAirborne = true;
-		UE_LOG(LogTemp, Warning, TEXT("Character has left floor."));
+		bIsRunning = false;
+		bAirJump = false;
+		JumpsUsed++;
 	}
-	else if (OtherComp->GetCollisionObjectType() == ECC_Wall)
-	{
-		bTouchingWall = false;
-	}
+}
+
+void ACharacterBase::ActivateCollisionBox(OUT UPaperSpriteComponent* Collider)
+{
+	//Can be used to set hitbox and hurtbox to active
+	Collider->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	//Also add whether to display perhaps based on an option in GameMode? 
+	//if (/*add condition*/) {Collider->SetVisibility(true)}
 }
 
 void ACharacterBase::ClearHitBox()
@@ -590,8 +658,10 @@ void ACharacterBase::DisableAllActions(bool bDisableBlitz)
 	bAcceptBlitz = !bDisableBlitz;
 
 	bIsRunning = false;
-	bArmorActive = false;
 	bCounterHitState = false;
+
+	if (HitStun > 0)
+		bArmorActive = false;
 }
 
 void ACharacterBase::EnableAllActions()
@@ -615,12 +685,30 @@ void ACharacterBase::EnableAllActions()
 	bWallStickState = false;
 }
 
-void ACharacterBase::ActivateCollisionBox(OUT UPaperSpriteComponent* Collider)
+void ACharacterBase::SurfaceOverlapEnter(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	//Can be used to set hitbox and hurtbox to active
-	Collider->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	//Also add whether to display perhaps based on an option in GameMode? 
-	//if (/*add condition*/) {Collider->SetVisibility(true)}
+	//check if PushBoxTrigger has overlapped with the floor or wall and apply appropriate behavior
+	//check if overlapping with other Character's PushBoxTrigger and apply appropriate action based on state (character push, teleporting to prevent characters from occupying same space, etc.)
+	//character pushing idea: (if both grounded, opponent velocity.x is zero, and self velocity.x is forward, make opponent's velocity half of self velocity)
+		//UE_LOG(LogTemp, Warning, TEXT("OtherComponent: %s"), *OtherComp->GetName());
+
+}
+
+void ACharacterBase::SurfaceOverlapExit(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	//check if PushBoxTrigger has overlapped with the floor or wall and apply appropriate behavior
+	//check if overlapping with other Character's PushBoxTrigger and apply appropriate action based on state (character push, teleporting to prevent characters from occupying same space, etc.)
+	//character pushing idea: (if both grounded, opponent velocity.x is zero, and self velocity.x is forward, make opponent's velocity half of self velocity)
+	UE_LOG(LogTemp, Warning, TEXT("OtherComponent: %s"), *OtherComp->GetName());
+	if (OtherComp->GetCollisionObjectType() == ECC_Floor)
+	{
+		bIsAirborne = true;
+		UE_LOG(LogTemp, Warning, TEXT("Character has left floor."));
+	}
+	else if (OtherComp->GetCollisionObjectType() == ECC_Wall)
+	{
+		bTouchingWall = false;
+	}
 }
 
 void ACharacterBase::OnSurfaceHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
