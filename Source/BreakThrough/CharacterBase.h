@@ -309,6 +309,8 @@ private:
 	void LBPress();
 
 	void TurnAroundCheck();
+	void Guarding();
+	void Jumping();
 
 	void ActivateCollisionBox(OUT UPaperSpriteComponent* Collider);
 	void ClearHitBox();
