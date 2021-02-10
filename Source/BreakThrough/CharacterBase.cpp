@@ -154,7 +154,7 @@ void ACharacterBase::Tick(float DeltaTime)
 	}
 
 	Guarding();
-	Jumping();
+	JumpInput();
 
 	if (bIsRunning)
 	{
@@ -319,7 +319,7 @@ void ACharacterBase::MoveForward()
 	}
 	else
 	{
-		if (Dir6 < InputTime - 1 && Dir6 > 0 && DoubleDir6 == 0)
+		if (((Dir6 < InputTime - 1 && Dir6 > 0) || (Dir3 < InputTime - 1 && Dir3 > 0) || (Dir9 < InputTime - 1 && Dir9 > 0)) && DoubleDir6 == 0)
 		{
 			DoubleDir6 = InputTime;
 		}
@@ -344,7 +344,7 @@ void ACharacterBase::MoveBackward()
 	}
 	else
 	{
-		if (Dir4 < InputTime - 1 && Dir4 > 0 && DoubleDir4 == 0)
+		if (((Dir4 < InputTime - 1 && Dir4 > 0) || (Dir7 < InputTime - 1 && Dir7 > 0) || (Dir1 < InputTime - 1 && Dir1 > 0)) && DoubleDir4 == 0)
 		{
 			DoubleDir4 = InputTime;
 		}		
@@ -534,39 +534,52 @@ void ACharacterBase::Guarding()
 	}
 }
 
-void ACharacterBase::Jumping()
+void ACharacterBase::JumpInput()
 {
 	if (bAcceptJump && JumpsUsed < MaxJumps && (Dir7 > 0 || Dir8 > 0 || Dir9 > 0) && (!bIsAirborne || (bIsAirborne && bAirJump)))
 	{
-		if (!bIsRunning || (Dir7 > Dir8 && Dir7 > Dir9)) //preserve horizontal velocity only if jumping with a running start
-			Velocity.X = 0;
-		if (bIsAirborne && JumpsUsed == 0)
-			JumpsUsed++;
-
-		if (Dir9 > Dir8 && Dir9 > Dir7) //if most recent input is jumping forward
-		{
-			if (bFacingRight)
-				Velocity.X += JumpForce.X;
-			else
-				Velocity.X -= JumpForce.X;
-			//play/set bool jumpforward
-		}
-		else if (Dir7 > Dir8 && Dir7 > Dir9) //if most recent input is jumping back
-		{
-			if (bFacingRight)
-				Velocity.X -= JumpForce.X;
-			else
-				Velocity.X += JumpForce.X;
-			//play/set bool jump back
-		}
-
 		//play/trigger jump anim
-		Velocity.Z = JumpForce.Z;
-		bIsAirborne = true;
-		bIsRunning = false;
-		bAirJump = false;
-		JumpsUsed++;
+		//if (!bIsAirborne)
+		//play jumpstartup
+		//disableall actions except special attacks
+		//make throw invincible
+		//else
+		//immediately play jump anim
+		Jumping(); //remove and call from jump animation once implemented
 	}
+}
+
+void ACharacterBase::Jumping()
+{
+	EnableAllActions();
+	if (!bIsRunning || (Dir7 > Dir8 && Dir7 > Dir9)) //preserve horizontal velocity only if jumping with a running start
+		Velocity.X = 0;
+	if (bIsAirborne && JumpsUsed == 0)
+		JumpsUsed++;
+
+	if (Dir9 > Dir8 && Dir9 > Dir7) //if most recent input is jumping forward
+	{
+		if (bFacingRight)
+			Velocity.X += JumpForce.X;
+		else
+			Velocity.X -= JumpForce.X;
+		//play/set bool jumpforward
+	}
+	else if (Dir7 > Dir8 && Dir7 > Dir9) //if most recent input is jumping back
+	{
+		if (bFacingRight)
+			Velocity.X -= JumpForce.X;
+		else
+			Velocity.X += JumpForce.X;
+		//play/set bool jump back
+	}
+
+	Velocity.Z = JumpForce.Z;
+	bIsAirborne = true;
+	bIsRunning = false;
+	bAirJump = false;
+	JumpsUsed++;
+
 }
 
 void ACharacterBase::ActivateCollisionBox(OUT UPaperSpriteComponent* Collider)

@@ -12,7 +12,7 @@
 
 #define OUT
 
-enum GuardLevel
+enum GuardHeight
 {
 	Mid,
 	Low,
@@ -20,7 +20,9 @@ enum GuardLevel
 	Overhead,
 	Unblockable,
 	Throw,
-	CommandThrow
+	CommandThrow,
+	AirThrow,
+	AirCommandThrow
 };
 
 enum HitEffects
@@ -30,7 +32,15 @@ enum HitEffects
 	Launch,
 	Stagger,
 	Crumple,
-	Deflected
+	KnockAway,
+	Deflected,
+	HiCounter, // this and below are for character's ability to be hit by certain attacks
+	LowCounter,
+	AllCounter,
+	ProjectileInvincible,
+	StrikeInvincible,
+	ThrowInvincible,
+	FullInvincible
 };
 
 UCLASS()
@@ -233,7 +243,8 @@ protected:
 	bool bGroundBounceState = false;
 	bool bWallBounceState = false;
 	bool bWallStickState = false;
-	int32 AdditionalHitState = 0;
+	int32 AdditionalHitState = 0; //used if an attack puts character in a specific animation state (crumple, sweep, launch, etc.)
+	int32 CharacterState = 0; // determines if a character is invincible, projectile immune, deflects attacks of certain heights, etc
 
 	//attack properties
 	bool bJumpCancellable;
@@ -252,6 +263,7 @@ protected:
 	int32 AttackHeight = Mid;
 	int32 BaseHitStun = 0;
 	int32 BaseHitStop = 0;
+	int32 BaseBlockStun = 0;
 	float InitProration = 1.f;
 	float ForcedProration = 1.f;
 
@@ -262,6 +274,7 @@ protected:
 	bool bCanWallBounce = false;
 	bool bCanWallStick = false;
 	bool bCanShatter = false;
+	bool bCanPierce = false;
 	int32 AdditionalEffect = 0;
 	
 
@@ -311,6 +324,7 @@ private:
 	void TurnAroundCheck();
 	void Guarding();
 	void Jumping();
+	void JumpInput();
 
 	void ActivateCollisionBox(OUT UPaperSpriteComponent* Collider);
 	void ClearHitBox();
