@@ -63,127 +63,127 @@ protected:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UCameraComponent* PersonalCamera;
+		UCameraComponent* PersonalCamera;
 
 	//Hitboxes for the character to attack with
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPaperSpriteComponent* HitBox0;
+		UPaperSpriteComponent* HitBox0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPaperSpriteComponent* HitBox1;
+		UPaperSpriteComponent* HitBox1;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPaperSpriteComponent* HitBox2;
+		UPaperSpriteComponent* HitBox2;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPaperSpriteComponent* HitBox3;
+		UPaperSpriteComponent* HitBox3;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPaperSpriteComponent* HitBox4;
+		UPaperSpriteComponent* HitBox4;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPaperSpriteComponent* HitBox5;
+		UPaperSpriteComponent* HitBox5;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPaperSpriteComponent* HitBox6;
+		UPaperSpriteComponent* HitBox6;
 
 	//Hurtboxes to represent the character's physical position, where they can be hit
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPaperSpriteComponent* UpperBody0;
+		UPaperSpriteComponent* UpperBody0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPaperSpriteComponent* UpperBody1;
+		UPaperSpriteComponent* UpperBody1;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPaperSpriteComponent* UpperBody2;
+		UPaperSpriteComponent* UpperBody2;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPaperSpriteComponent* LowerBody0;
+		UPaperSpriteComponent* LowerBody0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPaperSpriteComponent* LowerBody1;
+		UPaperSpriteComponent* LowerBody1;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPaperSpriteComponent* LowerBody2;
+		UPaperSpriteComponent* LowerBody2;
 
 	//Guardbox represents proximity to an attack, character automatically puts up guard when in this box and is holding a backward direction
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPaperSpriteComponent* GuardBox;
+		UPaperSpriteComponent* GuardBox;
 
 	//character's vitality, loses when it hits zero
 	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
-	int32 Health;
+		int32 Health;
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-	int32 MaxHealth = 1000;
+		int32 MaxHealth = 1000;
 
 	//the resolve that must be broken through
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
-	int32 Resolve = 4;
+		int32 Resolve = 4;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
-	int32 Durability = 100;
+		int32 Durability = 100;
 
 	//values that represent a character's resilience as a battle rages on
 	//scales down damage received based on how low the character's health is
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-	float CurrentValor;
+		float CurrentValor;
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-	float Valor100;
+		float Valor100;
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-	float Valor50;
+		float Valor50;
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-	float Valor25;
+		float Valor25;
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-	float Valor10;
+		float Valor10;
 
 	UPROPERTY(EditAnywhere, Category = "Battle Stats")
-	bool bFacingRight = true;
+		bool bFacingRight = true;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-	int32 HitStun = 0;
+		int32 HitStun = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-	int32 BlockStun = 0;
+		int32 BlockStun = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-	int32 LandingLag = 0;
+		int32 LandingLag = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-	int32 HitStop = 0;
+		int32 HitStop = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-	int32 BlitzDashTime = 0;
+		int32 BlitzDashTime = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-	int32 ShatteredTime = 0;
-
-	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
-	int32 JumpsUsed = 0;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-	float AnimSpeed = 1.f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-	bool bIsAirborne = true;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-	bool bIsCrouching = false;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-	bool bIsGuarding = true;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-	bool bAutoGuard = true;
+		int32 ShatteredTime = 0;
 
 	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
-	int32 SlowMoTime = 0;
+		int32 JumpsUsed = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		float AnimSpeed = 1.f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bIsAirborne = true;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bIsCrouching = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bIsGuarding = true;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bAutoGuard = true;
+
+	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
+		int32 SlowMoTime = 0;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	float Weight = 1;
+		float Weight = 1;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	float WalkSpeed = 1;
+		float WalkSpeed = 1;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	float WalkBackSpeed = 1;
+		float WalkBackSpeed = 1;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	float RunAcceleration = .2f;
+		float RunAcceleration = .2f;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	float MaxRunSpeed = 2;
+		float MaxRunSpeed = 2;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	float BlitzDashForce = 2;
+		float BlitzDashForce = 2;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	int32 MaxJumps = 2;
+		int32 MaxJumps = 2;
 	//x dictates horizontal acceleration, z dictates vertical acceleration. y should never be changed or touched
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	FVector BackDashForce;
+		FVector BackDashForce;
 	//x dictates horizontal acceleration during forward/backward jumps, z dictates vertical acceleration, y should never be changed or touched
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-	FVector JumpForce;
+		FVector JumpForce;
 
 	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
-	FVector Velocity;
+		FVector Velocity;
 
 	UPROPERTY(VisibleAnywhere, Category = "Movement Properties") //keeps track of non-movement acceleration to apply once hitstop is zero
-	FVector KnockBack;
+		FVector KnockBack;
 
 	//the influence of gravity on a character
 	//if being hit, increases with the number of hits in a combo to make continuing a combo more difficult as time goes on
@@ -204,7 +204,7 @@ protected:
 	int32 DoubleDir6 = 0;
 	int32 DoubleDir4 = 0;
 	bool bAirJump = false;
-	
+
 
 	// ints to denote active time on button inputs
 	int32 LPressed = 0;
@@ -276,26 +276,26 @@ protected:
 	bool bCanShatter = false;
 	bool bCanPierce = false;
 	int32 AdditionalEffect = 0;
-	
+
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	UCapsuleComponent* PushBox;
+		UCapsuleComponent* PushBox;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	UCapsuleComponent* PushBoxTrigger;
+		UCapsuleComponent* PushBoxTrigger;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	UPaperSpriteComponent* PushBoxSprite;
+		UPaperSpriteComponent* PushBoxSprite;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	USkeletalMeshComponent* BaseMesh;
+		USkeletalMeshComponent* BaseMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	USceneComponent* HitBoxFolder;
+		USceneComponent* HitBoxFolder;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	USceneComponent* HurtBoxFolder;
+		USceneComponent* HurtBoxFolder;
 
 	//keeps track of whether an attack has already hit something
 	//attack effects are only applied based on the first overlap interaction with the attack (!bAttackMadeContact)
@@ -333,13 +333,13 @@ private:
 	void EnableAllActions();
 
 	UFUNCTION()
-	void SurfaceOverlapEnter(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+		void SurfaceOverlapEnter(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	UFUNCTION()
-	void SurfaceOverlapExit(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+		void SurfaceOverlapExit(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	UFUNCTION()
-	void OnSurfaceHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+		void OnSurfaceHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
 	//void CheckOpponentFacing();
 
