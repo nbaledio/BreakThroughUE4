@@ -16,7 +16,7 @@
 // Sets default values
 ACharacterBase::ACharacterBase()
 {
- 	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	PushBox = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Push Box"));
@@ -83,7 +83,7 @@ void ACharacterBase::BeginPlay()
 	PushBox->OnComponentHit.AddDynamic(this, &ACharacterBase::OnSurfaceHit);
 	PushBoxTrigger->OnComponentEndOverlap.AddDynamic(this, &ACharacterBase::SurfaceOverlapExit);
 	ClearHitBox();
-	
+
 }
 
 // Called every frame
@@ -154,7 +154,7 @@ void ACharacterBase::Tick(float DeltaTime)
 	}
 
 	Guarding();
-	Jumping();
+	JumpInput();
 
 	if (bIsRunning)
 	{
@@ -176,7 +176,7 @@ void ACharacterBase::Tick(float DeltaTime)
 
 			Velocity.X = FMath::Max(Velocity.X, MaxRunSpeed);
 		}
-			
+
 		if (Dir6 < InputTime - 1) //stop running if forward direction is no longer being held
 		{
 			bIsRunning = false;
@@ -197,7 +197,7 @@ void ACharacterBase::Tick(float DeltaTime)
 	{
 		if (bIsAirborne && BlitzDashTime == 0) //apply gravity while character is airborne and not defying gravity
 		{
-			float GravCalc = (Weight * GravityScale * -10.f)/60.f;
+			float GravCalc = (Weight * GravityScale * -10.f) / 60.f;
 			if (SlowMoTime > 0)
 				GravCalc /= 2;
 
@@ -209,7 +209,7 @@ void ACharacterBase::Tick(float DeltaTime)
 		if (SlowMoTime > 0)
 			AddActorLocalOffset(Velocity * 100 / 120.f, true);
 		else
-			AddActorLocalOffset(Velocity * 100/ 60.f, true);
+			AddActorLocalOffset(Velocity * 100 / 60.f, true);
 	}
 
 	InputCountdown();
@@ -238,19 +238,19 @@ void ACharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 }
 
 /*Inputs are recorded using keypad notation
-Below is a diagram for which floats are fired based on directional input 
+Below is a diagram for which floats are fired based on directional input
 and while the character is facing toward the right. The left and right columns
 are switched if the character is facing toward the left.
 
 "5" represents the neutral position and thus does not have a corresponding variable
 
-     ^
-     |
+	 ^
+	 |
    7 8 9
 <- 4 5 6 ->
    1 2 3
-     |
-     v
+	 |
+	 v
 */
 void ACharacterBase::HorizontalInput(float AxisValue)
 {
@@ -280,7 +280,7 @@ void ACharacterBase::HorizontalInput(float AxisValue)
 
 void ACharacterBase::VerticalInput(float AxisValue)
 {
-	if (InputComponent->GetAxisValue(TEXT("Horizontal")) < .25f && InputComponent->GetAxisValue(TEXT("Horizontal")) > - .25f )
+	if (InputComponent->GetAxisValue(TEXT("Horizontal")) < .25f && InputComponent->GetAxisValue(TEXT("Horizontal")) > -.25f)
 	{
 		if (AxisValue > .25f)
 		{
@@ -319,11 +319,11 @@ void ACharacterBase::MoveForward()
 	}
 	else
 	{
-		if (Dir6 < InputTime - 1 && Dir6 > 0 && DoubleDir6 == 0)
+		if (((Dir6 < InputTime - 1 && Dir6 > 0) || (Dir3 < InputTime - 1 && Dir3 > 0) || (Dir9 < InputTime - 1 && Dir9 > 0)) && DoubleDir6 == 0)
 		{
 			DoubleDir6 = InputTime;
 		}
-			
+
 		Dir6 = InputTime; //Pure forward
 	}
 }
@@ -344,10 +344,10 @@ void ACharacterBase::MoveBackward()
 	}
 	else
 	{
-		if (Dir4 < InputTime - 1 && Dir4 > 0 && DoubleDir4 == 0)
+		if (((Dir4 < InputTime - 1 && Dir4 > 0) || (Dir7 < InputTime - 1 && Dir7 > 0) || (Dir1 < InputTime - 1 && Dir1 > 0)) && DoubleDir4 == 0)
 		{
 			DoubleDir4 = InputTime;
-		}		
+		}
 		Dir4 = InputTime; //Pure backward
 	}
 }
@@ -534,39 +534,52 @@ void ACharacterBase::Guarding()
 	}
 }
 
-void ACharacterBase::Jumping()
+void ACharacterBase::JumpInput()
 {
 	if (bAcceptJump && JumpsUsed < MaxJumps && (Dir7 > 0 || Dir8 > 0 || Dir9 > 0) && (!bIsAirborne || (bIsAirborne && bAirJump)))
 	{
-		if (!bIsRunning || (Dir7 > Dir8 && Dir7 > Dir9)) //preserve horizontal velocity only if jumping with a running start
-			Velocity.X = 0;
-		if (bIsAirborne && JumpsUsed == 0)
-			JumpsUsed++;
-
-		if (Dir9 > Dir8 && Dir9 > Dir7) //if most recent input is jumping forward
-		{
-			if (bFacingRight)
-				Velocity.X += JumpForce.X;
-			else
-				Velocity.X -= JumpForce.X;
-			//play/set bool jumpforward
-		}
-		else if (Dir7 > Dir8 && Dir7 > Dir9) //if most recent input is jumping back
-		{
-			if (bFacingRight)
-				Velocity.X -= JumpForce.X;
-			else
-				Velocity.X += JumpForce.X;
-			//play/set bool jump back
-		}
-
 		//play/trigger jump anim
-		Velocity.Z = JumpForce.Z;
-		bIsAirborne = true;
-		bIsRunning = false;
-		bAirJump = false;
-		JumpsUsed++;
+		//if (!bIsAirborne)
+		//play jumpstartup
+		//disableall actions except special attacks
+		//make throw invincible
+		//else
+		//immediately play jump anim
+		Jumping(); //remove and call from jump animation once implemented
 	}
+}
+
+void ACharacterBase::Jumping()
+{
+	EnableAllActions();
+	if (!bIsRunning || (Dir7 > Dir8 && Dir7 > Dir9)) //preserve horizontal velocity only if jumping with a running start
+		Velocity.X = 0;
+	if (bIsAirborne && JumpsUsed == 0)
+		JumpsUsed++;
+
+	if (Dir9 > Dir8 && Dir9 > Dir7) //if most recent input is jumping forward
+	{
+		if (bFacingRight)
+			Velocity.X += JumpForce.X;
+		else
+			Velocity.X -= JumpForce.X;
+		//play/set bool jumpforward
+	}
+	else if (Dir7 > Dir8 && Dir7 > Dir9) //if most recent input is jumping back
+	{
+		if (bFacingRight)
+			Velocity.X -= JumpForce.X;
+		else
+			Velocity.X += JumpForce.X;
+		//play/set bool jump back
+	}
+
+	Velocity.Z = JumpForce.Z;
+	bIsAirborne = true;
+	bIsRunning = false;
+	bAirJump = false;
+	JumpsUsed++;
+
 }
 
 void ACharacterBase::ActivateCollisionBox(OUT UPaperSpriteComponent* Collider)
@@ -616,8 +629,8 @@ void ACharacterBase::ClearHitBox()
 	InitProration = 1.f;
 	ForcedProration = 1.f;
 
-	PotentialKnockBack = FVector(0,0,0);
-	PotentialAirKnockBack = FVector(0,0,0);
+	PotentialKnockBack = FVector(0, 0, 0);
+	PotentialAirKnockBack = FVector(0, 0, 0);
 
 	bCanGroundBounce = false;
 	bCanWallBounce = false;
