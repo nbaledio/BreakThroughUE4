@@ -1,4 +1,4 @@
-// Copyright ShatterPoint Games. All Rights Reserved.
+// Copyright 2021 ShatterPoint Games. All Rights Reserved.
 
 #pragma once
 
