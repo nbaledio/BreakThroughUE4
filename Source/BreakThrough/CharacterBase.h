@@ -124,7 +124,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
 		float Valor10;
 
-	UPROPERTY(EditAnywhere, Category = "Battle Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Battle Stats")
 		bool bFacingRight = true;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
