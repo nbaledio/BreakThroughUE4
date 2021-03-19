@@ -429,5 +429,5 @@ private:
 
  P1->DrawCharacter();
  P2->DrawCharacter();
- GameState->Timers and stuff, update UI
+ GameState->Timers and stuff, update UI, update camera position
 */
