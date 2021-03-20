@@ -141,7 +141,7 @@ struct FAnimationFrame
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
 		bool bSuperFlash; //freezes Opposing character in place
 
-	//relinquish complete control of camera positioning to animation/character class, camera will snap to stored positions, setting this to true automatically switches on bSuperFlash as well
+	//relinquish complete control of camera positioning to animation/character class, camera will snap to stored positions
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
 		bool bCinematic;
 
@@ -151,6 +151,12 @@ struct FAnimationFrame
 	//camera rotation, will snap to rotation if bCinematic is also on, otherwise will lerp to new rotation
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
 		FRotator CameraRotation;
+	//Changes the main lighting angle on the character
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
+		FVector MainLightVector;
+	//Changes the fill light angle
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
+		FVector FillLightVector;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hitboxes")
 		TArray<FHitbox> Hitboxes;
@@ -172,6 +178,8 @@ struct FAnimationFrame
 		bool bCounterHitState = false;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		int32 LandingLag = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		int32 AutoGuardProximity = 0; //opposing character will stop moving and automatically put up guard if they hold back while within this distance of the character
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		bool bStopVelocityX;
@@ -255,7 +263,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 		int32 HitStop = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		int32 BlitzDashTime = 0;
+		int32 GravDefyTime = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 		int32 ShatteredTime = 0;
 	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
@@ -326,7 +334,8 @@ protected:
 	//value that increasingly scales positive vertical knockback the longer a character is in a combo
 	//causes a character to not be launched as high the more hits there are in a combo
 		float ComboGravity = 1;
-		int ComboCount = 0;
+		int ComboCount = 0; //keeps track of the number of hits in a combo performed by this character
+		int ComboTimer = 0; //keeps track of the amount of time this character has spent in hitstun in frames
 
 	//number of frames that an input is active for
 		int32 InputTime = 10;
@@ -398,6 +407,12 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		USkeletalMeshComponent* BaseMesh;
+
+	//Sets the corresponding vectors on character's materials
+		FVector MainLightVector;
+		FVector FillLightVector;
+		FVector MainLightColor;
+		FVector FillLightColor;
 
 	//Take in information from CurrentAnimFrame
 	void ProcessAnimationFrame();

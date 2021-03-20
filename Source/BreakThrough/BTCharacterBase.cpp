@@ -57,10 +57,12 @@ void ABTCharacterBase::UpdateCharacter()
 				BlockStun--;
 		}
 
-		if (bIsAirborne && BlitzDashTime == 0) //apply gravity while character is airborne and not defying gravity
+		if (bIsAirborne && GravDefyTime == 0) //apply gravity while character is airborne and not defying gravity
 		{
 			float GravCalc = -10.f / 60.f; // GravityScale * -10.f / 60.f;
 
+			if (ShatteredTime > 0)
+				GravCalc *= .8f;
 			if (WallStickTime > 0)
 				GravCalc *= .25f;
 			if (SlowMoTime > 0)
@@ -109,8 +111,10 @@ void ABTCharacterBase::UpdateCharacter()
 		HitStop--;
 	}
 
-	if (BlitzDashTime > 0)
-		BlitzDashTime--;
+	if (GravDefyTime > 0)
+		GravDefyTime--;
+	if (ShatteredTime > 0)
+		ShatteredTime--;
 	if (SlowMoTime > 0)
 		SlowMoTime--;
 
@@ -126,6 +130,15 @@ void ABTCharacterBase::DrawCharacter()
 {
 	if (CurrentAnimFrame != NULL && CurrentAnimFrame->Pose != NULL)
 		BaseMesh->SetAnimation(CurrentAnimFrame->Pose);
+
+	if (!bFacingRight && BaseMesh->GetRelativeScale3D().X != -1)
+	{
+		BaseMesh->SetRelativeScale3D(FVector(-1, 1, 1));
+	}
+	else if (bFacingRight && BaseMesh->GetRelativeScale3D().X != 1)
+	{
+		BaseMesh->SetRelativeScale3D(FVector(1, 1, 1));
+	}
 
 	SetActorLocation(FVector(Position.X, GetActorLocation().Y, Position.Y));
 }
@@ -167,6 +180,7 @@ void ABTCharacterBase::ProcessAnimationFrame()
 			if (bIsAirborne && CurrentAnimFrame->LandingLag > 0)
 				LandingLag = CurrentAnimFrame->LandingLag + 4;
 		}
+		//animation events
 	}
 }
 
@@ -188,21 +202,16 @@ void ABTCharacterBase::TurnAroundCheck()
 {
 	if (Opponent != NULL)
 	{
-		if (Opponent->GetActorLocation().X < GetActorLocation().X)
+		if (Opponent->Position.X < Position.X && bFacingRight)
+		{
 			bFacingRight = false;
-		else if (Opponent->GetActorLocation().X > GetActorLocation().X)
+			TriggerTurnAround();
+		}
+		else if (Opponent->Position.X > Position.X && !bFacingRight)
+		{
 			bFacingRight = true;
-	}
-
-	if (!bFacingRight && Transform->GetRelativeScale3D().X != -1)
-	{
-		Transform->SetRelativeScale3D(FVector(-1, 1, 1));
-		TriggerTurnAround();
-	}
-	else if (bFacingRight && Transform->GetRelativeScale3D().X != 1)
-	{
-		Transform->SetRelativeScale3D(FVector(1, 1, 1));
-		TriggerTurnAround();
+			TriggerTurnAround();
+		}
 	}
 }
 
@@ -350,106 +359,12 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 	{
 		if (CurrentAnimFrame != NULL && Opponent->CurrentAnimFrame != NULL)
 		{
-			if (CurrentAnimFrame->Invincibility != Intangible && Opponent->CurrentAnimFrame->Invincibility != Intangible && FMath::Abs(Opponent->Position.X - Position.X) <= .5f * Opponent->PushboxWidth + .5f * PushboxWidth)
+			if (!CurrentAnimFrame->bCinematic && !Opponent->CurrentAnimFrame->bCinematic)
 			{
-				if (!bIsAirborne && !Opponent->bIsAirborne) //both on the ground
+				if (CurrentAnimFrame->Invincibility != Intangible && Opponent->CurrentAnimFrame->Invincibility != Intangible &&
+					FMath::Abs(Opponent->Position.X - Position.X) <= .5f * Opponent->PushboxWidth + .5f * PushboxWidth)
 				{
-					if (bTouchingWall)
-					{
-						if (bFacingRight)
-							Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-						else
-							Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-					}
-					else if (Opponent->bTouchingWall)
-					{
-						if (bFacingRight)
-							Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-						else
-							Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-					}
-					//when character is faster than opponent, and both are moving in the same direction or towards each other
-					else if (FMath::Abs(Velocity.X) > FMath::Abs(Opponent->Velocity.X) && ((Velocity.X < 0 && Opponent->Velocity.X < 0) || (Velocity.X > 0 && Opponent->Velocity.X > 0) || (!bFacingRight && Velocity.X < 0 && Opponent->Velocity.X > 0) || (bFacingRight && Velocity.X > 0 && Opponent->Velocity.X < 0)))
-					{
-						if (bFacingRight)
-						{
-							Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-							if (Opponent->Position.X >= 10 - .5f * Opponent->PushboxWidth)
-							{
-								Opponent->bTouchingWall = true;
-								Opponent->Velocity.X = 0;
-								Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
-								Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								Velocity.X = 0;
-							}
-						}
-						else
-						{
-							Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-							if (Opponent->Position.X <= -10 + .5f * Opponent->PushboxWidth)
-							{
-								Opponent->bTouchingWall = true;
-								Opponent->Velocity.X = 0;
-								Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
-								Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								Velocity.X = 0;
-							}
-						}
-					}
-					//when opponent is faster than character, and both are moving in the same direction or towards each other
-					else if (FMath::Abs(Velocity.X) < FMath::Abs(Opponent->Velocity.X) && ((Velocity.X < 0 && Opponent->Velocity.X < 0) || (Velocity.X > 0 && Opponent->Velocity.X > 0) || (!bFacingRight && Velocity.X < 0 && Opponent->Velocity.X > 0) || (bFacingRight && Velocity.X > 0 && Opponent->Velocity.X < 0)))
-					{
-						if (bFacingRight)
-						{
-							Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-							if (Position.X <= -10 + .5f * PushboxWidth)
-							{
-								bTouchingWall = true;
-								Velocity.X = 0;
-								Position.X = -10 + .5f * PushboxWidth;
-								Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								Opponent->Velocity.X = 0;
-							}
-						}
-						else
-						{
-							Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-							if (Position.X >= 10 - .5f * PushboxWidth)
-							{
-								bTouchingWall = true;
-								Velocity.X = 0;
-								Position.X = 10 - .5f * PushboxWidth;
-								Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								Opponent->Velocity.X = 0;
-							}
-						}
-					}
-					else //if both characters have the same velocity or arent moving
-					{
-						float MoveDistance = .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth - FMath::Abs(Opponent->Position.X - Position.X));
-
-						if (bFacingRight)
-						{
-							Position.X -= MoveDistance;
-							Opponent->Position.X += MoveDistance;
-						}
-						else
-						{
-							Position.X += MoveDistance;
-							Opponent->Position.X -= MoveDistance;
-						}
-					}
-					bTouchingOpponent = true;
-					Opponent->bTouchingOpponent = true;
-				}
-				else if (!bIsAirborne && Opponent->bIsAirborne && Opponent->Velocity.Y < 0)
-				{
-					if ((bIsCrouching && CrouchingPushBoxHeight > Opponent->Position.Y + Opponent->AirPushboxVerticalOffset) ||
-						(!bIsCrouching && StandingPushBoxHeight > Opponent->Position.Y + Opponent->AirPushboxVerticalOffset)) //check if pushboxes intersect
+					if (!bIsAirborne && !Opponent->bIsAirborne) //both on the ground
 					{
 						if (bTouchingWall)
 						{
@@ -465,36 +380,293 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 							else
 								Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 						}
-						else if (Opponent->Position.X < Position.X)
+						//when character is faster than opponent, and both are moving in the same direction or towards each other
+						else if (FMath::Abs(Velocity.X) > FMath::Abs(Opponent->Velocity.X) && ((Velocity.X < 0 && Opponent->Velocity.X < 0) || (Velocity.X > 0 && Opponent->Velocity.X > 0) || (!bFacingRight && Velocity.X < 0 && Opponent->Velocity.X > 0) || (bFacingRight && Velocity.X > 0 && Opponent->Velocity.X < 0)))
 						{
-							Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-							if (Opponent->Position.X <= -10 + .5f * Opponent->PushboxWidth)
+							if (bFacingRight)
 							{
-								Opponent->bTouchingWall = true;
-								Opponent->Velocity.X = 0;
-								Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
-								Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+								if (Opponent->Position.X >= 10 - .5f * Opponent->PushboxWidth)
+								{
+									Opponent->bTouchingWall = true;
+									Opponent->Velocity.X = 0;
+									Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
+									Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									Velocity.X = 0;
+								}
+							}
+							else
+							{
+								Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+								if (Opponent->Position.X <= -10 + .5f * Opponent->PushboxWidth)
+								{
+									Opponent->bTouchingWall = true;
+									Opponent->Velocity.X = 0;
+									Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
+									Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									Velocity.X = 0;
+								}
 							}
 						}
-						else if (Opponent->Position.X > Position.X)
+						//when opponent is faster than character, and both are moving in the same direction or towards each other
+						else if (FMath::Abs(Velocity.X) < FMath::Abs(Opponent->Velocity.X) && ((Velocity.X < 0 && Opponent->Velocity.X < 0) || (Velocity.X > 0 && Opponent->Velocity.X > 0) || (!bFacingRight && Velocity.X < 0 && Opponent->Velocity.X > 0) || (bFacingRight && Velocity.X > 0 && Opponent->Velocity.X < 0)))
 						{
-							Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-							if (Opponent->Position.X >= 10 - .5f * Opponent->PushboxWidth)
+							if (bFacingRight)
 							{
-								Opponent->bTouchingWall = true;
-								Opponent->Velocity.X = 0;
-								Opponent->Position.X = 10 - .5f * Opponent->PushboxWidth;
 								Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+								if (Position.X <= -10 + .5f * PushboxWidth)
+								{
+									bTouchingWall = true;
+									Velocity.X = 0;
+									Position.X = -10 + .5f * PushboxWidth;
+									Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									Opponent->Velocity.X = 0;
+								}
+							}
+							else
+							{
+								Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+								if (Position.X >= 10 - .5f * PushboxWidth)
+								{
+									bTouchingWall = true;
+									Velocity.X = 0;
+									Position.X = 10 - .5f * PushboxWidth;
+									Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									Opponent->Velocity.X = 0;
+								}
 							}
 						}
-						else
+						else //if both characters have the same velocity or arent moving
 						{
-							if (Opponent->bFacingRight)
+							float MoveDistance = .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth - FMath::Abs(Opponent->Position.X - Position.X));
+
+							if (bFacingRight)
 							{
-								Opponent->Position.X = Position.X + .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								Position.X -= .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								Position.X -= MoveDistance;
+								Opponent->Position.X += MoveDistance;
+							}
+							else
+							{
+								Position.X += MoveDistance;
+								Opponent->Position.X -= MoveDistance;
+							}
+						}
+						bTouchingOpponent = true;
+						Opponent->bTouchingOpponent = true;
+					}
+					else if (!bIsAirborne && Opponent->bIsAirborne && Opponent->Velocity.Y < 0)
+					{
+						if ((bIsCrouching && CrouchingPushBoxHeight > Opponent->Position.Y + Opponent->AirPushboxVerticalOffset) ||
+							(!bIsCrouching && StandingPushBoxHeight > Opponent->Position.Y + Opponent->AirPushboxVerticalOffset)) //check if pushboxes intersect
+						{
+							if (bTouchingWall)
+							{
+								if (bFacingRight)
+									Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								else
+									Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							}
+							else if (Opponent->bTouchingWall)
+							{
+								if (bFacingRight)
+									Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								else
+									Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							}
+							else if (Opponent->Position.X < Position.X)
+							{
+								Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+								if (Opponent->Position.X <= -10 + .5f * Opponent->PushboxWidth)
+								{
+									Opponent->bTouchingWall = true;
+									Opponent->Velocity.X = 0;
+									Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
+									Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								}
+							}
+							else if (Opponent->Position.X > Position.X)
+							{
+								Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+								if (Opponent->Position.X >= 10 - .5f * Opponent->PushboxWidth)
+								{
+									Opponent->bTouchingWall = true;
+									Opponent->Velocity.X = 0;
+									Opponent->Position.X = 10 - .5f * Opponent->PushboxWidth;
+									Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								}
+							}
+							else
+							{
+								if (Opponent->bFacingRight)
+								{
+									Opponent->Position.X = Position.X + .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									Position.X -= .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+									if (Opponent->Position.X >= 10 - .5f * Opponent->PushboxWidth)
+									{
+										Opponent->bTouchingWall = true;
+										Opponent->Velocity.X = 0;
+										Opponent->Position.X = 10 - .5f * Opponent->PushboxWidth;
+										Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									}
+									else if (Position.X <= -10 + .5f * PushboxWidth)
+									{
+										bTouchingWall = true;
+										Velocity.X = 0;
+										Position.X = -10 + .5f * PushboxWidth;
+										Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									}
+
+								}
+								else
+								{
+									Opponent->Position.X = Position.X - .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									Position.X += .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+									if (Opponent->Position.X <= -10 + .5f * Opponent->PushboxWidth)
+									{
+										Opponent->bTouchingWall = true;
+										Opponent->Velocity.X = 0;
+										Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
+										Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									}
+									else if (Position.X >= 10 - .5f * PushboxWidth)
+									{
+										bTouchingWall = true;
+										Velocity.X = 0;
+										Position.X = 10 - .5f * PushboxWidth;
+										Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									}
+								}
+							}
+							bTouchingOpponent = true;
+							Opponent->bTouchingOpponent = true;
+						}
+					}
+					else if (bIsAirborne && !Opponent->bIsAirborne && Velocity.Y < 0)
+					{
+						if ((Opponent->bIsCrouching && Opponent->CrouchingPushBoxHeight > Position.Y + AirPushboxVerticalOffset) ||
+							(!Opponent->bIsCrouching && Opponent->StandingPushBoxHeight > Position.Y + AirPushboxVerticalOffset)) //check if pushboxes intersect
+						{
+							if (Opponent->bTouchingWall)
+							{
+								if (Opponent->bFacingRight)
+									Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								else
+									Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							}
+							else if (bTouchingWall)
+							{
+								if (Opponent->bFacingRight)
+									Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								else
+									Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							}
+							else if (Position.X < Opponent->Position.X)
+							{
+								Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+								if (Position.X <= -10 + .5f * PushboxWidth)
+								{
+									bTouchingWall = true;
+									Velocity.X = 0;
+									Position.X = -10 + .5f * PushboxWidth;
+									Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								}
+							}
+							else if (Position.X > Opponent->Position.X)
+							{
+								Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+								if (Position.X >= 10 - .5f * PushboxWidth)
+								{
+									bTouchingWall = true;
+									Velocity.X = 0;
+									Position.X = 10 - .5f * PushboxWidth;
+									Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								}
+							}
+							else
+							{
+								if (bFacingRight)
+								{
+									Position.X = Opponent->Position.X + .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									Opponent->Position.X -= .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+									if (Position.X >= 10 - .5f * PushboxWidth)
+									{
+										bTouchingWall = true;
+										Velocity.X = 0;
+										Position.X = 10 - .5f * PushboxWidth;
+										Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									}
+									else if (Opponent->Position.X <= -10 + .5f * PushboxWidth)
+									{
+										Opponent->bTouchingWall = true;
+										Opponent->Velocity.X = 0;
+										Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
+										Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									}
+
+								}
+								else
+								{
+									Position.X = Opponent->Position.X - .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									Opponent->Position.X += .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+									if (Position.X <= -10 + .5f * PushboxWidth)
+									{
+										bTouchingWall = true;
+										Velocity.X = 0;
+										Position.X = -10 + .5f * PushboxWidth;
+										Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									}
+									else if (Opponent->Position.X >= 10 - .5f * Opponent->PushboxWidth)
+									{
+										Opponent->bTouchingWall = true;
+										Opponent->Velocity.X = 0;
+										Opponent->Position.X = 10 - .5f * Opponent->PushboxWidth;
+										Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									}
+								}
+							}
+							bTouchingOpponent = true;
+							Opponent->bTouchingOpponent = true;
+						}
+					}
+					else //if both characters are in the air
+					{
+						if ((Opponent->Position.Y < Position.Y &&
+							(Position.Y + AirPushboxVerticalOffset) - (Opponent->Position.Y + Opponent->AirPushboxVerticalOffset) <= Opponent->CrouchingPushBoxHeight) ||
+							(Opponent->Position.Y > Position.Y &&
+								(Opponent->Position.Y + Opponent->AirPushboxVerticalOffset) - (Position.Y + AirPushboxVerticalOffset) <= CrouchingPushBoxHeight) ||
+							Position.Y + AirPushboxVerticalOffset == Opponent->Position.Y + Opponent->AirPushboxVerticalOffset)
+						{
+							if (bTouchingWall)
+							{
+								if (bFacingRight)
+									Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								else
+									Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							}
+							else if (Opponent->bTouchingWall)
+							{
+								if (Opponent->bFacingRight)
+									Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								else
+									Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							}
+							else if (Opponent->Position.X > Position.X)
+							{
+								float CenterPoint = .5f * (Position.X + Opponent->Position.X);
+								Opponent->Position.X = CenterPoint + .5f * (Opponent->PushboxWidth);
+								Position.X = CenterPoint - .5f * (PushboxWidth);
 
 								if (Opponent->Position.X >= 10 - .5f * Opponent->PushboxWidth)
 								{
@@ -510,12 +682,12 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 									Position.X = -10 + .5f * PushboxWidth;
 									Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 								}
-
 							}
-							else
+							else if (Opponent->Position.X < Position.X)
 							{
-								Opponent->Position.X = Position.X - .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								Position.X += .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								float CenterPoint = .5f * (Position.X + Opponent->Position.X);
+								Opponent->Position.X = CenterPoint - .5f * (Opponent->PushboxWidth);
+								Position.X = CenterPoint + .5f * (PushboxWidth);
 
 								if (Opponent->Position.X <= -10 + .5f * Opponent->PushboxWidth)
 								{
@@ -528,115 +700,20 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 								{
 									bTouchingWall = true;
 									Velocity.X = 0;
-									Position.X = -10 + .5f * PushboxWidth;
+									Position.X = 10 - .5f * PushboxWidth;
 									Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 								}
 							}
+							bTouchingOpponent = true;
+							Opponent->bTouchingOpponent = true;
 						}
-						bTouchingOpponent = true;
-						Opponent->bTouchingOpponent = true;
 					}
 				}
-				else if (bIsAirborne && !Opponent->bIsAirborne && Velocity.Y < 0)
+				else
 				{
-					if ((Opponent->bIsCrouching && Opponent->CrouchingPushBoxHeight > Position.Y + AirPushboxVerticalOffset) ||
-						(!Opponent->bIsCrouching && Opponent->StandingPushBoxHeight > Position.Y + AirPushboxVerticalOffset)) //check if pushboxes intersect
-					{
-						if (Opponent->bTouchingWall)
-						{
-							if (Opponent->bFacingRight)
-								Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-							else
-								Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-						}
-						else if (bTouchingWall)
-						{
-							if (Opponent->bFacingRight)
-								Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-							else
-								Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-						}
-						else if (Position.X < Opponent->Position.X)
-						{
-							Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-							if (Position.X <= -10 + .5f * PushboxWidth)
-							{
-								bTouchingWall = true;
-								Velocity.X = 0;
-								Position.X = -10 + .5f * PushboxWidth;
-								Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-							}
-						}
-						else if (Position.X > Opponent->Position.X)
-						{
-							Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-							if (Position.X >= 10 - .5f * PushboxWidth)
-							{
-								bTouchingWall = true;
-								Velocity.X = 0;
-								Position.X = 10 - .5f * PushboxWidth;
-								Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-							}
-						}
-						else
-						{
-							if (bFacingRight)
-							{
-								Position.X = Opponent->Position.X + .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								Opponent->Position.X -= .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-								if (Position.X >= 10 - .5f * PushboxWidth)
-								{
-									bTouchingWall = true;
-									Velocity.X = 0;
-									Position.X = 10 - .5f * PushboxWidth;
-									Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								}
-								else if (Opponent->Position.X <= -10 + .5f * PushboxWidth)
-								{
-									Opponent->bTouchingWall = true;
-									Opponent->Velocity.X = 0;
-									Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
-									Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								}
-
-							}
-							else
-							{
-								Position.X = Opponent->Position.X - .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								Opponent->Position.X += .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-								if (Position.X <= -10 + .5f * PushboxWidth)
-								{
-									bTouchingWall = true;
-									Velocity.X = 0;
-									Position.X = -10 + .5f * PushboxWidth;
-									Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								}
-								else if (Opponent->Position.X >= 10 - .5f * Opponent->PushboxWidth)
-								{
-									Opponent->bTouchingWall = true;
-									Opponent->Velocity.X = 0;
-									Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
-									Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								}
-							}
-						}
-						bTouchingOpponent = true;
-						Opponent->bTouchingOpponent = true;
-					}
+					bTouchingOpponent = false;
+					Opponent->bTouchingOpponent = false;
 				}
-				else //if (FMath::Abs() <= .5f * Opponent->CrouchingPushBoxHeight + .5f * CrouchingPushBoxHeight)
-				{
-
-				}
-			}
-			else
-			{
-				bTouchingOpponent = false;
-				Opponent->bTouchingOpponent = false;
 			}
 		}
 	}
