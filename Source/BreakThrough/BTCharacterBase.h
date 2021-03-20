@@ -434,6 +434,8 @@ private:
 	void HitWall();
 
 	void Guarding();
+
+	void LandingLagCheck();
 };
 
 /* 
@@ -453,7 +455,10 @@ private:
 
  P1->PushboxSolver();
 
+ GameState->Timers and stuff, increment frame number
+
  P1->DrawCharacter();
  P2->DrawCharacter();
- GameState->Timers and stuff, update UI, update camera position
+
+ update UI, update camera position
 */
