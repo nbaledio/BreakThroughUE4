@@ -201,9 +201,15 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime);
 
+	virtual void HitDetection();
+
 	virtual void UpdateCharacter();
 
-	virtual void HitDetection();
+	void VelocitySolver(); //only called once by gamestate, do not call for each character
+
+	virtual void UpdatePosition();
+
+	void PushboxSolver(); //only called once by gamestate, do not call for each character
 
 	virtual void DrawCharacter();
 
@@ -311,7 +317,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float RunAcceleration = .2f; //set RunAcceleration to zero to disable run/dash
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float MaxRunSpeed = 2; //set MaxRunSpeed to zero to enable dash type
+		float InitRunSpeed = 2; //set InitRunSpeed to zero to enable dash type
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float BlitzDashForce = 2;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
@@ -417,7 +423,7 @@ private:
 	//Take in information from CurrentAnimFrame
 	void ProcessAnimationFrame();
 
-	void EnterNewAnimation(TArray<FAnimationFrame> Animation, int32 FrameNumber = 0);
+	bool EnterNewAnimation(TArray<FAnimationFrame> Animation, int32 FrameNumber = 0);
 
 	void TurnAroundCheck();
 
@@ -428,17 +434,22 @@ private:
 	void HitWall();
 
 	void Guarding();
-
-	void PushboxSolver(); //only called once by gamestate, do not call for each character
 };
 
 /* 
  Basic Gamestate Tick:
  P1->HitDetection();
- p2->HitDetection(); //possible to change animations from here
+ P2->HitDetection(); //possible to change animations and other information pertaining to hit state
 
- P1->UpdateCharacter(); //process inputs, transition to new animation if required and process new animation data at start of update
+ //record inputs and store in queue, process inputs based on values that may have been affected by HitDetection, 
+ //transition to new animation if required and process new animation data, initial velocity changes
+ P1->UpdateCharacter();
  P2->UpdateCharacter();
+
+ P1->VelocitySolver();
+
+ P1->UpdateCharacter(); //make changes to independent data based on changes to info that may have been changed from the above functions
+ P2->UpdateCharacter(); //DO NOT CHANGE ANY INFO THAT THE OTHER CHARACTER NEEDS TO READ IN THEIR UPDATE
 
  P1->PushboxSolver();
 

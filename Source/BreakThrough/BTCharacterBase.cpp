@@ -28,12 +28,84 @@ void ABTCharacterBase::Tick(float DeltaTime)
 
 }
 
+void ABTCharacterBase::HitDetection()
+{
+	//HitDetection is done at the beginning of every frame, hit detection can also cause animation transitions
+	/* Check inputs and add them to InputQueue	
+	if (HitStop == 0)
+	{
+		Process inputs from n frames ago (n = frame delay), will need to update/look at AvailableActions
+		Checking PosePlayTime < PlayDuration, Changing Animations, and Anim Transitions
+		ProcessAnimationFrame();
+	} */
+}
+
 void ABTCharacterBase::UpdateCharacter()
 {
-	//Check and Process inputs
-	//Checking PosePlayTime < PlayDuration, Changing Animations, and Anim Transitions
-	//ProcessAnimationFrame();
-	
+	if (LandingLag > 0) //landing lag system
+	{
+		if (LandingLag > 4)
+		{
+			bCounterHitState = true;
+			bIsCrouching = true;
+
+			if (AvailableActions & AcceptBlitz)
+				AvailableActions = AcceptBlitz + AcceptSuper;
+			else
+				AvailableActions = None;
+		}
+		else //universal four frames of recovery upon landing on feet that only restricts movement
+		{
+			bCounterHitState = false;
+			AvailableActions = AcceptAll - (AcceptMove + AcceptJump);
+		}
+
+		if (!bIsAirborne)
+		{
+			LandingLag--;
+		}
+	}
+}
+
+void ABTCharacterBase::VelocitySolver()
+{
+	if (Opponent != NULL)
+	{
+		if (bTouchingOpponent)
+		{
+			if (bIsRunning && Opponent->bIsRunning)
+			{
+				if (FMath::Abs(Velocity.X) > FMath::Abs(Opponent->Velocity.X))
+				{
+					if (bFacingRight)
+						Velocity.X = FMath::Abs(Velocity.X) - FMath::Abs(Opponent->Velocity.X);
+					else
+						Velocity.X = -(FMath::Abs(Velocity.X) - FMath::Abs(Opponent->Velocity.X));
+				}
+				else if (FMath::Abs(Velocity.X) < FMath::Abs(Opponent->Velocity.X))
+				{
+					if (bFacingRight)
+						Velocity.X = -(FMath::Abs(Opponent->Velocity.X) - FMath::Abs(Velocity.X));
+					else
+						Velocity.X = (FMath::Abs(Opponent->Velocity.X) - FMath::Abs(Velocity.X));
+				}
+				else
+				{
+					Velocity.X = 0;
+				}
+			}
+			else if (bIsRunning) //opponent provides resistance when dashing against them
+				Velocity.X *= .85f;
+			else if ((bFacingRight && Velocity.X > 0 && Opponent->Velocity.X < 0) || (!bFacingRight && Velocity.X < 0 && Opponent->Velocity.X > 0))
+				Velocity.X = 0;
+
+			Opponent->Velocity.X = Velocity.X;
+		}
+	}
+}
+
+void ABTCharacterBase::UpdatePosition()
+{
 	if (HitStop == 0)
 	{
 		if (KnockBack != FVector2D(0, 0)) //apply any knockback
@@ -50,7 +122,8 @@ void ABTCharacterBase::UpdateCharacter()
 
 		if (SlowMoTime % 2 == 0) //animation speed is halved and stun values decrease at half speed while in slow motion
 		{
-			PosePlayTime++;
+			if (ShatteredTime % 2 == 0)
+				PosePlayTime++;
 			if (HitStun > 0)
 				HitStun--;
 			if (BlockStun > 0)
@@ -76,54 +149,25 @@ void ABTCharacterBase::UpdateCharacter()
 		if (WallStickTime > 0)
 			WallStickTime--;
 
-		if (Opponent != NULL)
-		{
-			if (bTouchingOpponent)
-			{
-				if (bIsRunning && Opponent->bIsRunning)
-				{
-					if (FMath::Abs(Velocity.X) > FMath::Abs(Opponent->Velocity.X))
-					{
-						if (bFacingRight)
-							Velocity.X = FMath::Abs(Velocity.X) - FMath::Abs(Opponent->Velocity.X);
-						else
-							Velocity.X = -(FMath::Abs(Velocity.X) - FMath::Abs(Opponent->Velocity.X));
-					}
-					else
-					{
-						Velocity.X = 0;
-					}
-				}
-				else if (bIsRunning) //opponent provides resistance when dashing against them
-					Velocity.X *= .85f;
-				else if ((bFacingRight && Velocity.X > 0 && Opponent->Velocity.X < 0) || (!bFacingRight && Velocity.X < 0 && Opponent->Velocity.X > 0))
-					Velocity.X = 0;
-			}
-		}
-
 		if (SlowMoTime > 0)
 			Position += Velocity * 100 / 120.f;
 		else
 			Position += Velocity * 100 / 60.f;
+
+		SurfaceContact();
+
+		if (GravDefyTime > 0)
+			GravDefyTime--;
 	}
 	else if (HitStop > 0)
 	{
 		HitStop--;
 	}
 
-	if (GravDefyTime > 0)
-		GravDefyTime--;
 	if (ShatteredTime > 0)
 		ShatteredTime--;
 	if (SlowMoTime > 0)
 		SlowMoTime--;
-
-	SurfaceContact();
-}
-
-void ABTCharacterBase::HitDetection()
-{
-
 }
 
 void ABTCharacterBase::DrawCharacter()
@@ -184,18 +228,23 @@ void ABTCharacterBase::ProcessAnimationFrame()
 	}
 }
 
-void ABTCharacterBase::EnterNewAnimation(TArray<FAnimationFrame> Animation, int32 FrameNumber)
+bool ABTCharacterBase::EnterNewAnimation(TArray<FAnimationFrame> Animation, int32 FrameNumber)
 {
 	//check if the specified animation and frame exist
 	if (Animation.Num() > FrameNumber)
 	{
 		if (Animation[FrameNumber].Pose != NULL)
 		{
-			PosePlayTime = 0; // reset pose play time to make sure new frame is shown for the correct amount of time
+			PosePlayTime = 0; // reset pose play time to make sure new frame is played for the correct amount of time
 			CurrentAnimation = &Animation;
 			CurrentAnimFrame = &Animation[FrameNumber];
+			return true;
 		}
+		else
+			return false;
 	}
+	else
+		return false;
 }
 
 void ABTCharacterBase::TurnAroundCheck()
@@ -234,30 +283,6 @@ void ABTCharacterBase::TriggerTurnAround()
 
 void ABTCharacterBase::SurfaceContact()
 {
-	if (LandingLag > 0) //landing lag system
-	{
-		if (LandingLag > 4)
-		{
-			bCounterHitState = true;
-			bIsCrouching = true;
-
-			if (AvailableActions & AcceptBlitz)
-				AvailableActions = AcceptBlitz + AcceptSuper;
-			else
-				AvailableActions = None;
-		}
-		else //universal four frames of recovery upon landing on feet that only restricts movement
-		{
-			bCounterHitState = false;
-			AvailableActions = AcceptAll - (AcceptMove + AcceptJump);
-		}
-
-		if (!bIsAirborne)
-		{
-			LandingLag--;
-		}
-	}
-
 	if (bIsAirborne && Position.Y <= 0 && Velocity.Y <= 0 && CurrentAnimFrame != NULL) //landing on the ground
 	{
 		Position.Y = 0;
