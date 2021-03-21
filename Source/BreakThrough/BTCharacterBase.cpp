@@ -7,7 +7,7 @@
 ABTCharacterBase::ABTCharacterBase()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = true; //false; most likely will update this actor from gamestate
 
 	Transform = CreateDefaultSubobject<USceneComponent>(TEXT("Transform"));
 	RootComponent = Transform;
@@ -31,7 +31,7 @@ void ABTCharacterBase::Tick(float DeltaTime)
 void ABTCharacterBase::HitDetection()
 {
 	//HitDetection is done at the beginning of every frame, hit detection can also cause animation transitions
-	//if (!Opponent->bIsAirborne || (Opponent->bIsAirborne && Position.Y + Velocity.Y * 100 / 60.f <= 0)) 
+	//if (!Opponent->bIsAirborne || (Opponent->HitStun == 0 && Opponent->bIsAirborne && Position.Y + Velocity.Y * 100 / 60.f <= 0)) 
 	//If the opponent would be on the ground on the next frame, treat them as if they were hit while on the ground
 }
 
@@ -44,9 +44,31 @@ void ABTCharacterBase::UpdateCharacter()
 		/* Process inputs from n frames ago (n = frame delay), will need to update/look at AvailableActions
 		Checking PosePlayTime < PlayDuration, Changing Animations, and Anim Transitions
 		Guarding();
+		if (Dir6 < InputTime - 1) //stop running if forward direction is no longer being held for run type characters
+			{
+				bIsRunning = false;
+			}
 		AnimationStateMachine();
 		 */
+
 		ProcessAnimationFrame();
+		RunBraking();
+		GravityCalculation();
+
+		if (KnockBack != FVector2D(0, 0)) //apply any knockback
+		{
+			if (KnockBack.Y > 0)
+				Velocity = FVector2D(KnockBack.X, ComboGravity * KnockBack.Y);
+			else
+				Velocity = FVector2D(KnockBack.X, KnockBack.Y);
+
+			if (bFacingRight)
+			{
+				Velocity *= FVector2D(-1, 1);
+			}
+
+			KnockBack = FVector2D(0, 0);
+		}
 
 		if (Opponent != NULL) //Keeps game from freezing or slowing down if both characters super flash on the exact same frame, Player 1 Anim will play first
 		{
@@ -87,30 +109,22 @@ void ABTCharacterBase::VelocitySolver()
 			}
 			else if (bIsRunning) //opponent provides resistance when dashing against them
 				Velocity.X *= .85f;
-			else if ((bFacingRight && Velocity.X > 0 && Opponent->Velocity.X < 0) || (!bFacingRight && Velocity.X < 0 && Opponent->Velocity.X > 0))
+			else if (Opponent->bIsRunning) //provide resistance against dashing opponent
+				Opponent->Velocity.X *= .85f;
+			else if ((bFacingRight && Velocity.X > 0 && Opponent->Velocity.X < 0) || (!bFacingRight && Velocity.X < 0 && Opponent->Velocity.X > 0) && 
+				AvailableActions & AcceptMove && Opponent->AvailableActions & AcceptMove) //both characters stop moving if walking against each other
+			{
 				Velocity.X = 0;
-
-			Opponent->Velocity.X = Velocity.X;
+				Opponent->Velocity.X = Velocity.X;
+			}	
 		}
 	}
 }
 
-void ABTCharacterBase::UpdatePosition()
+void ABTCharacterBase::UpdatePosition() //update character's location based on velocity and decrement certain timed values
 {
 	if (HitStop == 0)
 	{
-		if (KnockBack != FVector2D(0, 0)) //apply any knockback
-		{
-			Velocity = FVector2D(Weight * KnockBack.X, Weight * ComboGravity * KnockBack.Y);
-
-			if (bFacingRight)
-			{
-				Velocity *= FVector2D(-1, 1);
-			}
-
-			KnockBack = FVector2D(0, 0);
-		}
-
 		if (SlowMoTime % 2 == 0) //animation speed is halved and stun values decrease at half speed while in slow motion
 		{
 			if (ShatteredTime % 2 == 0)
@@ -120,22 +134,6 @@ void ABTCharacterBase::UpdatePosition()
 			if (BlockStun > 0)
 				BlockStun--;
 		}
-
-		if (bIsAirborne && GravDefyTime == 0) //apply gravity while character is airborne and not defying gravity
-		{
-			float GravCalc = -10.f / 60.f; // GravityScale * -10.f / 60.f;
-
-			if (ShatteredTime > 0)
-				GravCalc *= .8f;
-			if (WallStickTime > 0)
-				GravCalc *= .25f;
-			if (SlowMoTime > 0)
-				GravCalc *= .5f;
-
-			Velocity.Y += GravCalc;
-		}
-		if (!bIsAirborne && Velocity.Y > 0)
-			bIsAirborne = true;
 
 		if (WallStickTime > 0)
 			WallStickTime--;
@@ -195,11 +193,10 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 							{
 								Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 
-								if (Opponent->Position.X >= 10 - .5f * Opponent->PushboxWidth)
+								if (Opponent->Position.X >= 1000 - .5f * Opponent->PushboxWidth)
 								{
-									Opponent->bTouchingWall = true;
-									Opponent->Velocity.X = 0;
-									Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
+									Opponent->HitWall();
+									Opponent->Position.X = -1000 + .5f * Opponent->PushboxWidth;
 									Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									Velocity.X = 0;
 								}
@@ -208,11 +205,10 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 							{
 								Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 
-								if (Opponent->Position.X <= -10 + .5f * Opponent->PushboxWidth)
+								if (Opponent->Position.X <= -1000 + .5f * Opponent->PushboxWidth)
 								{
-									Opponent->bTouchingWall = true;
-									Opponent->Velocity.X = 0;
-									Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
+									Opponent->HitWall();
+									Opponent->Position.X = -1000 + .5f * Opponent->PushboxWidth;
 									Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									Velocity.X = 0;
 								}
@@ -225,11 +221,10 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 							{
 								Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 
-								if (Position.X <= -10 + .5f * PushboxWidth)
+								if (Position.X <= -1000 + .5f * PushboxWidth)
 								{
-									bTouchingWall = true;
-									Velocity.X = 0;
-									Position.X = -10 + .5f * PushboxWidth;
+									HitWall();
+									Position.X = -1000 + .5f * PushboxWidth;
 									Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									Opponent->Velocity.X = 0;
 								}
@@ -238,11 +233,10 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 							{
 								Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 
-								if (Position.X >= 10 - .5f * PushboxWidth)
+								if (Position.X >= 1000 - .5f * PushboxWidth)
 								{
-									bTouchingWall = true;
-									Velocity.X = 0;
-									Position.X = 10 - .5f * PushboxWidth;
+									HitWall();
+									Position.X = 1000 - .5f * PushboxWidth;
 									Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									Opponent->Velocity.X = 0;
 								}
@@ -289,11 +283,10 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 							{
 								Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 
-								if (Opponent->Position.X <= -10 + .5f * Opponent->PushboxWidth)
+								if (Opponent->Position.X <= -1000 + .5f * Opponent->PushboxWidth)
 								{
-									Opponent->bTouchingWall = true;
-									Opponent->Velocity.X = 0;
-									Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
+									Opponent->HitWall();
+									Opponent->Position.X = -1000 + .5f * Opponent->PushboxWidth;
 									Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 								}
 							}
@@ -301,11 +294,10 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 							{
 								Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 
-								if (Opponent->Position.X >= 10 - .5f * Opponent->PushboxWidth)
+								if (Opponent->Position.X >= 1000 - .5f * Opponent->PushboxWidth)
 								{
-									Opponent->bTouchingWall = true;
-									Opponent->Velocity.X = 0;
-									Opponent->Position.X = 10 - .5f * Opponent->PushboxWidth;
+									Opponent->HitWall();
+									Opponent->Position.X = 1000 - .5f * Opponent->PushboxWidth;
 									Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 								}
 							}
@@ -316,18 +308,16 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 									Opponent->Position.X = Position.X + .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									Position.X -= .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 
-									if (Opponent->Position.X >= 10 - .5f * Opponent->PushboxWidth)
+									if (Opponent->Position.X >= 1000 - .5f * Opponent->PushboxWidth)
 									{
-										Opponent->bTouchingWall = true;
-										Opponent->Velocity.X = 0;
-										Opponent->Position.X = 10 - .5f * Opponent->PushboxWidth;
+										Opponent->HitWall();
+										Opponent->Position.X = 1000 - .5f * Opponent->PushboxWidth;
 										Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									}
-									else if (Position.X <= -10 + .5f * PushboxWidth)
+									else if (Position.X <= -1000 + .5f * PushboxWidth)
 									{
-										bTouchingWall = true;
-										Velocity.X = 0;
-										Position.X = -10 + .5f * PushboxWidth;
+										HitWall();
+										Position.X = -1000 + .5f * PushboxWidth;
 										Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									}
 
@@ -337,18 +327,16 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 									Opponent->Position.X = Position.X - .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									Position.X += .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 
-									if (Opponent->Position.X <= -10 + .5f * Opponent->PushboxWidth)
+									if (Opponent->Position.X <= -1000 + .5f * Opponent->PushboxWidth)
 									{
-										Opponent->bTouchingWall = true;
-										Opponent->Velocity.X = 0;
-										Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
+										Opponent->HitWall();
+										Opponent->Position.X = -1000 + .5f * Opponent->PushboxWidth;
 										Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									}
-									else if (Position.X >= 10 - .5f * PushboxWidth)
+									else if (Position.X >= 1000 - .5f * PushboxWidth)
 									{
-										bTouchingWall = true;
-										Velocity.X = 0;
-										Position.X = 10 - .5f * PushboxWidth;
+										HitWall();
+										Position.X = 1000 - .5f * PushboxWidth;
 										Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									}
 								}
@@ -380,11 +368,10 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 							{
 								Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 
-								if (Position.X <= -10 + .5f * PushboxWidth)
+								if (Position.X <= -1000 + .5f * PushboxWidth)
 								{
-									bTouchingWall = true;
-									Velocity.X = 0;
-									Position.X = -10 + .5f * PushboxWidth;
+									HitWall();
+									Position.X = -1000 + .5f * PushboxWidth;
 									Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 								}
 							}
@@ -392,11 +379,10 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 							{
 								Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 
-								if (Position.X >= 10 - .5f * PushboxWidth)
+								if (Position.X >= 1000 - .5f * PushboxWidth)
 								{
-									bTouchingWall = true;
-									Velocity.X = 0;
-									Position.X = 10 - .5f * PushboxWidth;
+									HitWall();
+									Position.X = 1000 - .5f * PushboxWidth;
 									Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 								}
 							}
@@ -407,18 +393,16 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 									Position.X = Opponent->Position.X + .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									Opponent->Position.X -= .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 
-									if (Position.X >= 10 - .5f * PushboxWidth)
+									if (Position.X >= 1000 - .5f * PushboxWidth)
 									{
-										bTouchingWall = true;
-										Velocity.X = 0;
-										Position.X = 10 - .5f * PushboxWidth;
+										HitWall();
+										Position.X = 1000 - .5f * PushboxWidth;
 										Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									}
-									else if (Opponent->Position.X <= -10 + .5f * PushboxWidth)
+									else if (Opponent->Position.X <= -1000 + .5f * PushboxWidth)
 									{
-										Opponent->bTouchingWall = true;
-										Opponent->Velocity.X = 0;
-										Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
+										Opponent->HitWall();
+										Opponent->Position.X = -1000 + .5f * Opponent->PushboxWidth;
 										Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									}
 
@@ -428,18 +412,16 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 									Position.X = Opponent->Position.X - .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									Opponent->Position.X += .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 
-									if (Position.X <= -10 + .5f * PushboxWidth)
+									if (Position.X <= -1000 + .5f * PushboxWidth)
 									{
-										bTouchingWall = true;
-										Velocity.X = 0;
-										Position.X = -10 + .5f * PushboxWidth;
+										HitWall();
+										Position.X = -1000 + .5f * PushboxWidth;
 										Opponent->Position.X = Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									}
-									else if (Opponent->Position.X >= 10 - .5f * Opponent->PushboxWidth)
+									else if (Opponent->Position.X >= 1000 - .5f * Opponent->PushboxWidth)
 									{
-										Opponent->bTouchingWall = true;
-										Opponent->Velocity.X = 0;
-										Opponent->Position.X = 10 - .5f * Opponent->PushboxWidth;
+										Opponent->HitWall();
+										Opponent->Position.X = 1000 - .5f * Opponent->PushboxWidth;
 										Position.X = Opponent->Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 									}
 								}
@@ -450,6 +432,7 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 					}
 					else //if both characters are in the air
 					{
+						// Check pushbox intersection
 						if ((Opponent->Position.Y < Position.Y &&
 							(Position.Y + AirPushboxVerticalOffset) - (Opponent->Position.Y + Opponent->AirPushboxVerticalOffset) <= Opponent->CrouchingPushBoxHeight) ||
 							(Opponent->Position.Y > Position.Y &&
@@ -476,18 +459,16 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 								Opponent->Position.X = CenterPoint + .5f * (Opponent->PushboxWidth);
 								Position.X = CenterPoint - .5f * (PushboxWidth);
 
-								if (Opponent->Position.X >= 10 - .5f * Opponent->PushboxWidth)
+								if (Opponent->Position.X >= 1000 - .5f * Opponent->PushboxWidth)
 								{
-									Opponent->bTouchingWall = true;
-									Opponent->Velocity.X = 0;
-									Opponent->Position.X = 10 - .5f * Opponent->PushboxWidth;
+									Opponent->HitWall();
+									Opponent->Position.X = 1000 - .5f * Opponent->PushboxWidth;
 									Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 								}
-								else if (Position.X <= -10 + .5f * PushboxWidth)
+								else if (Position.X <= -1000 + .5f * PushboxWidth)
 								{
-									bTouchingWall = true;
-									Velocity.X = 0;
-									Position.X = -10 + .5f * PushboxWidth;
+									HitWall();
+									Position.X = -1000 + .5f * PushboxWidth;
 									Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 								}
 							}
@@ -497,18 +478,16 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 								Opponent->Position.X = CenterPoint - .5f * (Opponent->PushboxWidth);
 								Position.X = CenterPoint + .5f * (PushboxWidth);
 
-								if (Opponent->Position.X <= -10 + .5f * Opponent->PushboxWidth)
+								if (Opponent->Position.X <= -1000 + .5f * Opponent->PushboxWidth)
 								{
-									Opponent->bTouchingWall = true;
-									Opponent->Velocity.X = 0;
-									Opponent->Position.X = -10 + .5f * Opponent->PushboxWidth;
+									Opponent->HitWall();
+									Opponent->Position.X = -1000 + .5f * Opponent->PushboxWidth;
 									Position.X = Opponent->Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 								}
-								else if (Position.X >= 10 - .5f * PushboxWidth)
+								else if (Position.X >= 1000 - .5f * PushboxWidth)
 								{
-									bTouchingWall = true;
-									Velocity.X = 0;
-									Position.X = 10 - .5f * PushboxWidth;
+									HitWall();
+									Position.X = 1000 - .5f * PushboxWidth;
 									Opponent->Position.X = Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 								}
 							}
@@ -565,6 +544,7 @@ void ABTCharacterBase::ProcessAnimationFrame()
 				if ((*CurrentHitbox)[0].bNewHit)
 					bAttackMadeContact = false;
 
+			//check if any of the frame's variables pertaining to velocity have stored values, add acceleration if any or halt velocity in certain axes if specified
 			if (CurrentAnimFrame->Acceleration != FVector2D(0, 0) || CurrentAnimFrame->bStopVelocityY || CurrentAnimFrame->bStopVelocityX)
 			{
 				if (bFacingRight)
@@ -644,10 +624,11 @@ void ABTCharacterBase::SurfaceContact()
 	{
 		Position.Y = 0;
 		//logic for setting character's state when they hit the ground (land on feet, knockdown, groundbounce)
-		if (CharacterHitState & GroundBounce)
+		if (CharacterHitState & CanGroundBounce)
 		{
 			//cause ground bounce and ground bounce animation
-			CharacterHitState -= GroundBounce;
+			EnterNewAnimation(GroundBounce);
+			CharacterHitState -= CanGroundBounce;
 		}
 		else
 		{
@@ -679,14 +660,14 @@ void ABTCharacterBase::SurfaceContact()
 	}
 	
 	//Check if hitting wall, 20 meters is the tentative stage length, subject to change
-	if (Position.X <= -10 + .5f * PushboxWidth)
+	if (Position.X <= -1000 + .5f * PushboxWidth)
 	{
-		Position.X = -10 + .5f * PushboxWidth;
+		Position.X = -1000 + .5f * PushboxWidth;
 		HitWall();
 	}
-	else if (Position.X >= 10 - .5f * PushboxWidth)
+	else if (Position.X >= 1000 - .5f * PushboxWidth)
 	{
-		Position.X = 10 - .5f * PushboxWidth;
+		Position.X = 1000 - .5f * PushboxWidth;
 		HitWall();
 	}
 	else
@@ -698,17 +679,19 @@ void ABTCharacterBase::SurfaceContact()
 void ABTCharacterBase::HitWall()
 {
 	bTouchingWall = true;
-	if (CharacterHitState & WallStick)
+	if (CharacterHitState & CanWallStick)
 	{
 		//cause wall stick
+		EnterNewAnimation(WallStick);
 		WallStickTime = 30;
 		CharacterHitState = None;
 		//minimum Position.Y
 	}
-	else if (CharacterHitState & WallBounce)
+	else if (CharacterHitState & CanWallBounce)
 	{
 		//cause wall bounce and wall bounce animation
-		CharacterHitState -= WallBounce;
+		EnterNewAnimation(WallBounce);
+		CharacterHitState -= CanWallBounce;
 		//reverse Velocity.X and minimum Velocity.X
 		//minimum Velocity.Y
 		return;
@@ -731,6 +714,10 @@ void ABTCharacterBase::Guarding()
 		{
 			//holding a backward direction while able to guard keeps the character's guard up
 			bIsGuarding = true;
+		}
+		else
+		{
+			bIsGuarding = false;
 		}
 	}
 }
@@ -762,3 +749,63 @@ void ABTCharacterBase::LandingLagCheck()
 	}
 }
 
+void ABTCharacterBase::RunBraking()
+{
+	if (bIsRunning) //accelerate while running
+	{
+		if (bFacingRight)
+		{
+			if (Velocity.X < InitRunSpeed)
+				Velocity.X = InitRunSpeed;
+			else
+			{
+				if (SlowMoTime > 0)
+					Velocity.X += .5f * RunAcceleration;
+				else
+					Velocity.X += RunAcceleration;
+			}
+
+		}
+		else
+		{
+			if (Velocity.X > -InitRunSpeed)
+				Velocity.X = -InitRunSpeed;
+			else
+			{
+				if (SlowMoTime > 0)
+					Velocity.X -= .5f * RunAcceleration;
+				else
+					Velocity.X -= RunAcceleration;
+			}
+		}
+	}
+	else if (!(AvailableActions & AcceptMove) && !bIsRunning && !bIsAirborne) //braking/friction to slow down character when not voluntarily accelerating
+	{
+		if (FMath::Abs(Velocity.X) > 1.f) // 1 is not necessarily the final value, just for testing
+			Velocity.X *= .95f;//test values once more things are put in place
+		else
+		{
+			Velocity.X = 0;
+			AvailableActions |= AcceptMove; //remove after testing
+		}
+	}
+}
+
+void ABTCharacterBase::GravityCalculation()
+{
+	if (bIsAirborne && GravDefyTime == 0) //apply gravity while character is airborne and not defying gravity
+	{
+		float GravCalc = Weight * -10.f / 60.f;
+
+		if (ShatteredTime > 0)
+			GravCalc *= .8f;
+		if (WallStickTime > 0)
+			GravCalc *= .25f;
+		if (SlowMoTime > 0)
+			GravCalc *= .5f;
+
+		Velocity.Y += GravCalc;
+	}
+	if (!bIsAirborne && Velocity.Y > 0)
+		bIsAirborne = true;
+}

@@ -163,7 +163,7 @@ void ACharacterBase::Tick(float DeltaTime)
 			if (Velocity.X < WalkSpeed)
 				Velocity.X = WalkSpeed;
 
-			Velocity.X += RunAcceleration; ///60.f;
+			Velocity.X += RunAcceleration;
 
 			Velocity.X = FMath::Min(Velocity.X, MaxRunSpeed);
 		}
