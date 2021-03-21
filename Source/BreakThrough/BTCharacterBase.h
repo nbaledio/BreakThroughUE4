@@ -56,9 +56,9 @@ enum CharacterActions
 
 enum AttackProperties
 {
-	GroundBounce = (1 << 0), //can be bounced against the ground
-	WallBounce = (1 << 1), //can be bounced off of walls
-	WallStick = (1 << 2), //can be stuck against walls
+	CanGroundBounce = (1 << 0), //can be bounced against the ground
+	CanWallBounce = (1 << 1), //can be bounced off of walls
+	CanWallStick = (1 << 2), //can be stuck against walls
 	Sweep = (1 << 3), //sweep: hitstun does not decrement until in fallingforward animation
 	Launch = (1 << 4), //launch: no special properties, purely aesthetic
 	Stagger = (1 << 5), //stagger: can still be thrown despite being a hitstun state, need to hold button to recover back to standing position once hitstun ends
@@ -292,15 +292,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 		bool bTouchingOpponent = false;
 
-	/* A flat knockback scale that is applied to all knockback applied to the character (See below for values per weight class)
-		Featherweight = 1.05 
-		Lightweight = 1.02
+	/* Affects how quickly the character falls to the ground (See below for values per weight class)
+		Featherweight = .95 
+		Lightweight = .98
 		Middleweight = 1
-		Heavyweight = .97  */
+		Heavyweight = 1.03  */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float Weight = 1;
-	/*UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float GravityScale = 1;*/
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float StandingPushBoxHeight = 1;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
@@ -315,9 +313,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float WalkBackSpeed = 1;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float RunAcceleration = .2f; //set RunAcceleration to zero to disable run/dash
+		float RunAcceleration = .2f; //set RunAcceleration to zero to enable dash type
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float InitRunSpeed = 2; //set InitRunSpeed to zero to enable dash type
+		float InitRunSpeed = 2; //set InitRunSpeed to zero to disable run/dash
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float BlitzDashForce = 2;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
@@ -391,6 +389,12 @@ protected:
 	//keeps track if an attack makes a hit, used for attacks that have a followup when they hit
 		bool bHitSuccess = false;
 
+	//Sets the corresponding vectors on character's materials
+		FVector MainLightVector;
+		FVector FillLightVector;
+		FVector MainLightColor;
+		FVector FillLightColor;
+
 	//Idle Stance Animations
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> TurnAroundCrouch;
@@ -400,6 +404,14 @@ protected:
 		TArray<FAnimationFrame> CrouchDown;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> StandUp;
+
+	//Hitstun Animations
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+		TArray<FAnimationFrame> WallStick;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+		TArray<FAnimationFrame> WallBounce;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+		TArray<FAnimationFrame> GroundBounce;
 
 	//Knockdown/WakeUp Animations
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
@@ -413,12 +425,6 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		USkeletalMeshComponent* BaseMesh;
-
-	//Sets the corresponding vectors on character's materials
-		FVector MainLightVector;
-		FVector FillLightVector;
-		FVector MainLightColor;
-		FVector FillLightColor;
 
 	//Take in information from CurrentAnimFrame
 	void ProcessAnimationFrame();
@@ -436,10 +442,15 @@ private:
 	void Guarding();
 
 	void LandingLagCheck();
+	
+	void RunBraking();
+
+	void GravityCalculation();
 };
 
 /* 
  Basic Gamestate Tick:
+
  P1->HitDetection();
  P2->HitDetection(); //possible to change animations and other information pertaining to hit state
 
@@ -448,14 +459,16 @@ private:
  P1->UpdateCharacter();
  P2->UpdateCharacter();
 
- P1->VelocitySolver();
+ P1->VelocitySolver(); // all velocity changes need to occur before this step
 
- P1->UpdateCharacter(); //make changes to independent data based on changes to info that may have been changed from the above functions
- P2->UpdateCharacter(); //DO NOT CHANGE ANY INFO THAT THE OTHER CHARACTER NEEDS TO READ IN THEIR UPDATE
+ P1->UpdatePosition(); //update character location based on the character's velocity and decrement various timed character state values
+ P2->UpdatePosition(); //DO NOT CHANGE ANY INFO THAT THE OTHER CHARACTER NEEDS TO READ IN THEIR UPDATE
 
  P1->PushboxSolver();
 
- GameState->Timers and stuff, increment frame number
+ GameState->Timer, round count, round wins, increment frame number, update camera transform drivers
+
+ All of the above is looped x times when a rollback needs to occur
 
  P1->DrawCharacter();
  P2->DrawCharacter();
