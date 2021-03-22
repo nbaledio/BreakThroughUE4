@@ -201,9 +201,11 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime);
 
+	void SuperFlashSolver();
+
 	virtual void HitDetection();
 
-	virtual void UpdateCharacter();
+	virtual void UpdateCharacter(int32 CurrentInputs);
 
 	void VelocitySolver(); //only called once by gamestate, do not call for each character
 
@@ -228,7 +230,7 @@ protected:
 	int32 AnimFrameIndex;
 	int32 PosePlayTime = 0;
 
-	TArray<int32> Inputs;
+	TArray<int32> InputHistory;
 	int32 Seals = 0;
 	int32 SealTimer = 0;
 
@@ -291,6 +293,8 @@ protected:
 		bool bTouchingWall = false;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 		bool bTouchingOpponent = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		int32 JustDefense = 5;
 
 	/* Affects how quickly the character falls to the ground (See below for values per weight class)
 		Featherweight = .95 
@@ -356,7 +360,19 @@ protected:
 		int32 DoubleDir6 = 0;
 		int32 DoubleDir4 = 0;
 		bool bAirJump = false;
+		bool Resolute; // Set to true when no inputs are held down
 
+		int32 Charge2 = 0;
+		int32 Charge4 = 0;
+		//int32 Charge5 = 0;
+		int32 Charge6 = 0;
+		int32 Charge8 = 0;
+
+		int32 Charge2Life = 0;
+		int32 Charge4Life = 0;
+		//int32 Charge5Life = 0;
+		int32 Charge6Life = 0;
+		int32 Charge8Life = 0;
 
 	// ints to denote active time on button inputs
 		int32 LPressed = 0;
@@ -446,10 +462,24 @@ private:
 	void RunBraking();
 
 	void GravityCalculation();
+
+	void ApplyKnockBack();
+
+	void ProcessInputs(int32 Inputs);
+
+	void ChargeInputs(int32 Inputs);
+
+	void DirectionalInputs(int32 Inputs);
+
+	void ButtonInputs(int32 Inputs);
+
+	void InputCountdown();
 };
 
 /* 
  Basic Gamestate Tick:
+
+ P1->SuperFlash();
 
  P1->HitDetection();
  P2->HitDetection(); //possible to change animations and other information pertaining to hit state
