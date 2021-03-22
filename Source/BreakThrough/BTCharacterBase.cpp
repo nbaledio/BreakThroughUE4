@@ -28,6 +28,21 @@ void ABTCharacterBase::Tick(float DeltaTime)
 
 }
 
+void ABTCharacterBase::SuperFlashSolver() //Only play once from Player1
+{
+	if (Opponent != NULL) //Keeps game from freezing or slowing down if both characters super flash on the exact same frame, Player 1 Anim will play first
+	{
+		if ((CurrentAnimFrame->bSuperFlash && Opponent->CurrentAnimFrame->bSuperFlash) || (CurrentAnimFrame->bSuperFlash))
+		{
+			Opponent->HitStop++;
+		}
+		else if (Opponent->CurrentAnimFrame->bSuperFlash)
+		{
+			HitStop++;
+		}
+	}
+}
+
 void ABTCharacterBase::HitDetection()
 {
 	//HitDetection is done at the beginning of every frame, hit detection can also cause animation transitions
@@ -35,13 +50,16 @@ void ABTCharacterBase::HitDetection()
 	//If the opponent would be on the ground on the next frame, treat them as if they were hit while on the ground
 }
 
-void ABTCharacterBase::UpdateCharacter()
+void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs)
 {
 	//Check inputs and add them to InputQueue
-	
+	//Process inputs from n frames ago (n = frame delay), 
+
+	ProcessInputs(CurrentInputs); //(Inputs[GameState->FrameCount - FrameDelay]);
+
 	if (HitStop == 0)
 	{
-		/* Process inputs from n frames ago (n = frame delay), will need to update/look at AvailableActions
+		/* will need to update/look at AvailableActions
 		Checking PosePlayTime < PlayDuration, Changing Animations, and Anim Transitions
 		Guarding();
 		if (Dir6 < InputTime - 1) //stop running if forward direction is no longer being held for run type characters
@@ -54,27 +72,7 @@ void ABTCharacterBase::UpdateCharacter()
 		ProcessAnimationFrame();
 		RunBraking();
 		GravityCalculation();
-
-		if (KnockBack != FVector2D(0, 0)) //apply any knockback
-		{
-			if (KnockBack.Y > 0)
-				Velocity = FVector2D(KnockBack.X, ComboGravity * KnockBack.Y);
-			else
-				Velocity = FVector2D(KnockBack.X, KnockBack.Y);
-
-			if (bFacingRight)
-			{
-				Velocity *= FVector2D(-1, 1);
-			}
-
-			KnockBack = FVector2D(0, 0);
-		}
-
-		if (Opponent != NULL) //Keeps game from freezing or slowing down if both characters super flash on the exact same frame, Player 1 Anim will play first
-		{
-			if (CurrentAnimFrame->bSuperFlash)
-				Opponent->HitStop++;
-		}
+		ApplyKnockBack();
 
 		LandingLagCheck();
 	}
@@ -157,6 +155,8 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 		ShatteredTime--;
 	if (SlowMoTime > 0)
 		SlowMoTime--;
+
+	InputCountdown();
 }
 
 void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick after updating characters, do not call on multiple characters
@@ -534,7 +534,10 @@ void ABTCharacterBase::ProcessAnimationFrame()
 			bArmorActive = CurrentAnimFrame->bArmorActive;
 			bCounterHitState = CurrentAnimFrame->bCounterHitState;
 
-			AvailableActions = CurrentAnimFrame->AvailableActions;
+			if (bAttackMadeContact)
+				AvailableActions |= CurrentAnimFrame->AvailableActions;
+			else
+				AvailableActions = CurrentAnimFrame->AvailableActions;
 
 			CurrentHitbox = &CurrentAnimFrame->Hitboxes;
 			CurrentUpperBody = &CurrentAnimFrame->HurtboxUpperBody;
@@ -714,10 +717,12 @@ void ABTCharacterBase::Guarding()
 		{
 			//holding a backward direction while able to guard keeps the character's guard up
 			bIsGuarding = true;
+			JustDefense--;
 		}
 		else
 		{
 			bIsGuarding = false;
+			JustDefense = 5;
 		}
 	}
 }
@@ -808,4 +813,176 @@ void ABTCharacterBase::GravityCalculation()
 	}
 	if (!bIsAirborne && Velocity.Y > 0)
 		bIsAirborne = true;
+}
+
+void ABTCharacterBase::ApplyKnockBack()
+{
+	if (KnockBack != FVector2D(0, 0)) //apply any knockback
+	{
+		if (KnockBack.Y > 0)
+			Velocity = FVector2D(KnockBack.X, ComboGravity * KnockBack.Y);
+		else
+			Velocity = FVector2D(KnockBack.X, KnockBack.Y);
+
+		if (bFacingRight)
+		{
+			Velocity *= FVector2D(-1, 1);
+		}
+
+		KnockBack = FVector2D(0, 0);
+	}
+}
+
+void ABTCharacterBase::ProcessInputs(int32 Inputs)
+{
+	ChargeInputs(Inputs);
+	DirectionalInputs(Inputs);
+	ButtonInputs(Inputs);
+}
+
+void ABTCharacterBase::ChargeInputs(int32 Inputs)
+{
+	if (Inputs & INPUT_DOWN)
+	{
+		Charge2++;
+		Charge2Life = InputTime;
+	}
+	else if (Charge2Life == 0)
+		Charge2 = 0;
+
+	if (Inputs & INPUT_UP)
+	{
+		Charge8++;
+		Charge8Life = InputTime;
+	}
+	else if (Charge8Life == 0)
+		Charge8 = 0;
+
+	if ((Inputs & INPUT_LEFT && !bFacingRight) || (Inputs & INPUT_RIGHT && bFacingRight))
+	{
+		Charge6++;
+		Charge6Life = InputTime;
+	}
+	else if (Charge6Life == 0)
+		Charge6 = 0;
+
+	if ((Inputs & INPUT_LEFT && bFacingRight) || (Inputs & INPUT_RIGHT && !bFacingRight))
+	{
+		Charge4++;
+		Charge4Life = InputTime;
+	}
+	else if (Charge4Life == 0)
+		Charge4 = 0;
+}
+
+void ABTCharacterBase::DirectionalInputs(int32 Inputs)
+{
+	if (Inputs & INPUT_DOWN)
+	{
+		if ((bFacingRight && Inputs & INPUT_RIGHT) || (!bFacingRight && Inputs & INPUT_LEFT))
+			Dir3 = InputTime;
+		else if ((!bFacingRight && Inputs & INPUT_RIGHT) || (bFacingRight && Inputs & INPUT_LEFT))
+			Dir1 = InputTime;
+		else
+			Dir2 = InputTime;
+	}
+	else if (Inputs & INPUT_UP)
+	{
+		if ((bFacingRight && Inputs & INPUT_RIGHT) || (!bFacingRight && Inputs & INPUT_LEFT))
+			Dir9 = InputTime;
+		else if ((!bFacingRight && Inputs & INPUT_RIGHT) || (bFacingRight && Inputs & INPUT_LEFT))
+			Dir7 = InputTime;
+		else
+			Dir8 = InputTime;
+	}
+	else if (Inputs & INPUT_RIGHT)
+	{
+		if (bFacingRight)
+			Dir6 = InputTime;
+		else
+			Dir4 = InputTime;
+	}
+	else if (Inputs & INPUT_LEFT)
+	{
+		if (bFacingRight)
+			Dir4 = InputTime;
+		else
+			Dir6 = InputTime;
+	}
+}
+
+void ABTCharacterBase::ButtonInputs(int32 Inputs)
+{
+	if (Inputs & INPUT_LIGHT && !bIsLDown) //Light Attack Button
+	{
+		LPressed = InputTime;
+		bIsLDown = true;
+	}
+	else if (!(Inputs & INPUT_LIGHT) && bIsLDown)
+	{
+		LReleased = InputTime;
+		bIsLDown = false;
+	}
+
+	if (Inputs & INPUT_MEDIUM && !bIsMDown) //Medium Attack Button
+	{
+		MPressed = InputTime;
+		bIsMDown = true;
+	}
+	else if (!(Inputs & INPUT_LIGHT) && bIsMDown)
+	{
+		MReleased = InputTime;
+		bIsMDown = false;
+	}
+
+	if (Inputs & INPUT_HEAVY && !bIsHDown) //Heavy Attack Button
+	{
+		HPressed = InputTime;
+		bIsHDown = true;
+	}
+	else if (!(Inputs & INPUT_HEAVY) && bIsHDown)
+	{
+		HReleased = InputTime;
+		bIsHDown = false;
+	}
+
+	if (Inputs & INPUT_BREAK && !bIsBDown) //Break Attack Button
+	{
+		BPressed = InputTime;
+		bIsBDown = true;
+	}
+	else if (!(Inputs & INPUT_BREAK) && bIsBDown)
+	{
+		BReleased = InputTime;
+		bIsBDown = false;
+	}
+}
+
+void ABTCharacterBase::InputCountdown()
+{
+	if (Charge2Life > 0)
+		Charge2Life--;
+	if (Charge4Life > 0)
+		Charge4Life--;
+	if (Charge6Life > 0)
+		Charge6Life--;
+	if (Charge8Life > 0)
+		Charge8Life--;
+
+	if (Dir1 > 0)
+		Dir1--;
+	if (Dir2 > 0)
+		Dir2--;
+	if (Dir3 > 0)
+		Dir3--;
+	if (Dir4 > 0)
+		Dir4--;
+	if (Dir6 > 0)
+		Dir6--;
+	if (Dir7 > 0)
+		Dir7--;
+	if (Dir8 > 0)
+		Dir8--;
+	if (Dir9 > 0)
+		Dir9--;
 }
