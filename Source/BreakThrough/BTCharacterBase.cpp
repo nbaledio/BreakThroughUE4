@@ -958,7 +958,7 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs)
 	}
 }
 
-void ABTCharacterBase::InputCountdown()
+void ABTCharacterBase::InputCountdown() //decrement input values
 {
 	if (Charge2Life > 0)
 		Charge2Life--;
@@ -985,4 +985,22 @@ void ABTCharacterBase::InputCountdown()
 		Dir8--;
 	if (Dir9 > 0)
 		Dir9--;
+
+	if (LPressed > 0)
+		LPressed--;
+	if (MPressed > 0)
+		MPressed--;
+	if (HPressed > 0)
+		HPressed--;
+	if (BPressed > 0)
+		BPressed--;
+
+	if (LReleased > 0)
+		LReleased--;
+	if (MReleased > 0)
+		MReleased--;
+	if (HReleased > 0)
+		HReleased--;
+	if (BReleased > 0)
+		BReleased--;
 }
