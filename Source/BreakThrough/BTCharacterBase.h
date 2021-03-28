@@ -605,6 +605,8 @@ private:
 
 	void ButtonInputs(int32 Inputs);
 
+	void UpdateInputHistory(int32 Inputs);
+
 	void InputCountdown();
 
 	bool RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2D Size1, FVector2D Size2);

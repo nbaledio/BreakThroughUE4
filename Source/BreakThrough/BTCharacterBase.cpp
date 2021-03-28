@@ -1332,6 +1332,11 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	}
 }
 
+void ABTCharacterBase::UpdateInputHistory(int32 Inputs) //Called to add current inputs to input history
+{
+	InputHistory.Add(Inputs)
+}
+
 void ABTCharacterBase::InputCountdown() //decrement input values
 {
 	if (Charge2Life > 0)
