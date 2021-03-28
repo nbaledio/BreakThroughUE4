@@ -74,7 +74,10 @@ void ABTCharacterBase::HitDetection()
 				}
 				else
 				{
-					Opponent->SlowMoTime = 60; //Slows opponent for one second
+					if (Opponent->ShatteredTime % 2 == 0)
+						Opponent->SlowMoTime = 60; //Slows opponent for one second
+					else
+						Opponent->SlowMoTime = 61; //Slows opponent for one second
 					//Blitz Afterimage effect
 				}
 			}
@@ -142,7 +145,7 @@ void ABTCharacterBase::HitDetection()
 				}
 				//loop through opponent's active hurtboxes and see if any current hitboxes overlap them
 				if (Opponent->CurrentAnimFrame->Invincibility != StrikeInvincible && Opponent->CurrentAnimFrame->Invincibility != FullInvincible &&
-					!((*CurrentHitbox)[0].AttackHeight == High && Opponent->bIsCrouching) && !bClash)
+					!((*CurrentHitbox)[0].AttackHeight == High && Opponent->bIsCrouching) && !bAttackMadeContact)
 				{
 					if (Opponent->CurrentHurtbox->Num() > 0)
 					{
@@ -165,7 +168,16 @@ void ABTCharacterBase::HitDetection()
 								if (RectangleOverlap(HitboxCenter, OpponentHurtboxCenter, (*CurrentHitbox)[i].Size, (*Opponent->CurrentHurtbox)[j].Size))
 								{
 									bAttackMadeContact = true;
-									ContactHit((*CurrentHitbox)[i]);
+									if (Opponent->CurrentAnimFrame->Invincibility == SuperCounter || (((Opponent->CurrentAnimFrame->Invincibility == AllCounter && (*CurrentHitbox)[i].AttackHeight != Unblockable) || 
+										(Opponent->CurrentAnimFrame->Invincibility == HiCounter && (*CurrentHitbox)[i].AttackHeight < Low) || (Opponent->CurrentAnimFrame->Invincibility == LowCounter && (*CurrentHitbox)[i].AttackHeight == Low)) && 
+										!((*CurrentHitbox)[i].AttackProperties & IsSuper))) //check if the opponent is in a counter stance that can counter the current attack
+									{
+										HitStop = 24;
+										Opponent->bHitSuccess = true;
+										Opponent->bClash = true;
+									}
+									else
+										ContactHit((*CurrentHitbox)[i], OpponentHurtboxCenter);
 								}
 							}
 						}
@@ -177,7 +189,7 @@ void ABTCharacterBase::HitDetection()
 				(((*CurrentHitbox)[0].AttackHeight == AirCommandThrow || (*CurrentHitbox)[0].AttackHeight == AirThrow) && Opponent->bIsAirborne)) &&
 				((Opponent->HitStun == 0 && Opponent->BlockStun == 0) || (*CurrentHitbox)[0].AttackProperties & ComboThrow || Opponent->CurrentAnimation == &Opponent->Stagger ||
 				Opponent->CurrentAnimation == &Opponent->Crumple) && Opponent->CurrentAnimFrame->Invincibility != ThrowInvincible &&
-				Opponent->CurrentAnimFrame->Invincibility != FullInvincible && Opponent->CurrentAnimFrame->Invincibility != Intangible)
+				Opponent->CurrentAnimFrame->Invincibility != FullInvincible && Opponent->CurrentAnimFrame->Invincibility != Intangible && Opponent->CurrentAnimFrame->Invincibility != OTG)
 			{
 				for (int32 i = 0; i < CurrentHitbox->Num() && !bAttackMadeContact; i++)
 				{
@@ -215,9 +227,6 @@ void ABTCharacterBase::HitDetection()
 	bClash = false;
 	
 	//HitDetection is done at the beginning of every frame, hit detection can also cause animation transitions to hitstun states
-	//if (!Opponent->bIsAirborne || (Opponent->HitStun == 0 && Opponent->bIsAirborne && Position.Y + Velocity.Y * 100 / 60.f <= 0)) 
-	//If the opponent would be on the ground on the next frame, treat them as if they were hit while on the ground
-	//TurnAroundCheck() on contact
 }
 
 void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs)
@@ -234,12 +243,18 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs)
 		RunBraking();
 
 		if (HitStun > 0)
+		{
 			AvailableActions = None;
+		}
 		else if (BlockStun > 0)
 			AvailableActions = AcceptGuard;
 
-		if (AvailableActions & AcceptMove && !bIsAirborne)
-			TurnAroundCheck();
+		if (AvailableActions & AcceptMove)
+		{
+			if (!bIsAirborne)
+				TurnAroundCheck();
+		}
+			
 
 		//Checking PosePlayTime < PlayDuration, Changing Animations, and Anim Transitions based on read inputs
 		AnimationStateMachine();
@@ -249,7 +264,6 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs)
 		Guarding();
 		GravityCalculation();
 		ApplyKnockBack();
-		UpdateResolve();
 
 		if (AvailableActions & AcceptMove && CurrentInputs == 0) //Character is not inputting anything while in neutral
 			Resolute = true; //Character with Resolute state will gain meter instead of being hit by a Blitz wave and will automatically counter normal throws
@@ -309,7 +323,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 				if (PosePlayTime == CurrentAnimFrame->PlayDuration)
 					AnimFrameIndex++;
 			}
-			if (HitStun > 0)
+			if (HitStun > 0 && CurrentAnimation != &WallBounce && CurrentAnimation != &Crumple && CurrentAnimation != &GroundBounce && CurrentAnimation != &Tumble)
 				HitStun--;
 			if (BlockStun > 0)
 				BlockStun--;
@@ -346,10 +360,26 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 		HitStop--;
 	}
 
+	if ((HitStun > 0 || CurrentAnimFrame->Invincibility == FaceDown || CurrentAnimFrame->Invincibility == FaceUp) && ShatteredTime == 0)
+	{
+		if (SlowMoTime % 2 == 0)
+			ComboTimer++;
+	}
+	else
+		ComboTimer = 0;
+
+	UpdateResolve();
+		
 	if (ShatteredTime > 0)
 		ShatteredTime--;
 	if (SlowMoTime > 0)
 		SlowMoTime--;
+
+	if (Opponent != NULL)
+	{
+		if ((Opponent->HitStun == 0 && !Opponent->bIsAirborne) || (Opponent->bIsAirborne && Opponent->CurrentAnimFrame->Invincibility != FaceDown && Opponent->CurrentAnimFrame->Invincibility != FaceUp))
+			ComboCount = 0;
+	}	
 
 	InputCountdown();
 }
@@ -868,12 +898,14 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 			{
 				SlowMoTime = 0;
 				ShatteredTime = 0;
+				HitStun = 0;
 				return EnterNewAnimation(KnockDownFaceDown);
 			}
 			else if (CurrentAnimFrame->Invincibility != FaceUp)
 			{
 				SlowMoTime = 0;
 				ShatteredTime = 0;
+				HitStun = 0;
 				return EnterNewAnimation(KnockDownFaceUp);
 			}
 			else //if a character is not in a hit state, they will land on their feet
@@ -918,7 +950,7 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 bool ABTCharacterBase::HitWall()
 {
 	bTouchingWall = true;
-	if (CharacterHitState & CanWallStick)
+	if (CharacterHitState & CanWallStick && bIsAirborne)
 	{
 		//cause wall stick
 		WallStickTime = 30;
@@ -926,7 +958,7 @@ bool ABTCharacterBase::HitWall()
 		//minimum Position.Y
 		return EnterNewAnimation(WallStick);
 	}
-	else if (CharacterHitState & CanWallBounce)
+	else if (CharacterHitState & CanWallBounce && bIsAirborne)
 	{
 		//cause wall bounce and wall bounce animation
 		
@@ -945,26 +977,30 @@ void ABTCharacterBase::Guarding()
 {
 	if (AvailableActions & AcceptGuard)
 	{
+		RefreshMovelist();
 		if (!bIsAirborne && (Dir1 == InputTime || Dir2 == InputTime || Dir3 == InputTime))
 		{
 			//on the ground and holding a downward direction means the character is crouching
 			bIsCrouching = true;
 		}
 
-		if (Dir7 == InputTime || Dir4 >= InputTime || Dir1 == InputTime)
+		if (bIsGuarding) //(Dir7 == InputTime || Dir4 >= InputTime || Dir1 == InputTime)
 		{
 			//holding a backward direction while able to guard keeps the character's guard up
-			bIsGuarding = true;
+			//bIsGuarding = true;
 			JustDefense--; //if a character inputs guard up to five frames before an attack lands, blockstun is reduced by a third and no knockback/pushback is applied
 		}
 		else
 		{
-			bIsGuarding = false;
+			//bIsGuarding = false;
 			JustDefense = 5;
 		}
 	}
 	else
+	{
 		bIsGuarding = false;
+		JustDefense = 5;
+	}
 }
 
 void ABTCharacterBase::LandingLagCheck()
@@ -1043,6 +1079,7 @@ void ABTCharacterBase::RunBraking()
 void ABTCharacterBase::Jumping()
 {
 	TurnAroundCheck();
+	RefreshMovelist();
 	if (!bIsRunning || bBackwardJump || bIsAirborne) //preserve horizontal velocity only if jumping with a running start
 		Velocity.X = 0;
 	if (bIsAirborne && JumpsUsed == 0)
@@ -1095,16 +1132,44 @@ void ABTCharacterBase::GravityCalculation()
 	}
 	if (!bIsAirborne && Velocity.Y > 0)
 		bIsAirborne = true;
+
+	if (Opponent != NULL)
+	{
+		if (Opponent->ComboCount <= 8 || CharacterHitState & IsSuper || ShatteredTime > 0)
+			ComboGravity = 1;
+		else if (Opponent->ComboCount <= 12)
+			ComboGravity = .98;
+		else if (Opponent->ComboCount <= 16)
+			ComboGravity = .95;
+		else if (Opponent->ComboCount <= 20)
+			ComboGravity = .93;
+		else if (Opponent->ComboCount <= 24)
+			ComboGravity = .9;
+		else if (Opponent->ComboCount <= 30)
+			ComboGravity = .87;
+		else
+			ComboGravity = .85f;
+	}
+	
 }
 
 void ABTCharacterBase::ApplyKnockBack()
 {
 	if (KnockBack != FVector2D(0, 0)) //apply any knockback
 	{
-		if (KnockBack.Y > 0)
-			Velocity = FVector2D(KnockBack.X, ComboGravity * KnockBack.Y);
+		if (HitStun > 0 || BlockStun > 0 || CurrentAnimation == &Deflected)
+		{
+			if (KnockBack.Y > 0)
+				Velocity = FVector2D(KnockBack.X, ComboGravity * KnockBack.Y);
+			else
+				Velocity = KnockBack;
+		}
 		else
-			Velocity = FVector2D(KnockBack.X, KnockBack.Y);
+		{
+				Velocity.X = KnockBack.X;
+				if (KnockBack.Y > 0)
+					Velocity.Y = KnockBack.Y;
+		}
 
 		if (bFacingRight)
 		{
@@ -1117,23 +1182,23 @@ void ABTCharacterBase::ApplyKnockBack()
 
 void ABTCharacterBase::UpdateResolve()
 {
-	if (ShatteredTime == 0)
+	if (ShatteredTime == 0 && !CurrentAnimFrame->bCinematic && !CurrentAnimFrame->bSuperFlash)
 	{
 		if (ResolveRecoverTimer >= 180) //Resolve starts passively regenerating after three seconds without being used or broken, resolve regen speeds up if the character is not inputting anything
 		{
-			if ((float)Health / (float)MaxHealth <= .1f * (float)MaxHealth && (SlowMoTime == 0 || (SlowMoTime > 0 && RecoverInterval >= 2)))
+			if ((float)Health / (float)MaxHealth <= .1f && (SlowMoTime == 0 || (SlowMoTime > 0 && RecoverInterval >= 2)))
 			{
 				Durability++;
 				if (Resolute)
 					Durability++;
 				RecoverInterval = 0;
 			}
-			else if ((float)Health / (float)MaxHealth <= .25f * (float)MaxHealth && ((SlowMoTime == 0 &&RecoverInterval >= 2)|| (SlowMoTime > 0 && RecoverInterval >= 4) || (SlowMoTime == 0 && Resolute)))
+			else if ((float)Health / (float)MaxHealth <= .25f && ((SlowMoTime == 0 &&RecoverInterval >= 2)|| (SlowMoTime > 0 && RecoverInterval >= 4) || (SlowMoTime == 0 && Resolute)))
 			{
 				Durability++;
 				RecoverInterval = 0;
 			}
-			else if ((float)Health / (float)MaxHealth <= .5f * (float)MaxHealth && ((SlowMoTime == 0 && RecoverInterval >= 3) || (SlowMoTime > 0 && RecoverInterval >= 6) || (SlowMoTime == 0 && Resolute && RecoverInterval >= 2)))
+			else if ((float)Health / (float)MaxHealth <= .5f && ((SlowMoTime == 0 && RecoverInterval >= 3) || (SlowMoTime > 0 && RecoverInterval >= 6) || (SlowMoTime == 0 && Resolute && RecoverInterval >= 2)))
 			{
 				Durability++;
 				RecoverInterval = 0;
@@ -1261,6 +1326,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 				DoubleDir4 = InputTime;
 			}
 			Dir4 = InputTime;
+			bIsGuarding = true;
 		}
 			
 	}
@@ -1273,6 +1339,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 				DoubleDir4 = InputTime;
 			}
 			Dir4 = InputTime;
+			bIsGuarding = true;
 		}
 		else
 		{
@@ -1404,8 +1471,34 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 {
 	//Attack transitions supersede all others
 
+	if (bIsAirborne && CurrentAnimFrame->Invincibility == FaceDown || CurrentAnimFrame->Invincibility == FaceUp && HitStun == 0 && ShatteredTime == 0 && WallStickTime <= 6)
+	{
+		if (bIsLDown || bIsMDown || bIsHDown || bIsBDown) //hold any attack button down to air recover once able
+		{
+			WallStickTime = 0;
+			if (Dir6 == InputTime) //can hold a direction as well to move in that direction while recovering
+			{
+				if (bFacingRight)
+					Velocity.X = 1;
+				else
+					Velocity.X = -1;
+			}
+			else if (Dir4 == InputTime)
+			{
+				if (bFacingRight)
+					Velocity.X = -1;
+				else
+					Velocity.X = 1;
+			}
+			Velocity.Y = .5f;
+			//make flash white
+			return EnterNewAnimation(AirRecovery);
+		}
+	}
+
 	if (bIsGuarding && !bIsAirborne && FMath::Abs(Position.X - Opponent->Position.X) <= Opponent->CurrentAnimFrame->AutoGuardProximity && BlockStun == 0)
 	{
+		Velocity.X = 0;
 		if (bIsCrouching)
 			return EnterNewAnimation(GuardLoIn);
 		else
@@ -1478,10 +1571,10 @@ bool ABTCharacterBase::ConditionalTransitions()
 		if ((CurrentAnimation == &RunStart || CurrentAnimation == &RunCycle) && !bIsRunning)
 			return EnterNewAnimation(Brake);
 		if ((CurrentAnimation == &GuardHi || CurrentAnimation == &GuardHiHeavy || CurrentAnimation == &GuardHiVertical || CurrentAnimation == &GuardHiIn) && BlockStun == 0 && 
-			(!(FMath::Abs(Position.X - Opponent->Position.X) <= Opponent->CurrentAnimFrame->AutoGuardProximity) || !bIsGuarding))
+			(FMath::Abs(Position.X - Opponent->Position.X) > Opponent->CurrentAnimFrame->AutoGuardProximity || !bIsGuarding))
 			return EnterNewAnimation(GuardHiOut);
 		if ((CurrentAnimation == &GuardLo || CurrentAnimation == &GuardLoHeavy || CurrentAnimation == &GuardLoIn) && BlockStun == 0 &&
-			(!(FMath::Abs(Position.X - Opponent->Position.X) <= Opponent->CurrentAnimFrame->AutoGuardProximity) || !bIsGuarding))
+			(FMath::Abs(Position.X - Opponent->Position.X) > Opponent->CurrentAnimFrame->AutoGuardProximity || !bIsGuarding))
 			return EnterNewAnimation(GuardLoOut);
 		if (CurrentAnimation == &GuardAir && BlockStun == 0)
 			return EnterNewAnimation(GuardAirOut);
@@ -1611,6 +1704,11 @@ bool ABTCharacterBase::FC()
 	return (Dir4 > 0 && Dir2 > 0 && Dir6 > 0 && Dir8) && ((Dir8 > Dir4 && Dir4 > Dir2 && Dir2 > Dir6) || (Dir8 > Dir6 && Dir6 > Dir2 && Dir2 > Dir4));
 }
 
+void ABTCharacterBase::RefreshMovelist()
+{
+	MoveList = 0;
+}
+
 bool ABTCharacterBase::RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2D Size1, FVector2D Size2)
 {
 	FVector2D TL1, TL2, BR1, BR2; //TL: Top left corner, BR: Bottom right corner
@@ -1636,9 +1734,395 @@ bool ABTCharacterBase::RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2
 	return true;
 }
 
-void ABTCharacterBase::ContactHit(FHitbox Hitbox)
+void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 {
 	Opponent->TurnAroundCheck();
+	//If the opponent would be on the ground on the next frame, treat them as if they were hit while on the ground
+	if (Opponent->HitStun == 0 && Opponent->bIsAirborne && Position.Y + Velocity.Y * 100 / 60.f <= 0)
+	{
+		Opponent->Position.Y = 0;
+		Opponent->Velocity.Y = 0;
+		Opponent->bIsAirborne = false;
+		if (Opponent->Dir1 == InputTime || Opponent->Dir2 == InputTime || Opponent->Dir3 == InputTime)
+		{
+			bIsCrouching = true;
+		}
+	}
+	
+
+	//Opponent successfully guarded the attack
+	if (((Opponent->bIsGuarding && Opponent->bIsAirborne) || (Opponent->bIsGuarding && Hitbox.AttackHeight <= High) || (Opponent->bIsGuarding && !Opponent->bIsAirborne && Opponent->bIsCrouching && Hitbox.AttackHeight == Low) ||
+		(Opponent->bIsGuarding && !Opponent->bIsAirborne && !Opponent->bIsCrouching && Hitbox.AttackHeight == Overhead)) && Hitbox.AttackHeight != Unblockable)
+	{
+		int32 BlockstunToApply;
+		FVector2D KnockbackToApply;
+		if (Hitbox.BaseBlockStun == 0)
+			BlockstunToApply = Hitbox.BaseHitStun * .8f;
+		else
+			BlockstunToApply = Hitbox.BaseBlockStun;
+
+		if (Opponent->bIsAirborne)
+		{
+			if (FMath::Abs(Hitbox.PotentialAirKnockBack.X) > FMath::Abs(Hitbox.PotentialAirKnockBack.Y))
+				KnockbackToApply = FVector2D(Hitbox.PotentialAirKnockBack.X, .3f);
+			else
+				KnockbackToApply = FVector2D(.5f * (Hitbox.PotentialAirKnockBack.X + FMath::Abs(Hitbox.PotentialAirKnockBack.Y)), .3f);
+		}	
+		else
+		{
+			if (FMath::Abs(Hitbox.PotentialKnockBack.X) > FMath::Abs(Hitbox.PotentialKnockBack.Y))
+				KnockbackToApply = FVector2D(Hitbox.PotentialKnockBack.X, .3f);
+			else
+				KnockbackToApply = FVector2D(.5f * (Hitbox.PotentialKnockBack.X + FMath::Abs(Hitbox.PotentialKnockBack.Y)), .3f);
+		}
+
+		BlockstunToApply = FMath::Min(BlockstunToApply, 30);
+
+		if (Opponent->JustDefense >= 0) //if the opponent Instant Blocked the attack
+		{
+			//Cuts blockstun by a third on Just defense, cuts by 2 frame at minimum
+			if (BlockstunToApply < 9)
+				BlockstunToApply -= 2;
+			else
+				BlockstunToApply = BlockstunToApply * 2 / 3; 
+
+			BlockstunToApply = FMath::Max(1, BlockstunToApply);
+			KnockbackToApply *= 0;
+			Opponent->Durability += 35; //reward opponent for blocking with exceptional timing
+			//make opponent flash white
+			UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
+		}
+		else
+		{
+			Opponent->ResolveRecoverTimer = 0;
+
+			//blocked hits chip away at durability
+			if (Opponent->Resolve > 0)
+			{
+				if (bIsAirborne)
+				{
+					if (Hitbox.AttackProperties & IsSuper)
+						Opponent->Durability -= (int32)(Hitbox.BaseDamage * .35f);
+					else if (Hitbox.AttackProperties & IsSpecial)
+						Opponent->Durability -= (int32)(Hitbox.BaseDamage * .25f);
+					else
+						Opponent->Durability -= (int32)(Hitbox.BaseDamage * .2f);
+				}
+				else
+				{
+					if (Hitbox.AttackProperties & IsSuper)
+						Opponent->Durability -= (int32)(Hitbox.BaseDamage * .25f);
+					else if (Hitbox.AttackProperties & IsSpecial)
+						Opponent->Durability -= (int32)(Hitbox.BaseDamage * .15f);
+					else
+						Opponent->Durability -= (int32)(Hitbox.BaseDamage * .1f);
+				}
+				
+			}
+			else
+			{
+				//deal chip damage if the opponent has no resolve left, shatter their guard if they are airborne
+				if (bIsAirborne)
+				{
+					Opponent->bCounterHitState = true;
+					AttackCalculation(Hitbox, HurtboxCenter);
+					return;
+				}
+				else
+				{
+					int32 ChipDamage = (int32)(Hitbox.BaseDamage * .2f);
+
+					if (Opponent->Health - ChipDamage <= 0 && Opponent->Health > 1) //Chip damage reduces character's life to 1 before being lethal
+						ChipDamage = Opponent->Health - 1;
+					else
+						ChipDamage = FMath::Min(Opponent->Health, ChipDamage);
+
+					Opponent->Health -= ChipDamage;
+				}
+			}
+		}
+		
+		//apply final blockstun calculation
+		Opponent->BlockStun = BlockstunToApply;
+
+		if (Opponent->bIsCrouching) //extra blockstun if the opponent is crouching
+			Opponent->BlockStun += 2;
+
+		//apply hitstop
+		Opponent->HitStop = Hitbox.BaseHitStop - 2;
+		HitStop = Hitbox.BaseHitStop - 2;
+
+		if (Opponent->bTouchingWall && KnockbackToApply.X >= 0)
+		{
+			if (!(Hitbox.AttackProperties & IsSuper) && !(Hitbox.AttackProperties & IsSpecial))
+				KnockBack = FVector2D(.75f * KnockbackToApply.X, 0);
+		}
+		else
+		{
+			if (KnockbackToApply.X < 0)
+				Opponent->KnockBack = FVector2D(.5f * KnockbackToApply.X, KnockbackToApply.Y);
+			else
+				Opponent->KnockBack = KnockbackToApply;
+		}
+
+		//Made contact so can cancel into other actions
+		AvailableActions = Hitbox.PotentialActions;
+		AvailableActions &= AcceptAll - AcceptJump;
+
+		if (Hitbox.PotentialActions & JumpCancelOnBlock && Hitbox.PotentialActions & AcceptJump) //can only jump cancel if the move allows it on block
+			AvailableActions |= AcceptJump;
+
+		//update opponent's animation to guarding
+		if (bIsAirborne)
+			Opponent->EnterNewAnimation(GuardAir);
+		else
+		{
+			if (Opponent->bIsCrouching)
+			{
+				if (Hitbox.AttackLevel > 1)
+					Opponent->EnterNewAnimation(GuardLoHeavy);
+				else
+					Opponent->EnterNewAnimation(GuardLo);
+			}
+			else
+			{
+				if (Hitbox.AttackLevel > 1)
+					Opponent->EnterNewAnimation(GuardHiHeavy);
+				else
+					Opponent->EnterNewAnimation(GuardHi);
+			}
+		}
+
+		//place and play guard effect
+		//place at midpoint between hitbox center and hurtbox center
+	}
+	else if (Opponent->bArmorActive && Opponent->Resolve > 0 && !(Hitbox.AttackProperties & Piercing) && !(Hitbox.AttackProperties & Shatter))
+	{
+		Opponent->ResolveRecoverTimer = 0;
+		Opponent->Durability -= Hitbox.DurabilityDamage;
+		Opponent->Resolve -= Hitbox.ResolveDamage;
+		HitStop = Hitbox.BaseHitStop;
+		Opponent->HitStop = HitStop;
+		//make opponent flash red
+
+		//available actions are more limited when hitting an opponent's armor
+		if (Hitbox.PotentialActions & AcceptSpecial)
+			AvailableActions |= AcceptSpecial;
+		if (Hitbox.PotentialActions & AcceptSuper)
+			AvailableActions |= AcceptSuper;
+		if (Hitbox.PotentialActions & AcceptJump)
+			AvailableActions |= AcceptJump;
+		if (Hitbox.PotentialActions & AcceptBlitz)
+			AvailableActions |= AcceptBlitz;
+
+		//place and play armor hit effect
+		//place at midpoint between hitbox center and hurtbox center
+	}
+	else //the attack hit the opponent
+	{
+		AttackCalculation(Hitbox, HurtboxCenter);
+	}
+}
+
+void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter)
+{
+	if (Hitbox.AttackHeight < Throw)
+		ComboCount++;
+	Opponent->BlockStun = 0;
+	Opponent->WallStickTime = 0;
+
+	if (ComboCount >= 2)
+	{
+		//if the opponent is in an aerial hitstun animation or staggered but their hitstun is zero, they could have escaped
+		if ((Opponent->HitStun == 0 && Opponent->ShatteredTime == 0 && Opponent->WallStickTime <= 6 && Opponent->bIsAirborne && 
+			(Opponent->CurrentAnimFrame->Invincibility == FaceDown || Opponent->CurrentAnimFrame->Invincibility == FaceUp)) ||
+			(Opponent->CurrentAnimation == &Opponent->Stagger && Opponent->HitStun == 0))
+			bTrueCombo = false;
+		//display UI combo counter
+	}
+	else
+	{
+		//hide UI combo counter
+	}
+
+	//calculate damage scaling based on opponent's remaining health
+	float OpponentValor;
+
+	if ((float)Health / (float)MaxHealth <= .1f)
+		OpponentValor = Opponent->Valor10;
+	else if ((float)Health / (float)MaxHealth <= .25f)
+		OpponentValor = Opponent->Valor25;
+	else if ((float)Health / (float)MaxHealth <= .5f)
+		OpponentValor = Opponent->Valor50;
+	else
+		OpponentValor = Opponent->Valor100;
+
+	int32 DamageToApply = OpponentValor * SpecialProration * Hitbox.BaseDamage;
+	int32 HitStunToApply = Hitbox.BaseHitStun;
+
+	AvailableActions = Hitbox.PotentialActions;
+	Opponent->CharacterHitState = Hitbox.AttackProperties;
+	//apply certain modifiers based on circumstances around the hit
+	if (Hitbox.AttackHeight < Throw)
+	{
+		if ((Opponent->bArmorActive || Opponent->bCounterHitState) && Hitbox.AttackProperties & Shatter)
+		{
+			Opponent->ShatteredTime = 120;
+			HitStunToApply *= 1.2f;
+			Opponent->CharacterHitState |= Hitbox.CounterAttackProperties;
+			//set shatter UI effect to play
+		}
+		else if ((Opponent->bArmorActive || Opponent->bCounterHitState) && !(Hitbox.AttackProperties & Piercing && Opponent->bArmorActive && Opponent->Resolve > 0))
+		{
+			HitStunToApply *= 1.2f;
+			Opponent->CharacterHitState |= Hitbox.CounterAttackProperties;
+			//set counter hit ui effect to play
+		}
+		else if (Hitbox.AttackProperties & Piercing && Opponent->bArmorActive && Opponent->Resolve > 0)
+		{
+			//set piercing ui effect to play
+		}
+	}
+		
+	if (Opponent->CurrentAnimFrame->Invincibility == OTG)
+	{
+		DamageToApply = (int32)(.3f * DamageToApply);
+		HitStunToApply = (int32)(.3f * HitStunToApply);
+	}
+
+	//calculate proration to apply on subsequent hits in a combo
+	if (ComboCount == 1)
+	{
+		SpecialProration = Hitbox.InitProration; //initial proration is only applied if its the first hit of a combo
+		bTrueCombo = true; //reset to true since a new combo has started
+		if ((Opponent->bArmorActive || Opponent->bCounterHitState) && Hitbox.AttackProperties & Shatter)
+		{
+			SpecialProration *= 1.2f;
+			DamageToApply *= 1.2f;
+		}
+		else if (Opponent->bCounterHitState)
+			SpecialProration *= 1.1f;
+	}
+	else if (ComboCount > 1 && Hitbox.ForcedProration != 1)
+		SpecialProration *= Hitbox.ForcedProration; //forced proration is applied as long as the move is used in combo
+
+	//apply damage, damage is scaled by the number of hits in a combo
+	float ComboProration;
+	if (ComboCount < 3)
+		ComboProration = 1;
+	else if (ComboCount < 5)
+		ComboProration = .8f;
+	else if (ComboCount < 6)
+		ComboProration = .7f;
+	else if (ComboCount < 7)
+		ComboProration = .6f;
+	else if (ComboCount < 8)
+		ComboProration = .5f;
+	else if (ComboCount < 9)
+		ComboProration = .4f;
+	else if (ComboCount < 10)
+		ComboProration = .3f;
+	else if (ComboCount < 11)
+		ComboProration = .2f;
+	else
+		ComboProration = .1f;
+
+	DamageToApply *= ComboProration;
+
+	if (Hitbox.AttackProperties & IsSuper)
+		DamageToApply = FMath::Max((int32)(OpponentValor * Hitbox.BaseDamage * .25f), DamageToApply); //Supers will always deal a minimum of 25% their base damage affected by valor
+
+	DamageToApply = FMath::Max(1, DamageToApply); //non-super attacks will always deal a minimum of one damage
+
+	Opponent->Health -= FMath::Min(DamageToApply, Opponent->Health);
+
+	//apply hitstun, hitstun is scaled by how much time the opponent has spent in hitstun, supers' hitstun is never scaled
+	if (Opponent->bIsAirborne && !(Hitbox.AttackProperties & IsSuper))
+	{
+		if (Opponent->ComboTimer > 960 && !(Hitbox.AttackProperties & IsSpecial)) //16 seconds, normal attacks will only deal 1 frame of hitstun
+			HitStunToApply = 1;
+		else if(Opponent->ComboTimer > 840) //14 seconds, special attacks have a minimum of 60% their base hitstun
+			HitStunToApply *= .6f;
+		else if (Opponent->ComboTimer > 600)//10 seconds
+			HitStunToApply *= .7f;
+		else if (Opponent->ComboTimer > 420)//7 seconds
+			HitStunToApply *= .8f;
+		else if (Opponent->ComboTimer > 300)//5 seconds
+			HitStunToApply *= .9f;
+	}
+	Opponent->HitStun = HitStunToApply;
+	if (Opponent->bIsCrouching) //two extra frames of hitstun if hitting a crouching opponent
+		Opponent->HitStun += 2;
+
+	//apply hitstop
+	Opponent->HitStop = Hitbox.BaseHitStop;
+	HitStop = Hitbox.BaseHitStop;
+
+	//meter gain for each character
+	if (Opponent->ShatteredTime == 0)
+		Opponent->Durability += FMath::Max((int32)(Hitbox.BaseDamage * .2f), 1);
+
+	if (ResolveRecoverTimer >= 180)
+		Durability += FMath::Max((int32)(Hitbox.BaseDamage * .1f), 1);
+
+	//Make certain actions available for hitting with an attack
+	AvailableActions = Hitbox.PotentialActions;
+
+	//Apply knockback to opponent
+	if (Opponent->bIsAirborne)
+	{
+		if (Hitbox.PotentialAirKnockBack == FVector2D(0, 0) && Hitbox.PotentialKnockBack.Y == 0)
+			Opponent->KnockBack = FVector2D(Hitbox.PotentialKnockBack.X, .5f);
+		else
+			Opponent->KnockBack = Hitbox.PotentialAirKnockBack;
+	}
+	else
+	{
+		Opponent->KnockBack = Hitbox.PotentialKnockBack;
+	}
+
+	//apply pushback to self when not using a special or super
+	if (!(Hitbox.AttackProperties & IsSpecial) && !(Hitbox.AttackProperties & IsSuper))
+	{
+		float WallPushBack = 0, PushBack = 0;
+		if (Opponent->bTouchingWall) //if opponent is against a wall, character has to move back instead albeit with less magnitude
+		{
+			if (FMath::Abs(Hitbox.PotentialKnockBack.X) > FMath::Abs(Hitbox.PotentialKnockBack.Y))
+				WallPushBack = .5f * FMath::Abs(Hitbox.PotentialKnockBack.X);
+			else
+				WallPushBack = .25f * (FMath::Abs(Hitbox.PotentialKnockBack.X) + FMath::Abs(Hitbox.PotentialKnockBack.Y));
+		}
+
+		if (Opponent->ComboTimer > 3) //will not experience pushback during first three seconds of a combo
+		{
+			if (Opponent->ComboTimer < 5)
+				PushBack = .75f;
+			else if (Opponent->ComboTimer < 7)
+				PushBack = 1.f;
+			else if (Opponent->ComboTimer < 9)
+				PushBack = 1.25f;
+			else if (Opponent->ComboTimer < 12)
+				PushBack = 1.5f;
+			else if (Opponent->ComboTimer < 15)
+				PushBack = 1.75f;
+			else
+				PushBack = 2.f;
+		}
+
+		if (WallPushBack > PushBack)
+			KnockBack.X = -WallPushBack;
+		else
+			KnockBack.X = -PushBack;
+	}
+
+	//update opponent's animation
+
+	//place and play hit effect
+	//place at midpoint between hitbox center and hurtbox center
+	if (Hitbox.AttackProperties & PlayHitEffect)
+	{
+
+	}
 }
 
 void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
@@ -1713,12 +2197,12 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 				}
 			}
 		}
-		
+
 	}
-	else
+
+	if (!bClash)
 	{
 		bAttackMadeContact = true;
-		bHitSuccess = true;
+		AttackCalculation(Hitbox, Opponent->Position);
 	}
 }
-

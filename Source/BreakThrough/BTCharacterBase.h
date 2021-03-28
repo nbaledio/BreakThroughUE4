@@ -12,9 +12,9 @@
 enum GuardHeight
 {
 	Mid,
-	Low,
 	High,
 	Overhead,
+	Low,
 	Unblockable,
 	Throw,
 	CommandThrow,
@@ -33,6 +33,7 @@ enum SpecialStates
 	HiCounter,
 	LowCounter,
 	AllCounter,
+	SuperCounter,
 	FaceDown,
 	FaceUp,
 	OTG // 30% damage and halved hitstun
@@ -58,23 +59,26 @@ enum CharacterActions
 
 enum AttackProperties
 {
-	CanGroundBounce = (1 << 0), //can be bounced against the ground
-	CanWallBounce = (1 << 1), //can be bounced off of walls
-	CanWallStick = (1 << 2), //can be stuck against walls
-	Sweep = (1 << 3), //sweep: no special properties
-	Launch = (1 << 4), //launch: no special properties, purely aesthetic
-	Stagger = (1 << 5), //stagger: can still be thrown despite being a hitstun state, need to hold button to recover back to standing position once hitstun ends
-	Crumple = (1 << 6), //crumple: long hitstun state with preset duration, ends in facedown knockdown, can still be thrown despite being a hitstun state
-	KnockAway = (1 << 7), //knock away: no special properties, purely aesthetic
-	Deflect = (1 << 8), //deflect: non-deflect attacks are deflected by a hitbox with this property, character enters a hitstun state with preset duration, can still be thrown, two deflective attacks will clash normally
-	Tumbling = (1 << 9), //tumbling: an airborne hitstun state that cannot be air recovered from
-	ComboThrow = (1 << 10), //Throws with this flag can hit opponents even if they are in hitstun
-	PlayHitEffect = (1 << 11),
-	IsSpecial = (1 << 12),
-	IsSuper = (1 << 13),
-	IsSlash = (1 << 14),
-	IsVertical = (1 << 15),
-	LowerBodyHit = (1 << 16),
+	Piercing = (1 << 0), //Attack ignores armor
+	Shatter = (1 << 1), //Attack destroys armor
+	CanGroundBounce = (1 << 2), //can be bounced against the ground
+	CanWallBounce = (1 << 3), //can be bounced off of walls
+	CanWallStick = (1 << 4), //can be stuck against walls, wall stick transitions into crumple if hits the ground before wallsticktime is up
+	Sweep = (1 << 5), //sweep: no special properties
+	Launch = (1 << 6), //launch: no special properties, purely aesthetic
+	Stagger = (1 << 7), //stagger: can still be thrown despite being a hitstun state, need to hold button to recover back to standing position once hitstun ends
+	Crumple = (1 << 8), //crumple: long hitstun state with preset duration, ends in facedown knockdown, can still be thrown despite being a hitstun state
+	KnockAway = (1 << 9), //knock away: no special properties, purely aesthetic
+	Deflect = (1 << 10), //deflect: non-deflect attacks are deflected by a hitbox with this property, character enters a hitstun state with preset duration, can still be thrown, two deflective attacks will clash normally
+	Tumbling = (1 << 11), //tumbling: an airborne hitstun state that cannot be air recovered from
+	ComboThrow = (1 << 12), //Throws with this flag can hit opponents even if they are in hitstun
+	PlayHitEffect = (1 << 13),
+	IsSpecial = (1 << 14),
+	IsSuper = (1 << 15),
+	IsSlash = (1 << 16),
+	IsVertical = (1 << 17),
+	IsHorizontal = (1 << 18),
+	LowerBodyHit = (1 << 19),
 };
 
 USTRUCT(BlueprintType)
@@ -256,6 +260,8 @@ protected:
 
 	bool FC();
 
+	void RefreshMovelist();
+
 	TArray<FAnimationFrame>* CurrentAnimation;
 	FAnimationFrame* CurrentAnimFrame;
 	TArray<FHitbox>* CurrentHitbox;
@@ -382,6 +388,7 @@ protected:
 		int ComboCount = 0; //keeps track of the number of hits in a combo performed by this character
 		int ComboTimer = 0; //keeps track of the amount of time this character has spent in hitstun in frames
 		bool bTrueCombo = true; //keeps track of whether or not a character could have escaped a combo at some point
+		float SpecialProration = 1;
 
 	//number of frames that an input is active for
 		int32 InputTime = 10;
@@ -430,6 +437,7 @@ protected:
 
 	//int using bit flags to track to actions available to the character
 		int32 AvailableActions;
+		int32 MoveList;
 
 	//booleans to dictate the character's current state
 		bool bIsRunning = false;
@@ -498,6 +506,8 @@ protected:
 		TArray<FAnimationFrame> AirDashForward;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> AirDashBackward;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+		TArray<FAnimationFrame> AirRecovery;
 
 	//Guard Animations
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
@@ -526,8 +536,7 @@ protected:
 		TArray<FAnimationFrame> GuardAirOut;
 
 	//Hitstun Animations
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
-		TArray<FAnimationFrame> HitstunAir;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> Deflected;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
@@ -536,6 +545,12 @@ protected:
 		TArray<FAnimationFrame> Stagger;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> ThrowEscape;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+		TArray<FAnimationFrame> HitstunAir;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+		TArray<FAnimationFrame> HitstunAirCycle;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+		TArray<FAnimationFrame> Tumble;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> WallBounce; //sweep
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
@@ -609,9 +624,11 @@ private:
 
 	bool RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2D Size1, FVector2D Size2);
 
-	void ContactHit(FHitbox Hitbox);
+	void ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter);
 
 	void ContactThrow(FHitbox Hitbox, int32 ThrowType);
+
+	void AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter);
 };
 
 /* 
