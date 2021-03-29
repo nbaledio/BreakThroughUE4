@@ -69,7 +69,7 @@ void ABTCharacterBase::HitDetection()
 					{
 						Opponent->KnockBack = FVector2D(2, 0);
 						Opponent->SlowMoTime = 30; //Slows opponent for .5 seconds
-						Opponent->EnterNewAnimation(Deflected);
+						Opponent->EnterNewAnimation(Opponent->Deflected);
 					}
 				}
 				else
@@ -114,16 +114,16 @@ void ABTCharacterBase::HitDetection()
 								bAttackMadeContact = true;
 								Opponent->bAttackMadeContact = true;
 								//attacks with the deflect can deflect opponents' non-super, non-deflect attacks
-								if ((*CurrentHitbox)[0].AttackProperties & Deflect && !((*Opponent->CurrentHitbox)[0].AttackProperties & Deflect) && !((*Opponent->CurrentHitbox)[0].AttackProperties & IsSuper))
+								if ((*CurrentHitbox)[0].AttackProperties & CanDeflect && !((*Opponent->CurrentHitbox)[0].AttackProperties & CanDeflect) && !((*Opponent->CurrentHitbox)[0].AttackProperties & IsSuper))
 								{
 									AvailableActions = AcceptAll;
 									Opponent->AvailableActions = None;
-									Opponent->EnterNewAnimation(Deflected);
+									Opponent->EnterNewAnimation(Opponent->Deflected);
 									HitStop = 9;
 									Opponent->HitStop = 9;			
 								}
 								//opponent's attack can deflect
-								else if (!((*CurrentHitbox)[0].AttackProperties & Deflect) && (*Opponent->CurrentHitbox)[0].AttackProperties & Deflect && !((*CurrentHitbox)[0].AttackProperties & IsSuper))
+								else if (!((*CurrentHitbox)[0].AttackProperties & CanDeflect) && (*Opponent->CurrentHitbox)[0].AttackProperties & CanDeflect && !((*CurrentHitbox)[0].AttackProperties & IsSuper))
 								{
 									Opponent->AvailableActions = AcceptAll;
 									AvailableActions = None;
@@ -1132,7 +1132,12 @@ void ABTCharacterBase::GravityCalculation()
 	}
 	if (!bIsAirborne && Velocity.Y > 0)
 		bIsAirborne = true;
+	
+}
 
+void ABTCharacterBase::ApplyKnockBack()
+{
+	float ComboGravity = 1;
 	if (Opponent != NULL)
 	{
 		if (Opponent->ComboCount <= 8 || CharacterHitState & IsSuper || ShatteredTime > 0)
@@ -1150,11 +1155,7 @@ void ABTCharacterBase::GravityCalculation()
 		else
 			ComboGravity = .85f;
 	}
-	
-}
 
-void ABTCharacterBase::ApplyKnockBack()
-{
 	if (KnockBack != FVector2D(0, 0)) //apply any knockback
 	{
 		if (HitStun > 0 || BlockStun > 0 || CurrentAnimation == &Deflected)
@@ -1326,7 +1327,6 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 				DoubleDir4 = InputTime;
 			}
 			Dir4 = InputTime;
-			bIsGuarding = true;
 		}
 			
 	}
@@ -1349,6 +1349,14 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 			}
 			Dir6 = InputTime;
 		}
+	}
+
+	if (Opponent != NULL)
+	{
+		if ((Opponent->Position.X < Position.X && Inputs & INPUT_RIGHT) || (Opponent->Position.X > Position.X && Inputs & INPUT_LEFT))
+			bIsGuarding = true;
+		else if ((!bFacingRight && Inputs & INPUT_RIGHT) || (bFacingRight && Inputs & INPUT_LEFT))
+			bIsGuarding = true;
 	}
 }
 
@@ -1530,6 +1538,9 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 
 	if (AvailableActions & AcceptMove && !bIsAirborne)
 	{
+		/*if (Taunt > 0)
+			return EnterNewAnimation(Taunt); */
+
 		if (DoubleDir6 > 0)
 		{
 			bIsRunning = true;
@@ -1552,10 +1563,10 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		if (Dir4 == InputTime && CurrentAnimation != &WalkBackward)
 			return EnterNewAnimation(WalkBackward);
 		
-		if (bIsCrouching && CurrentAnimation != &CrouchDown && CurrentAnimation != &IdleCrouch)
+		if (bIsCrouching && CurrentAnimation != &CrouchDown && CurrentAnimation != &IdleCrouch && CurrentAnimation != &IdleCrouchBlink && CurrentAnimation != &CrouchIdleAction)
 			return EnterNewAnimation(CrouchDown);
 
-		if (!bIsCrouching && (CurrentAnimation == &IdleCrouch || CurrentAnimation == &CrouchDown))
+		if (!bIsCrouching && (CurrentAnimation == &IdleCrouch || CurrentAnimation == &CrouchDown || CurrentAnimation == &IdleCrouchBlink || CurrentAnimation == &CrouchIdleAction))
 			return EnterNewAnimation(StandUp);
 	}
 
@@ -1589,6 +1600,25 @@ bool ABTCharacterBase::PassiveTransitions()
 	{
 		if (CurrentAnimFrame->bDoesCycle) //if the anim cycles and are currently at the end of the animation, play it again
 		{
+			if (CurrentAnimation == &IdleStand || CurrentAnimation == &IdleCrouch)
+				IdleCycle++;
+
+			if (IdleCycle == 2)
+			{
+				IdleCycle = 0;
+				if (CurrentAnimation == &IdleStand)
+					return EnterNewAnimation(IdleStandBlink);
+				else
+					return EnterNewAnimation(IdleCrouchBlink);
+			}
+			/*else if (IdleCycle == 4)
+			{
+				IdleCycle = 0;
+				if (CurrentAnimation == &IdleStand)
+					return EnterNewAnimation(StandIdleAction);
+				else
+					return EnterNewAnimation(CrouchIdleAction);
+			}*/
 			return EnterNewAnimation(*CurrentAnimation);
 		}
 		else //certain animations need to transition to other animations upon finishing
@@ -1643,6 +1673,12 @@ bool ABTCharacterBase::ExitTimeTransitions()
 
 	if (CurrentAnimation == &GuardLoIn)
 		return EnterNewAnimation(GuardLo);
+
+	if (CurrentAnimation == &IdleStandBlink || CurrentAnimation == &StandIdleAction)
+		return EnterNewAnimation(IdleStand);
+
+	if (CurrentAnimation == &IdleCrouchBlink || CurrentAnimation == &CrouchIdleAction)
+		return EnterNewAnimation(IdleCrouch);
 
 	return false;
 }
@@ -1874,22 +1910,22 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 
 		//update opponent's animation to guarding
 		if (bIsAirborne)
-			Opponent->EnterNewAnimation(GuardAir);
+			Opponent->EnterNewAnimation(Opponent->GuardAir);
 		else
 		{
 			if (Opponent->bIsCrouching)
 			{
 				if (Hitbox.AttackLevel > 1)
-					Opponent->EnterNewAnimation(GuardLoHeavy);
+					Opponent->EnterNewAnimation(Opponent->GuardLoHeavy);
 				else
-					Opponent->EnterNewAnimation(GuardLo);
+					Opponent->EnterNewAnimation(Opponent->GuardLo);
 			}
 			else
 			{
 				if (Hitbox.AttackLevel > 1)
-					Opponent->EnterNewAnimation(GuardHiHeavy);
+					Opponent->EnterNewAnimation(Opponent->GuardHiHeavy);
 				else
-					Opponent->EnterNewAnimation(GuardHi);
+					Opponent->EnterNewAnimation(Opponent->GuardHi);
 			}
 		}
 
@@ -1931,6 +1967,9 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	Opponent->BlockStun = 0;
 	Opponent->WallStickTime = 0;
 
+	if (Hitbox.AttackHeight < Throw && Opponent->CurrentAnimation == &Opponent->Crumple) //treat opponent as if airborne if hitting them in crumple
+		Opponent->bIsAirborne = true;
+
 	if (ComboCount >= 2)
 	{
 		//if the opponent is in an aerial hitstun animation or staggered but their hitstun is zero, they could have escaped
@@ -1958,7 +1997,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		OpponentValor = Opponent->Valor100;
 
 	int32 DamageToApply = OpponentValor * SpecialProration * Hitbox.BaseDamage;
-	int32 HitStunToApply = Hitbox.BaseHitStun;
+	uint8 HitStunToApply = Hitbox.BaseHitStun;
 
 	AvailableActions = Hitbox.PotentialActions;
 	Opponent->CharacterHitState = Hitbox.AttackProperties;
@@ -1987,7 +2026,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	if (Opponent->CurrentAnimFrame->Invincibility == OTG)
 	{
 		DamageToApply = (int32)(.3f * DamageToApply);
-		HitStunToApply = (int32)(.3f * HitStunToApply);
+		HitStunToApply = (uint8)(.3f * HitStunToApply);
 	}
 
 	//calculate proration to apply on subsequent hits in a combo
@@ -2069,7 +2108,11 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	AvailableActions = Hitbox.PotentialActions;
 
 	//Apply knockback to opponent
-	if (Opponent->bIsAirborne)
+	if (Opponent->CurrentAnimFrame->Invincibility == OTG)
+	{
+		Opponent->KnockBack = FVector2D(1.1f * FMath::Abs(Hitbox.PotentialKnockBack.X), 1.f);
+	}
+	else if (Opponent->bIsAirborne)
 	{
 		if (Hitbox.PotentialAirKnockBack == FVector2D(0, 0) && Hitbox.PotentialKnockBack.Y == 0)
 			Opponent->KnockBack = FVector2D(Hitbox.PotentialKnockBack.X, .5f);
@@ -2116,6 +2159,62 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	}
 
 	//update opponent's animation
+	if (Hitbox.AttackProperties & CanTumble)
+	{
+		Opponent->EnterNewAnimation(Opponent->Tumble);
+	}
+	else if (Hitbox.AttackProperties & CanSweep)
+	{
+		if (Opponent->KnockBack.Y < 0)
+			Opponent->EnterNewAnimation(Opponent->FallingForward);
+		else
+			Opponent->EnterNewAnimation(Opponent->WallBounce);
+	}
+	else if (Hitbox.AttackProperties & CanLaunch)
+	{
+		if (Opponent->KnockBack.Y < 0)
+			Opponent->EnterNewAnimation(Opponent->LaunchFallCycle);
+		else
+			Opponent->EnterNewAnimation(Opponent->LaunchCycle);
+	}
+	else if (Opponent->bIsAirborne || Opponent->KnockBack.Y > 0)
+	{
+		if (Hitbox.AttackProperties & CanKnockAway)
+			Opponent->EnterNewAnimation(Opponent->KnockAway);
+		else
+			Opponent->EnterNewAnimation(Opponent->HitstunAir);
+	}
+	else if (!Opponent->bIsAirborne) //ground only hit states
+	{
+		if (Hitbox.AttackProperties & CanCrumple || Opponent->Health == 0)
+			Opponent->EnterNewAnimation(Opponent->Crumple);
+		else if (Hitbox.AttackProperties & CanStagger)
+			Opponent->EnterNewAnimation(Opponent->Stagger);
+		else if (Opponent->bIsCrouching)
+		{
+			if (Hitbox.AttackLevel > 2)
+				Opponent->EnterNewAnimation(Opponent->HitCHeavyIn);
+			else
+				Opponent->EnterNewAnimation(Opponent->HitCIn);
+		}
+		else
+		{
+			if (Hitbox.AttackProperties & LowerBodyHit)
+			{
+				if (Hitbox.AttackLevel > 2)
+					Opponent->EnterNewAnimation(Opponent->HitSLHeavyIn);
+				else
+					Opponent->EnterNewAnimation(Opponent->HitSLIn);
+			}
+			else
+			{
+				if (Hitbox.AttackLevel > 2)
+					Opponent->EnterNewAnimation(Opponent->HitSHHeavyIn);
+				else
+					Opponent->EnterNewAnimation(Opponent->HitSHIn);
+			}
+		}
+	}
 
 	//place and play hit effect
 	//place at midpoint between hitbox center and hurtbox center
@@ -2138,7 +2237,7 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 			KnockBack = FVector2D(-1, 0);
 			Opponent->KnockBack = FVector2D(-1, 0);
 			EnterNewAnimation(ThrowEscape);
-			Opponent->EnterNewAnimation(ThrowEscape);
+			Opponent->EnterNewAnimation(Opponent->ThrowEscape);
 			//play throw escape effect
 		}
 		else if (Opponent->Resolute)
@@ -2149,11 +2248,11 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 			Opponent->Durability = 101;
 			if (ThrowType == AirThrow)
 			{
-				//Opponent->EnterNewAnimation(AirResoluteCounter);
+				//Opponent->EnterNewAnimation(Opponent->AirResoluteCounter);
 			}
 			else
 			{
-				//Opponent->EnterNewAnimation(ResoluteCounter);
+				//Opponent->EnterNewAnimation(Opponent->ResoluteCounter);
 			}
 		}
 	}
@@ -2192,7 +2291,7 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 					KnockBack = FVector2D(-1, 0);
 					Opponent->KnockBack = FVector2D(-1, 0);
 					EnterNewAnimation(ThrowEscape);
-					Opponent->EnterNewAnimation(ThrowEscape);
+					Opponent->EnterNewAnimation(Opponent->ThrowEscape);
 					//play throw escape effect
 				}
 			}
