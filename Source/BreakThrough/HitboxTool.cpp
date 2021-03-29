@@ -54,22 +54,22 @@ void AHitboxTool::DrawPushbox()
 {
 	float PushboxBottom = GetActorLocation().Z + PushboxVerticalOffset;
 	//Left side
-	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, 41, PushboxBottom),
-		FVector(GetActorLocation().X - .5f * PushboxWidth, 41, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
+	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
+		FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
 	//bottom side
-	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, 41, PushboxBottom),
-		FVector(GetActorLocation().X + .5f * PushboxWidth, 41, PushboxBottom), FColor(255, 255, 0), false, 0, 0, .5f);
+	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
+		FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom), FColor(255, 255, 0), false, 0, 0, .5f);
 	//right side
-	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X + .5f * PushboxWidth, 41, PushboxBottom),
-		FVector(GetActorLocation().X + .5f * PushboxWidth, 41, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
+	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
+		FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
 	//top side
-	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, 41, PushboxBottom + PushBoxHeight),
-		FVector(GetActorLocation().X + .5f * PushboxWidth, 41, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
+	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight),
+		FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
 }
 
 void AHitboxTool::DrawHitbox(FTestHurtbox Box)
 {
-	FVector BoxCenter = FVector(GetActorLocation().X + Box.Position.X, GetActorLocation().Y + 40, GetActorLocation().Z + Box.Position.Y);
+	FVector BoxCenter = FVector(GetActorLocation().X + Box.Position.X, GetActorLocation().Y + 34, GetActorLocation().Z + Box.Position.Y);
 	//Left side
 	DrawDebugLine(GetWorld(), FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y),
 		FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(255, 0, 0), false, 0, 0, .5f);
@@ -86,7 +86,7 @@ void AHitboxTool::DrawHitbox(FTestHurtbox Box)
 
 void AHitboxTool::DrawHurtbox(FTestHurtbox Box)
 {
-	FVector BoxCenter = FVector(GetActorLocation().X + Box.Position.X, GetActorLocation().Y + 150, GetActorLocation().Z + Box.Position.Y);
+	FVector BoxCenter = FVector(GetActorLocation().X + Box.Position.X, GetActorLocation().Y + 34, GetActorLocation().Z + Box.Position.Y);
 	//Left side
 	DrawDebugLine(GetWorld(), FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y),
 		FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(0, 255, 0), false, 0, 0, .5f);
