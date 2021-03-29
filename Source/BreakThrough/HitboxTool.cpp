@@ -15,7 +15,7 @@ AHitboxTool::AHitboxTool()
 	BaseMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Character Mesh"));
 	BaseMesh->SetupAttachment(RootComponent);
 
-	PersonalCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Personal Camera"));
+	PersonalCamera = CreateDefaultSubobject<UCineCameraComponent>(TEXT("Personal Camera"));
 	PersonalCamera->SetupAttachment(RootComponent);
 }
 

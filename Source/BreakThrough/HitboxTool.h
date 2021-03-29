@@ -5,7 +5,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "DrawDebugHelpers.h"
-#include "Camera/CameraComponent.h"
+//#include "Camera/CameraComponent.h"
+#include "Runtime/CinematicCamera/Public/CineCameraComponent.h"
 #include "BTCharacterBase.h"
 #include "HitboxTool.generated.h"
 
@@ -40,7 +41,7 @@ protected:
 		USkeletalMeshComponent* BaseMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		UCameraComponent* PersonalCamera;
+		UCineCameraComponent* PersonalCamera;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hitboxes")
 		TArray<FTestHurtbox> Hitboxes;
