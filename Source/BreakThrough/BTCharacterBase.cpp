@@ -14,6 +14,12 @@ ABTCharacterBase::ABTCharacterBase()
 
 	BaseMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Character Mesh"));
 	BaseMesh->SetupAttachment(RootComponent);
+
+	CharacterVoice = CreateDefaultSubobject<UAudioComponent>(TEXT("Character Voice"));
+	CharacterVoice->SetupAttachment(RootComponent);
+
+	CharacterSoundEffects = CreateDefaultSubobject<UAudioComponent>(TEXT("Character SFX"));
+	CharacterSoundEffects->SetupAttachment(RootComponent);
 }
 
 // Called when the game starts or when spawned
@@ -268,6 +274,7 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs)
 		if (AvailableActions & AcceptMove && CurrentInputs == 0) //Character is not inputting anything while in neutral
 			Resolute = true; //Character with Resolute state will gain meter instead of being hit by a Blitz wave and will automatically counter normal throws
 	}
+	SetSounds();
 }
 
 void ABTCharacterBase::VelocitySolver()
@@ -747,6 +754,16 @@ void ABTCharacterBase::DrawCharacter()
 
 	SetActorLocation(FVector(Position.X, GetActorLocation().Y, Position.Y));
 
+	if (PlaySound)
+	{
+		if (CharacterVoice->Sound != NULL)
+			CharacterVoice->Play();
+		if (CharacterSoundEffects->Sound != NULL)
+			CharacterSoundEffects->Play();
+
+		PlaySound = false;
+	}
+
 	//if Hitbox View is on also loop through hitbox and hurtbox arrays and draw to screen
 }
 
@@ -963,10 +980,11 @@ bool ABTCharacterBase::HitWall()
 		//cause wall bounce and wall bounce animation
 		
 		CharacterHitState -= CanWallBounce;
+		WallStickTime = 3;
 		Velocity.X *= -1;
 		if (Velocity.Y < 1.5f)
 			Velocity.Y = 1.5f;
-		return EnterNewAnimation(WallBounce);
+		return EnterNewAnimation(WallStick);
 	}
 
 	Velocity.X = 0;
@@ -1499,8 +1517,23 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 					Velocity.X = 1;
 			}
 			Velocity.Y = .5f;
-			//make flash white
+			//make flash white and play chime
+			StatusMix = 3;
+			StatusTimer = 5;
+			StatusColor = FVector(1, 1, 1);
 			return EnterNewAnimation(AirRecovery);
+		}
+	}
+
+	if (CurrentAnimation == &Stagger && HitStun == 0)
+	{
+		if (bIsLDown || bIsMDown || bIsHDown || bIsBDown) //hold any attack button down recover from stagger once able
+		{
+			//make flash white and play chime
+			StatusMix = 3;
+			StatusTimer = 5;
+			StatusColor = FVector(1, 1, 1);
+			return EnterNewAnimation(IdleStand);
 		}
 	}
 
@@ -1589,6 +1622,21 @@ bool ABTCharacterBase::ConditionalTransitions()
 			return EnterNewAnimation(GuardLoOut);
 		if (CurrentAnimation == &GuardAir && BlockStun == 0)
 			return EnterNewAnimation(GuardAirOut);
+
+		if (CurrentAnimation == &HitSLIn && BlockStun == 0)
+			return EnterNewAnimation(HitSLOut);
+		if (CurrentAnimation == &HitSLHeavyIn && BlockStun == 0)
+			return EnterNewAnimation(HitSLHeavyOut);
+		if (CurrentAnimation == &HitSHIn && BlockStun == 0)
+			return EnterNewAnimation(HitSHOut);
+		if (CurrentAnimation == &HitSHHeavyIn && BlockStun == 0)
+			return EnterNewAnimation(HitSHHeavyOut);
+		if (CurrentAnimation == &HitCIn && BlockStun == 0)
+			return EnterNewAnimation(HitCOut);
+		if (CurrentAnimation == &HitCHeavyIn && BlockStun == 0)
+			return EnterNewAnimation(HitCHeavyOut);
+		if (CurrentAnimation == &WallStick && WallStickTime == 0)
+			return EnterNewAnimation(WallBounce);
 	}
 	return false;
 }
@@ -1656,13 +1704,15 @@ bool ABTCharacterBase::ExitTimeTransitions()
 		return EnterNewAnimation(JumpDescent);
 	}
 
-	if (CurrentAnimation == &StandUp || CurrentAnimation == &Brake || CurrentAnimation == &WakeUpFaceDown || CurrentAnimation == &WakeUpFaceUp || CurrentAnimation == &GuardHiOut)
+	if (CurrentAnimation == &StandUp || CurrentAnimation == &Brake || CurrentAnimation == &WakeUpFaceDown || CurrentAnimation == &WakeUpFaceUp || CurrentAnimation == &GuardHiOut ||
+		CurrentAnimation == &HitSLOut || CurrentAnimation == &HitSHOut || CurrentAnimation == &HitSLHeavyOut || CurrentAnimation == &HitSHHeavyOut || CurrentAnimation == &IdleStandBlink || CurrentAnimation == &StandIdleAction)
 		return EnterNewAnimation(IdleStand);
 
-	if (CurrentAnimation == &CrouchDown || CurrentAnimation == &GuardLoOut)
+	if (CurrentAnimation == &CrouchDown || CurrentAnimation == &GuardLoOut || CurrentAnimation == &IdleCrouchBlink || CurrentAnimation == &CrouchIdleAction ||
+		CurrentAnimation == &HitCOut || CurrentAnimation == &HitCHeavyOut)
 		return EnterNewAnimation(IdleCrouch);
 
-	if (CurrentAnimation == &KnockDownFaceDown)
+	if (CurrentAnimation == &KnockDownFaceDown || CurrentAnimation == &Crumple)
 		return EnterNewAnimation(WakeUpFaceDown);
 
 	if (CurrentAnimation == &KnockDownFaceUp)
@@ -1674,11 +1724,16 @@ bool ABTCharacterBase::ExitTimeTransitions()
 	if (CurrentAnimation == &GuardLoIn)
 		return EnterNewAnimation(GuardLo);
 
-	if (CurrentAnimation == &IdleStandBlink || CurrentAnimation == &StandIdleAction)
-		return EnterNewAnimation(IdleStand);
+	if (CurrentAnimation == &Deflected || CurrentAnimation == &ThrowEscape)
+	{
+		if (!bIsAirborne)
+			return EnterNewAnimation(IdleStand);
+		else
+			return EnterNewAnimation(MidJump);
+	}
 
-	if (CurrentAnimation == &IdleCrouchBlink || CurrentAnimation == &CrouchIdleAction)
-		return EnterNewAnimation(IdleCrouch);
+	if (CurrentAnimation == &WallBounce)
+		return EnterNewAnimation(FallingForward);
 
 	return false;
 }
@@ -1826,6 +1881,9 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			KnockbackToApply *= 0;
 			Opponent->Durability += 35; //reward opponent for blocking with exceptional timing
 			//make opponent flash white
+			StatusMix = 3;
+			StatusTimer = 5;
+			StatusColor = FVector(1, 1, 1);
 			UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
 		}
 		else
@@ -1940,6 +1998,9 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		HitStop = Hitbox.BaseHitStop;
 		Opponent->HitStop = HitStop;
 		//make opponent flash red
+		StatusMix = .8f;
+		StatusTimer = 5;
+		StatusColor = FVector(1, 0, 0);
 
 		//available actions are more limited when hitting an opponent's armor
 		if (Hitbox.PotentialActions & AcceptSpecial)
@@ -2248,11 +2309,11 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 			Opponent->Durability = 101;
 			if (ThrowType == AirThrow)
 			{
-				//Opponent->EnterNewAnimation(Opponent->AirResoluteCounter);
+				Opponent->EnterNewAnimation(Opponent->AirResoluteCounter);
 			}
 			else
 			{
-				//Opponent->EnterNewAnimation(Opponent->ResoluteCounter);
+				Opponent->EnterNewAnimation(Opponent->ResoluteCounter);
 			}
 		}
 	}
@@ -2303,5 +2364,28 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 	{
 		bAttackMadeContact = true;
 		AttackCalculation(Hitbox, Opponent->Position);
+	}
+}
+
+void ABTCharacterBase::SetSounds()
+{
+	if (CurrentAnimFrame->SFX != NULL)
+	{
+		CharacterSoundEffects->SetSound(CurrentAnimFrame->SFX);
+		PlaySound = true;
+	}
+	else
+	{
+		CharacterSoundEffects->SetSound(NULL);
+	}
+
+	if (CurrentAnimFrame->VoiceLines != NULL)
+	{
+		CharacterVoice->SetSound(CurrentAnimFrame->VoiceLines);
+		PlaySound = true;
+	}
+	else
+	{
+		CharacterVoice->SetSound(NULL);
 	}
 }

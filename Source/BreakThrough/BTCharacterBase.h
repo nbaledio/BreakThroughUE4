@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "BreakThroughPlayerController.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundCue.h"
 #include "BTCharacterBase.generated.h"
 
 #define OUT
@@ -198,6 +200,11 @@ struct FAnimationFrame
 		bool bLockPosition;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		FVector2D Acceleration; //add to character's velocity upon entering the animation frame
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Audio")
+		USoundCue* VoiceLines;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Audio")
+		USoundCue* SFX;
 };
 
 UCLASS()
@@ -234,6 +241,11 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		USkeletalMeshComponent* BaseMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UAudioComponent* CharacterVoice;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UAudioComponent* CharacterSoundEffects;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay();
@@ -276,6 +288,7 @@ protected:
 	uint8 AnimFrameIndex;
 	uint8 PosePlayTime = 0;
 	uint8 IdleCycle = 0;
+	bool PlaySound = false;
 
 	TArray<int32> InputHistory;
 	int32 Seals = 0;
@@ -298,8 +311,6 @@ protected:
 
 	//values that represent a character's resilience as a battle rages on
 	//scales down damage received based on how low the character's health is
-	/*UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
-		float CurrentValor;*/
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
 		float Valor100;
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
@@ -558,6 +569,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> ThrowEscape;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+		TArray<FAnimationFrame> ResoluteCounter;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+		TArray<FAnimationFrame> AirResoluteCounter;
 
 	//Ground Hitstun Animations
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
@@ -679,6 +694,8 @@ private:
 	void ContactThrow(FHitbox Hitbox, int32 ThrowType);
 
 	void AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter);
+
+	void SetSounds();
 };
 
 /* 
