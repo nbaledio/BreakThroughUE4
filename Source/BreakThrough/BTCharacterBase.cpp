@@ -70,12 +70,91 @@ void ABTCharacterBase::HitDetection()
 					{
 						//set opponent's animation to guarding
 						//guarding logic
+						Opponent->TurnAroundCheck();
+						//If the opponent would be on the ground on the next frame, treat them as if they were hit while on the ground
+						if (Opponent->HitStun == 0 && Opponent->bIsAirborne && Position.Y + Velocity.Y * 100 / 60.f <= 0)
+						{
+							Opponent->Position.Y = 0;
+							Opponent->Velocity.Y = 0;
+							Opponent->bIsAirborne = false;
+							if (Opponent->Dir1 == InputTime || Opponent->Dir2 == InputTime || Opponent->Dir3 == InputTime)
+							{
+								bIsCrouching = true;
+							}
+						}
+
+						//Opponent successfully guarded the attack
+						int32 BlockstunToApply = 18;
+						FVector2D KnockbackToApply = FVector2D(2, 0);
+
+						if (Opponent->bIsAirborne)
+						{
+							KnockbackToApply.Y = .5f;
+						}
+
+						if (Opponent->JustDefense >= 0) //if the opponent Instant Blocked the attack
+						{
+							//Cuts blockstun by a third on Just defense, cuts by 2 frame at minimum
+							BlockstunToApply = BlockstunToApply * 2 / 3;
+
+							BlockstunToApply = FMath::Max(1, BlockstunToApply);
+							KnockbackToApply *= 0;
+							Opponent->Durability += 35; //reward opponent for blocking with exceptional timing
+							//make opponent flash white
+							StatusMix = 3;
+							StatusTimer = 5;
+							StatusColor = FVector(1, 1, 1);
+							UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
+						}
+
+						//apply final blockstun calculation
+						Opponent->BlockStun = BlockstunToApply;
+
+						if (Opponent->bIsCrouching) //extra blockstun if the opponent is crouching
+							Opponent->BlockStun += 2;
+
+						//apply hitstop
+						Opponent->HitStop = 8;
+						HitStop = 8;
+
+						if (Opponent->bTouchingWall && KnockbackToApply.X >= 0)
+						{
+							KnockBack = FVector2D(.75f * KnockbackToApply.X, 0);
+						}
+						else
+						{
+							Opponent->KnockBack = KnockbackToApply;
+						}
+
+						//update opponent's animation to guarding
+						if (bIsAirborne)
+							Opponent->EnterNewAnimation(Opponent->GuardAir);
+						else
+						{
+							if (Opponent->bIsCrouching)
+							{
+								Opponent->EnterNewAnimation(Opponent->GuardLoHeavy);
+							}
+							else
+							{
+								Opponent->EnterNewAnimation(Opponent->GuardHiHeavy);
+							}
+						}
+
+						//place and play guard effect
+						//place at midpoint between hitbox center and hurtbox center
 					}
 					else
 					{
 						Opponent->KnockBack = FVector2D(2, 0);
 						Opponent->SlowMoTime = 30; //Slows opponent for .5 seconds
-						Opponent->EnterNewAnimation(Opponent->Deflected);
+						if (Opponent->bIsAirborne)
+						{
+							Opponent->KnockBack.Y = .5f;
+							Opponent->EnterNewAnimation(Opponent->DeflectedAir);
+						}
+						else
+							Opponent->EnterNewAnimation(Opponent->Deflected);
 					}
 				}
 				else
@@ -122,18 +201,26 @@ void ABTCharacterBase::HitDetection()
 								//attacks with the deflect can deflect opponents' non-super, non-deflect attacks
 								if ((*CurrentHitbox)[0].AttackProperties & CanDeflect && !((*Opponent->CurrentHitbox)[0].AttackProperties & CanDeflect) && !((*Opponent->CurrentHitbox)[0].AttackProperties & IsSuper))
 								{
-									AvailableActions = AcceptAll;
+									AvailableActions = AcceptAll - (AcceptMove + AcceptGuard);
 									Opponent->AvailableActions = None;
-									Opponent->EnterNewAnimation(Opponent->Deflected);
+									if (Opponent->bIsAirborne)
+										Opponent->EnterNewAnimation(Opponent->DeflectedAir);
+									else
+										Opponent->EnterNewAnimation(Opponent->Deflected);
+
 									HitStop = 9;
 									Opponent->HitStop = 9;			
 								}
 								//opponent's attack can deflect
 								else if (!((*CurrentHitbox)[0].AttackProperties & CanDeflect) && (*Opponent->CurrentHitbox)[0].AttackProperties & CanDeflect && !((*CurrentHitbox)[0].AttackProperties & IsSuper))
 								{
-									Opponent->AvailableActions = AcceptAll;
+									Opponent->AvailableActions = AcceptAll - (AcceptMove + AcceptGuard);
 									AvailableActions = None;
-									EnterNewAnimation(Deflected);
+									if (bIsAirborne)
+										EnterNewAnimation(DeflectedAir);
+									else
+										EnterNewAnimation(Deflected);
+
 									HitStop = 9;
 									Opponent->HitStop = 9;
 								}
@@ -141,8 +228,8 @@ void ABTCharacterBase::HitDetection()
 								{
 									HitStop = 15;
 									Opponent->HitStop = 15;
-									AvailableActions = AcceptAll;
-									Opponent->AvailableActions = AcceptAll;
+									AvailableActions = AcceptAll - (AcceptMove + AcceptGuard);
+									Opponent->AvailableActions = AcceptAll - (AcceptMove + AcceptGuard);
 									//play clash effect
 								}
 							}
@@ -330,14 +417,11 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 				if (PosePlayTime == CurrentAnimFrame->PlayDuration)
 					AnimFrameIndex++;
 			}
-			if (HitStun > 0 && CurrentAnimation != &WallBounce && CurrentAnimation != &Crumple && CurrentAnimation != &GroundBounce && CurrentAnimation != &Tumble)
+			if (HitStun > 0 && CurrentAnimation != &Sweep && CurrentAnimation != &WallBounce && CurrentAnimation != &Crumple && CurrentAnimation != &GroundBounce && CurrentAnimation != &Tumble)
 				HitStun--;
 			if (BlockStun > 0)
 				BlockStun--;
 		}
-
-		if (WallStickTime > 0)
-			WallStickTime--;
 
 		if (!CurrentAnimFrame->bLockPosition)
 		{
@@ -939,10 +1023,7 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 				}
 				else
 				{
-					LandingLag = 4;
-					AvailableActions = AcceptAll - (AcceptMove + AcceptJump);
-
-					return EnterNewAnimation(StandUp);
+					NonKnockdownLanding();
 				}
 			}
 		}
@@ -970,9 +1051,23 @@ bool ABTCharacterBase::HitWall()
 	if (CharacterHitState & CanWallStick && bIsAirborne)
 	{
 		//cause wall stick
-		WallStickTime = 30;
+		uint8 WallStickHitStun = 30;
+		if (HitStun < WallStickHitStun)
+		{
+			if (ComboTimer > 840) //14 seconds, special attacks have a minimum of 60% their base hitstun
+				WallStickHitStun *= .6f;
+			else if (ComboTimer > 600)//10 seconds
+				WallStickHitStun *= .7f;
+			else if (ComboTimer > 420)//7 seconds
+				WallStickHitStun *= .8f;
+			else if (ComboTimer > 300)//5 seconds
+				WallStickHitStun *= .9f;
+
+			HitStun = WallStickHitStun;
+		}
+
 		CharacterHitState = None;
-		//minimum Position.Y
+		Velocity = FVector2D(0, 0);
 		return EnterNewAnimation(WallStick);
 	}
 	else if (CharacterHitState & CanWallBounce && bIsAirborne)
@@ -980,11 +1075,10 @@ bool ABTCharacterBase::HitWall()
 		//cause wall bounce and wall bounce animation
 		
 		CharacterHitState -= CanWallBounce;
-		WallStickTime = 3;
 		Velocity.X *= -1;
 		if (Velocity.Y < 1.5f)
 			Velocity.Y = 1.5f;
-		return EnterNewAnimation(WallStick);
+		return EnterNewAnimation(WallBounce);
 	}
 
 	Velocity.X = 0;
@@ -1139,10 +1233,8 @@ void ABTCharacterBase::GravityCalculation()
 	{
 		float GravCalc = Weight * -10.f / 60.f;
 
-		if (ShatteredTime > 0)
-			GravCalc *= .8f;
-		if (WallStickTime > 0)
-			GravCalc *= .5f;
+		if (CurrentAnimation == &WallStick)
+			GravCalc *= .75f;
 		if (SlowMoTime > 0)
 			GravCalc *= .5f;
 
@@ -1176,7 +1268,7 @@ void ABTCharacterBase::ApplyKnockBack()
 
 	if (KnockBack != FVector2D(0, 0)) //apply any knockback
 	{
-		if (HitStun > 0 || BlockStun > 0 || CurrentAnimation == &Deflected)
+		if (HitStun > 0 || BlockStun > 0 || CurrentAnimation == &Deflected || CurrentAnimation == &DeflectedAir)
 		{
 			if (KnockBack.Y > 0)
 				Velocity = FVector2D(KnockBack.X, ComboGravity * KnockBack.Y);
@@ -1493,15 +1585,25 @@ void ABTCharacterBase::AnimationStateMachine()
 	}
 }
 
+bool ABTCharacterBase::NonKnockdownLanding()
+{
+	if (CurrentAnimation == &WallStick)
+		return EnterNewAnimation(Crumple);
+
+	LandingLag = 4;
+	AvailableActions = AcceptAll - (AcceptMove + AcceptJump);
+
+	return EnterNewAnimation(StandUp);
+}
+
 bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player input and character state
 {
 	//Attack transitions supersede all others
 
-	if (bIsAirborne && CurrentAnimFrame->Invincibility == FaceDown || CurrentAnimFrame->Invincibility == FaceUp && HitStun == 0 && ShatteredTime == 0 && WallStickTime <= 6)
+	if (bIsAirborne && (CurrentAnimFrame->Invincibility == FaceDown || CurrentAnimFrame->Invincibility == FaceUp || CurrentAnimation == &WallStick) && HitStun == 0 && ShatteredTime == 0)
 	{
 		if (bIsLDown || bIsMDown || bIsHDown || bIsBDown) //hold any attack button down to air recover once able
 		{
-			WallStickTime = 0;
 			if (Dir6 == InputTime) //can hold a direction as well to move in that direction while recovering
 			{
 				if (bFacingRight)
@@ -1527,12 +1629,16 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 
 	if (CurrentAnimation == &Stagger && HitStun == 0)
 	{
-		if (bIsLDown || bIsMDown || bIsHDown || bIsBDown) //hold any attack button down recover from stagger once able
+		if (LPressed > 0 || MPressed > 0 || HPressed > 0 || BPressed > 0) //press any attack button once hitstun has ended to recover from stagger
 		{
 			//make flash white and play chime
 			StatusMix = 3;
 			StatusTimer = 5;
 			StatusColor = FVector(1, 1, 1);
+			LPressed = 0;
+			MPressed = 0;
+			HPressed = 0;
+			BPressed = 0;
 			return EnterNewAnimation(IdleStand);
 		}
 	}
@@ -1612,6 +1718,8 @@ bool ABTCharacterBase::ConditionalTransitions()
 	{
 		if (CurrentAnimation == &MidJump && Velocity.Y < 0)
 			return EnterNewAnimation(JumpTransition);
+		if (CurrentAnimation == &LaunchCycle && Velocity.Y < 0)
+			return EnterNewAnimation(LaunchTransition);
 		if ((CurrentAnimation == &RunStart || CurrentAnimation == &RunCycle) && !bIsRunning)
 			return EnterNewAnimation(Brake);
 		if ((CurrentAnimation == &GuardHi || CurrentAnimation == &GuardHiHeavy || CurrentAnimation == &GuardHiVertical || CurrentAnimation == &GuardHiIn) && BlockStun == 0 && 
@@ -1635,8 +1743,6 @@ bool ABTCharacterBase::ConditionalTransitions()
 			return EnterNewAnimation(HitCOut);
 		if (CurrentAnimation == &HitCHeavyIn && BlockStun == 0)
 			return EnterNewAnimation(HitCHeavyOut);
-		if (CurrentAnimation == &WallStick && WallStickTime == 0)
-			return EnterNewAnimation(WallBounce);
 	}
 	return false;
 }
@@ -1694,7 +1800,8 @@ bool ABTCharacterBase::ExitTimeTransitions()
 			return EnterNewAnimation(NeutralJump);
 	}
 
-	if (CurrentAnimation == &NeutralJump || CurrentAnimation == &ForwardJump || CurrentAnimation == &BackwardJump || CurrentAnimation == &GuardAirOut)
+	if (CurrentAnimation == &NeutralJump || CurrentAnimation == &ForwardJump || CurrentAnimation == &BackwardJump || CurrentAnimation == &GuardAirOut || 
+		CurrentAnimation == &DeflectedAir || CurrentAnimation == &ThrowEscapeAir || CurrentAnimation == &BlitzOutAir)
 	{
 		return EnterNewAnimation(MidJump);
 	}
@@ -1704,8 +1811,14 @@ bool ABTCharacterBase::ExitTimeTransitions()
 		return EnterNewAnimation(JumpDescent);
 	}
 
+	if (CurrentAnimation == &LaunchTransition)
+	{
+		return EnterNewAnimation(LaunchFallCycle);
+	}
+
 	if (CurrentAnimation == &StandUp || CurrentAnimation == &Brake || CurrentAnimation == &WakeUpFaceDown || CurrentAnimation == &WakeUpFaceUp || CurrentAnimation == &GuardHiOut ||
-		CurrentAnimation == &HitSLOut || CurrentAnimation == &HitSHOut || CurrentAnimation == &HitSLHeavyOut || CurrentAnimation == &HitSHHeavyOut || CurrentAnimation == &IdleStandBlink || CurrentAnimation == &StandIdleAction)
+		CurrentAnimation == &HitSLOut || CurrentAnimation == &HitSHOut || CurrentAnimation == &HitSLHeavyOut || CurrentAnimation == &HitSHHeavyOut || CurrentAnimation == &IdleStandBlink || 
+		CurrentAnimation == &StandIdleAction || CurrentAnimation == &Deflected || CurrentAnimation == &ThrowEscape || CurrentAnimation == &BlitzOutStanding)
 		return EnterNewAnimation(IdleStand);
 
 	if (CurrentAnimation == &CrouchDown || CurrentAnimation == &GuardLoOut || CurrentAnimation == &IdleCrouchBlink || CurrentAnimation == &CrouchIdleAction ||
@@ -1724,16 +1837,17 @@ bool ABTCharacterBase::ExitTimeTransitions()
 	if (CurrentAnimation == &GuardLoIn)
 		return EnterNewAnimation(GuardLo);
 
-	if (CurrentAnimation == &Deflected || CurrentAnimation == &ThrowEscape)
+	if (CurrentAnimation == &Sweep || CurrentAnimation == &WallBounce)
+		return EnterNewAnimation(FallingForward);
+
+	if (CurrentAnimation == &FocusBlitz || CurrentAnimation == &BreakerBlitz)
 	{
-		if (!bIsAirborne)
-			return EnterNewAnimation(IdleStand);
+		if (bIsAirborne)
+			return EnterNewAnimation(BlitzOutAir);
 		else
-			return EnterNewAnimation(MidJump);
+			return EnterNewAnimation(BlitzOutStanding);
 	}
 
-	if (CurrentAnimation == &WallBounce)
-		return EnterNewAnimation(FallingForward);
 
 	return false;
 }
@@ -1980,7 +2094,9 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			}
 			else
 			{
-				if (Hitbox.AttackLevel > 1)
+				if (Hitbox.AttackProperties & IsVertical)
+					Opponent->EnterNewAnimation(Opponent->GuardHiVertical);
+				else if (Hitbox.AttackLevel > 1)
 					Opponent->EnterNewAnimation(Opponent->GuardHiHeavy);
 				else
 					Opponent->EnterNewAnimation(Opponent->GuardHi);
@@ -2026,7 +2142,6 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	if (Hitbox.AttackHeight < Throw)
 		ComboCount++;
 	Opponent->BlockStun = 0;
-	Opponent->WallStickTime = 0;
 
 	if (Hitbox.AttackHeight < Throw && Opponent->CurrentAnimation == &Opponent->Crumple) //treat opponent as if airborne if hitting them in crumple
 		Opponent->bIsAirborne = true;
@@ -2034,7 +2149,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	if (ComboCount >= 2)
 	{
 		//if the opponent is in an aerial hitstun animation or staggered but their hitstun is zero, they could have escaped
-		if ((Opponent->HitStun == 0 && Opponent->ShatteredTime == 0 && Opponent->WallStickTime <= 6 && Opponent->bIsAirborne && 
+		if ((Opponent->HitStun == 0 && Opponent->ShatteredTime == 0 && Opponent->bIsAirborne && 
 			(Opponent->CurrentAnimFrame->Invincibility == FaceDown || Opponent->CurrentAnimFrame->Invincibility == FaceUp)) ||
 			(Opponent->CurrentAnimation == &Opponent->Stagger && Opponent->HitStun == 0))
 			bTrueCombo = false;
@@ -2229,7 +2344,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		if (Opponent->KnockBack.Y < 0)
 			Opponent->EnterNewAnimation(Opponent->FallingForward);
 		else
-			Opponent->EnterNewAnimation(Opponent->WallBounce);
+			Opponent->EnterNewAnimation(Opponent->Sweep);
 	}
 	else if (Hitbox.AttackProperties & CanLaunch)
 	{
@@ -2297,22 +2412,33 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 			Opponent->bClash = true;
 			KnockBack = FVector2D(-1, 0);
 			Opponent->KnockBack = FVector2D(-1, 0);
-			EnterNewAnimation(ThrowEscape);
-			Opponent->EnterNewAnimation(Opponent->ThrowEscape);
+
+			if (ThrowType == AirThrow)
+			{
+				EnterNewAnimation(ThrowEscapeAir);
+				Opponent->EnterNewAnimation(Opponent->ThrowEscapeAir);
+			}
+			else
+			{
+				EnterNewAnimation(ThrowEscape);
+				Opponent->EnterNewAnimation(Opponent->ThrowEscape);
+			}
+			
 			//play throw escape effect
 		}
 		else if (Opponent->Resolute)
 		{
-			EnterNewAnimation(Deflected);
 			//play Resolute Counter UI graphic
 			Opponent->ResolveRecoverTimer = 180;
 			Opponent->Durability = 101;
 			if (ThrowType == AirThrow)
 			{
+				EnterNewAnimation(DeflectedAir);
 				Opponent->EnterNewAnimation(Opponent->AirResoluteCounter);
 			}
 			else
 			{
+				EnterNewAnimation(Deflected);
 				Opponent->EnterNewAnimation(Opponent->ResoluteCounter);
 			}
 		}
@@ -2351,8 +2477,17 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 					Opponent->bClash = true;
 					KnockBack = FVector2D(-1, 0);
 					Opponent->KnockBack = FVector2D(-1, 0);
-					EnterNewAnimation(ThrowEscape);
-					Opponent->EnterNewAnimation(Opponent->ThrowEscape);
+
+					if (ThrowType == AirCommandThrow)
+					{
+						EnterNewAnimation(ThrowEscapeAir);
+						Opponent->EnterNewAnimation(Opponent->ThrowEscapeAir);
+					}
+					else
+					{
+						EnterNewAnimation(ThrowEscape);
+						Opponent->EnterNewAnimation(Opponent->ThrowEscape);
+					}
 					//play throw escape effect
 				}
 			}

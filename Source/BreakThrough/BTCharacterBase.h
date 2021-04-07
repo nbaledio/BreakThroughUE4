@@ -254,6 +254,8 @@ protected:
 
 	virtual void AnimationStateMachine();
 
+	virtual bool NonKnockdownLanding(); //transitions triggered by touching the ground while not in a hitstun animation
+
 	virtual bool ActiveTransitions(); //Animation transitions triggered by player input
 
 	virtual bool ConditionalTransitions(); //Animation transitions triggered by fulfilling some condition within certain animations
@@ -337,8 +339,6 @@ protected:
 		uint8 ShatteredTime = 0;
 	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
 		uint8 SlowMoTime = 0;
-	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
-		uint8 WallStickTime = 0;
 
 	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
 		uint8 JumpsUsed = 0;
@@ -568,8 +568,6 @@ protected:
 		TArray<FAnimationFrame> GuardAirOut;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
-		TArray<FAnimationFrame> ThrowEscape;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> ResoluteCounter;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> AirResoluteCounter;
@@ -602,6 +600,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> Deflected;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+		TArray<FAnimationFrame> DeflectedAir;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+		TArray<FAnimationFrame> ThrowEscape;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+		TArray<FAnimationFrame> ThrowEscapeAir;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> Crumple;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> Stagger;
@@ -622,11 +626,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> Tumble;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
-		TArray<FAnimationFrame> WallBounce; //sweep
+		TArray<FAnimationFrame> Sweep;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> FallingForward;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> GroundBounce;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+		TArray<FAnimationFrame> WallBounce;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
 		TArray<FAnimationFrame> WallStick;
 
