@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "BreakThroughPlayerController.h"
+#include "BTProjectileBase.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundCue.h"
 #include "BTCharacterBase.generated.h"
@@ -82,6 +83,9 @@ enum AttackProperties
 	IsHorizontal = (1 << 18),
 	LowerBodyHit = (1 << 19),
 };
+
+class ABTProjectileBase;
+struct FProjectileState;
 
 USTRUCT(BlueprintType)
 struct FHurtbox
@@ -207,6 +211,154 @@ struct FAnimationFrame
 		USoundCue* SFX;
 };
 
+USTRUCT(BlueprintType)
+struct FCharacterState
+{
+	GENERATED_BODY()
+
+	TArray<FAnimationFrame>* CurrentAnimation;
+	FAnimationFrame* CurrentAnimFrame;
+	TArray<FHitbox>* CurrentHitbox;
+	TArray<FHurtbox>* CurrentHurtbox;
+	TArray<FProjectileState> CurrentProjectileStates;
+
+	uint8 AnimFrameIndex;
+	uint8 PosePlayTime = 0;
+	uint8 IdleCycle = 0;
+	bool bPlaySound = false;
+
+	UPROPERTY(EditAnywhere, Category = "Battle Stats")
+		bool bFacingRight = true;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		uint8 HitStun = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		uint8 BlockStun = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		uint8 LandingLag = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		uint8 HitStop = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		uint8 GravDefyTime = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		uint8 ShatteredTime = 0;
+	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
+		uint8 SlowMoTime = 0;
+
+	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
+		uint8 JumpsUsed = 0;
+
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bIsAirborne = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bIsCrouching = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bIsGuarding = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bTouchingWall = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bTouchingOpponent = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		int32 JustDefense = 5;
+
+	TArray<int32> SpecialVariables; //Store any unique character variables here
+	int32 Seals = 0;
+	int32 SealTimer = 0;
+
+	//character's vitality, loses when it hits zero
+	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
+		int32 Health;
+	//the resolve that must be broken through
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
+		uint8 Resolve = 4;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
+		int32 Durability = 100;
+
+	uint8 ResolveRecoverTimer; //Resolve starts passive recovery after 3 seconds of not being used and while not shattered, does not increment while shattered
+	uint8 RecoverInterval; //dictates how quickly Resolve replenishes, recovers more quickly the lower the character's life, doubled while in slow mo
+
+	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
+		FVector2D Position; // Y = 0 is considered the ground, X = (-/+)10 are the left and right walls respectively
+	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
+		FVector2D Velocity;
+
+	UPROPERTY(VisibleAnywhere, Category = "Movement Properties") //keeps track of non-movement acceleration to apply once hitstop is zero
+		FVector2D KnockBack;
+
+	//value that increasingly scales positive vertical knockback the longer a character is in a combo
+	//causes a character to not be launched as high the more hits there are in a combo
+	int ComboCount = 0; //keeps track of the number of hits in a combo performed by this character
+	int ComboTimer = 0; //keeps track of the amount of time this character has spent in hitstun in frames
+	bool bTrueCombo = true; //keeps track of whether or not a character could have escaped a combo at some point
+	float SpecialProration = 1;
+
+	// ints to denote active time on directional inputs
+	uint8 Dir1 = 0;
+	uint8 Dir2 = 0;
+	uint8 Dir3 = 0;
+	uint8 Dir4 = 0;
+	uint8 Dir6 = 0;
+	uint8 Dir7 = 0;
+	uint8 Dir8 = 0;
+	uint8 Dir9 = 0;
+	uint8 DoubleDir2 = 0;
+	uint8 DoubleDir6 = 0;
+	uint8 DoubleDir4 = 0;
+	uint8 AirJump = 0;
+	bool Resolute; // Set to true when no inputs are held down
+
+	uint8 Charge2 = 0;
+	uint8 Charge4 = 0;
+	//uint8 Charge5 = 0;
+	uint8 Charge6 = 0;
+	uint8 Charge8 = 0;
+
+	uint8 Charge2Life = 0;
+	uint8 Charge4Life = 0;
+	//uint8 Charge5Life = 0;
+	uint8 Charge6Life = 0;
+	uint8 Charge8Life = 0;
+
+	// ints to denote active time on button inputs
+	uint8 LPressed = 0;
+	uint8 MPressed = 0;
+	uint8 HPressed = 0;
+	uint8 BPressed = 0;
+	uint8 LReleased = 0;
+	uint8 MReleased = 0;
+	uint8 HReleased = 0;
+	uint8 BReleased = 0;
+
+	//booleans to track if buttons are being held down
+	bool bIsLDown;
+	bool bIsMDown;
+	bool bIsHDown;
+	bool bIsBDown;
+
+	//int using bit flags to track to actions available to the character
+	int32 AvailableActions;
+	int32 MoveList;
+
+	//booleans to dictate the character's current state
+	bool bIsRunning = false;
+	bool bForwardJump = false;
+	bool bBackwardJump = false;
+	bool bArmorActive = false;
+	bool bCounterHitState = false;
+	int32 CharacterHitState = None; //determines if character can be bounced against/ stuck to surfaces, uses AttackProperties enum
+
+//keeps track of whether an attack has already hit something
+//attack effects are only applied based on the first overlap interaction with the attack (!bAttackMadeContact)
+	bool bAttackMadeContact = false;
+	//keeps track if an attack makes a hit, used for attacks that have a followup when they hit
+	bool bHitSuccess = false;
+	bool bClash = false;
+	bool bBlitzing;
+
+	int32 StatusTimer; //only mixes with status color as long as this is greater than zero
+};
+
 UCLASS()
 class BREAKTHROUGH_API ABTCharacterBase : public AActor
 {
@@ -234,6 +386,11 @@ public:
 	virtual void DrawCharacter();
 
 	ABTCharacterBase* Opponent;
+
+	FCharacterState CurrentState;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectiles")
+		TArray<ABTProjectileBase*> Projectiles;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -282,34 +439,10 @@ protected:
 
 	void RefreshMovelist();
 
-	TArray<FAnimationFrame>* CurrentAnimation;
-	FAnimationFrame* CurrentAnimFrame;
-	TArray<FHitbox>* CurrentHitbox;
-	TArray<FHurtbox>* CurrentHurtbox;
-
-	uint8 AnimFrameIndex;
-	uint8 PosePlayTime = 0;
-	uint8 IdleCycle = 0;
-	bool PlaySound = false;
-
 	TArray<int32> InputHistory;
-	int32 Seals = 0;
-	int32 SealTimer = 0;
-
-	//character's vitality, loses when it hits zero
-	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
-		int32 Health;
+	
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
 		int32 MaxHealth = 1000;
-
-	//the resolve that must be broken through
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
-		uint8 Resolve = 4;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
-		int32 Durability = 100;
-
-	uint8 ResolveRecoverTimer; //Resolve starts passive recovery after 3 seconds of not being used and while not shattered, does not increment while shattered
-	uint8 RecoverInterval; //dictates how quickly Resolve replenishes, recovers more quickly the lower the character's life, doubled while in slow mo
 
 	//values that represent a character's resilience as a battle rages on
 	//scales down damage received based on how low the character's health is
@@ -321,41 +454,6 @@ protected:
 		float Valor25;
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
 		float Valor10;
-
-	UPROPERTY(EditAnywhere, Category = "Battle Stats")
-		bool bFacingRight = true;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		uint8 HitStun = 0;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		uint8 BlockStun = 0;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		uint8 LandingLag = 0;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		uint8 HitStop = 0;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		uint8 GravDefyTime = 0;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		uint8 ShatteredTime = 0;
-	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
-		uint8 SlowMoTime = 0;
-
-	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
-		uint8 JumpsUsed = 0;
-
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		bool bIsAirborne = false;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		bool bIsCrouching = false;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		bool bIsGuarding = false;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		bool bTouchingWall = false;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		bool bTouchingOpponent = false;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		int32 JustDefense = 5;
 
 	/* Affects how quickly the character falls to the ground (See below for values per weight class)
 		Featherweight = .95 
@@ -392,85 +490,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		FVector2D JumpForce;
 
-	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
-		FVector2D Position; // Y = 0 is considered the ground, X = (-/+)10 are the left and right walls respectively
-	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
-		FVector2D Velocity;
-
-	UPROPERTY(VisibleAnywhere, Category = "Movement Properties") //keeps track of non-movement acceleration to apply once hitstop is zero
-		FVector2D KnockBack;
-
-	//value that increasingly scales positive vertical knockback the longer a character is in a combo
-	//causes a character to not be launched as high the more hits there are in a combo
-		int ComboCount = 0; //keeps track of the number of hits in a combo performed by this character
-		int ComboTimer = 0; //keeps track of the amount of time this character has spent in hitstun in frames
-		bool bTrueCombo = true; //keeps track of whether or not a character could have escaped a combo at some point
-		float SpecialProration = 1;
-
 	//number of frames that an input is active for
 		uint8 InputTime = 10;
-	// ints to denote active time on directional inputs
-		uint8 Dir1 = 0;
-		uint8 Dir2 = 0;
-		uint8 Dir3 = 0;
-		uint8 Dir4 = 0;
-		uint8 Dir6 = 0;
-		uint8 Dir7 = 0;
-		uint8 Dir8 = 0;
-		uint8 Dir9 = 0;
-		uint8 DoubleDir2 = 0;
-		uint8 DoubleDir6 = 0;
-		uint8 DoubleDir4 = 0;
-		uint8 AirJump = 0;
-		bool Resolute; // Set to true when no inputs are held down
-
-		uint8 Charge2 = 0;
-		uint8 Charge4 = 0;
-		//uint8 Charge5 = 0;
-		uint8 Charge6 = 0;
-		uint8 Charge8 = 0;
-
-		uint8 Charge2Life = 0;
-		uint8 Charge4Life = 0;
-		//uint8 Charge5Life = 0;
-		uint8 Charge6Life = 0;
-		uint8 Charge8Life = 0;
-
-	// ints to denote active time on button inputs
-		uint8 LPressed = 0;
-		uint8 MPressed = 0;
-		uint8 HPressed = 0;
-		uint8 BPressed = 0;
-		uint8 LReleased = 0;
-		uint8 MReleased = 0;
-		uint8 HReleased = 0;
-		uint8 BReleased = 0;
-	
-	//booleans to track if buttons are being held down
-		bool bIsLDown;
-		bool bIsMDown;
-		bool bIsHDown;
-		bool bIsBDown;
-
-	//int using bit flags to track to actions available to the character
-		int32 AvailableActions;
-		int32 MoveList;
-
-	//booleans to dictate the character's current state
-		bool bIsRunning = false;
-		bool bForwardJump = false;
-		bool bBackwardJump = false;
-		bool bArmorActive = false;
-		bool bCounterHitState = false;
-		int32 CharacterHitState = None; //determines if character should be in a specific animation state (crumple, sweep, launch, etc.), or if they can be bounced against/ stuck to surfaces, uses AttackProperties enum
-
-	//keeps track of whether an attack has already hit something
-	//attack effects are only applied based on the first overlap interaction with the attack (!bAttackMadeContact)
-		bool bAttackMadeContact = false;
-	//keeps track if an attack makes a hit, used for attacks that have a followup when they hit
-		bool bHitSuccess = false;
-		bool bClash = false;
-		bool bBlitzing;
 
 	//Sets the corresponding parameters on character's materials
 		FVector MainLightVector;
@@ -480,7 +501,6 @@ protected:
 		FVector RimLightColor;
 		FVector StatusColor;
 		float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
-		int32 StatusTimer; //only mixes with status color as long as this is greater than zero
 		float LightIntensity;
 		float OverallBrightness;
 		float LineThickness; //0-1 during cinematics, 2 during normal gameplay
