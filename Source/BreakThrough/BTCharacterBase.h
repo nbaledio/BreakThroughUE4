@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "BreakThroughPlayerController.h"
 #include "BTProjectileBase.h"
+#include "Sigil.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundCue.h"
 #include "BTCharacterBase.generated.h"
@@ -86,6 +87,8 @@ enum AttackProperties
 
 class ABTProjectileBase;
 struct FProjectileState;
+class ASigil;
+struct FSigilState;
 
 USTRUCT(BlueprintType)
 struct FHurtbox
@@ -221,6 +224,7 @@ struct FCharacterState
 	TArray<FHitbox>* CurrentHitbox;
 	TArray<FHurtbox>* CurrentHurtbox;
 	TArray<FProjectileState> CurrentProjectileStates;
+	TArray<FSigilState> CurrentSigilStates;
 
 	uint8 AnimFrameIndex;
 	uint8 PosePlayTime = 0;
@@ -355,6 +359,8 @@ struct FCharacterState
 	bool bHitSuccess = false;
 	bool bClash = false;
 	bool bBlitzing;
+	bool bWin = false;
+	bool bLose = false;
 
 	int32 StatusTimer; //only mixes with status color as long as this is greater than zero
 };
@@ -383,14 +389,17 @@ public:
 
 	void PushboxSolver(); //only called once by gamestate, do not call for each character
 
-	virtual void DrawCharacter();
+	virtual void DrawCharacter();  //set material parameters from child class
 
 	ABTCharacterBase* Opponent;
 
-	FCharacterState CurrentState;
+	FCharacterState CurrentState{0};
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectiles")
 		TArray<ABTProjectileBase*> Projectiles;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sigils")
+		TArray<ASigil*> Sigils;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -470,6 +479,10 @@ protected:
 		float PushboxWidth = 1;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float AirPushboxVerticalOffset = 0;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float AirDashForwardOffset = 0;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float AirDashBackOffset = 0;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float WalkSpeed = 1;
@@ -506,175 +519,185 @@ protected:
 		float LineThickness; //0-1 during cinematics, 2 during normal gameplay
 
 	//Idle Stance Animations
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> IdleStand;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> IdleStandBlink;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> StandIdleAction;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> IdleCrouch;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> IdleCrouchBlink;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> CrouchIdleAction;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> TurnAroundStand;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> TurnAroundCrouch;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> StandUp;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> CrouchDown;
 
 	//Locomotion Animations
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> WalkForward;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> WalkBackward;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> PreJump;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> NeutralJump;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> ForwardJump;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> BackwardJump;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> MidJump;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> JumpTransition;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> JumpDescent;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> RunStart;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> RunCycle;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> Brake;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> BackDash;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> AirDashForward;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> AirDashBackward;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> AirRecovery;
 
 	//Guard Animations
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardHiIn;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardHi;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardHiHeavy;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardHiVertical;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardHiOut;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardLoIn;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardLo;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardLoHeavy;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardLoOut;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardAir;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardAirOut;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Resolute Counters")
 		TArray<FAnimationFrame> ResoluteCounter;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Resolute Counters")
 		TArray<FAnimationFrame> AirResoluteCounter;
 
 	//Ground Hitstun Animations
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> HitSHIn;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> HitSHOut;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> HitSHHeavyIn;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> HitSHHeavyOut;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> HitSLIn;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> HitSLOut;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> HitSLHeavyIn;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> HitSLHeavyOut;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> HitCIn;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> HitCOut;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> HitCHeavyIn;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> HitCHeavyOut;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> Deflected;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> DeflectedAir;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> ThrowEscape;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> ThrowEscapeAir;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> Crumple;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> Stagger;
 
-	//Airborne hitstun animations
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	//Airborne hitstun Anims
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> HitstunAir;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> HitstunAirCycle;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> KnockAway;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> LaunchCycle;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> LaunchTransition;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> LaunchFallCycle;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> Tumble;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> Sweep;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> FallingForward;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> GroundBounce;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> WallBounce;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> WallStick;
 
 	//Blitz Cancel
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
 		TArray<FAnimationFrame> FocusBlitz;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
 		TArray<FAnimationFrame> BreakerBlitz;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
 		TArray<FAnimationFrame> BlitzOutAir;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
 		TArray<FAnimationFrame> BlitzOutStanding;
 
 	//Knockdown/WakeUp Animations
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "KD Anims")
 		TArray<FAnimationFrame> KnockDownFaceDown;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "KD Anims")
 		TArray<FAnimationFrame> KnockDownFaceUp;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "KD Anims")
 		TArray<FAnimationFrame> WakeUpFaceDown;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "KD Anims")
 		TArray<FAnimationFrame> WakeUpFaceUp;
+
+	//Win/Lose Animation Cycles ---> Actual Round Win Animations located on character that transition to the win cycles below to account for unique dialogue that may play based on opponent's character
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Win/Lose Anims")
+		TArray<FAnimationFrame> WinCycle;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Win/Lose Anims")
+		TArray<FAnimationFrame> WinCycle2;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Win/Lose Anims")
+		TArray<FAnimationFrame> TimeOverLose;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Win/Lose Anims")
+		TArray<FAnimationFrame> LoseCycle;
 
 private:
 
@@ -722,6 +745,8 @@ private:
 	void AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter);
 
 	void SetSounds();
+
+	void SaveSigilStates();
 };
 
 /* 

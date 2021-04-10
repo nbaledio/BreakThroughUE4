@@ -7,7 +7,7 @@
 ABTCharacterBase::ABTCharacterBase()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true; //false; most likely will update this actor from gamestate
+	PrimaryActorTick.bCanEverTick = true; //false; most likely will update this actor from gamestatebase
 
 	Transform = CreateDefaultSubobject<USceneComponent>(TEXT("Transform"));
 	RootComponent = Transform;
@@ -363,6 +363,12 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs)
 		if (CurrentState.AvailableActions & AcceptMove && CurrentInputs == 0) //Character is not inputting anything while in neutral
 			CurrentState.Resolute = true; //Character with Resolute state will gain meter instead of being hit by a Blitz wave and will automatically counter normal throws
 	}
+
+	for (ASigil* Sigil : Sigils)
+	{
+		Sigil->Update();
+	}
+
 	SetSounds();
 }
 
@@ -474,6 +480,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 			CurrentState.ComboCount = 0;
 	}	
 
+	SaveSigilStates();
 	InputCountdown();
 }
 
@@ -843,6 +850,7 @@ void ABTCharacterBase::DrawCharacter()
 
 	SetActorLocation(FVector(CurrentState.Position.X, GetActorLocation().Y, CurrentState.Position.Y));
 
+	//play sounds if any
 	if (CurrentState.bPlaySound)
 	{
 		if (CharacterVoice->Sound != NULL)
@@ -853,6 +861,11 @@ void ABTCharacterBase::DrawCharacter()
 		CurrentState.bPlaySound = false;
 	}
 
+	//draw sigils if they're active
+	for (ASigil* Sigil : Sigils)
+	{
+		Sigil->DrawSigil();
+	}
 	//if Hitbox View is on also loop through hitbox and hurtbox arrays and draw to screen
 }
 
@@ -993,6 +1006,15 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 			CurrentState.Velocity.Y *= -1;
 			if (CurrentState.Velocity.Y < 3)
 				CurrentState.Velocity.Y = 3;
+
+			if (Opponent != NULL)
+			{
+				if (Opponent->Sigils.Num() > 1)
+				{
+					Opponent->Sigils[1]->Activate(CurrentState.Position, FRotator(0, 0, 20));
+				}
+			}
+
 			return EnterNewAnimation(GroundBounce);
 		}
 		else
@@ -1071,6 +1093,17 @@ bool ABTCharacterBase::HitWall()
 			CurrentState.HitStun = WallStickHitStun;
 		}
 
+		if (Opponent != NULL)
+		{
+			if (Opponent->Sigils.Num() > 1)
+			{
+				if (CurrentState.bFacingRight)
+					Opponent->Sigils[1]->Activate(FVector2D(CurrentState.Position.X - PushboxWidth - 25), FRotator(-90, 0, 20));
+				else
+					Opponent->Sigils[1]->Activate(FVector2D(CurrentState.Position.X + PushboxWidth + 25), FRotator(90, 0, 20));
+			}
+		}
+
 		CurrentState.CharacterHitState = None;
 		CurrentState.Velocity = FVector2D(0, 0);
 		return EnterNewAnimation(WallStick);
@@ -1083,6 +1116,18 @@ bool ABTCharacterBase::HitWall()
 		CurrentState.Velocity.X *= -1;
 		if (CurrentState.Velocity.Y < 1.5f)
 			CurrentState.Velocity.Y = 1.5f;
+
+		if (Opponent != NULL)
+		{
+			if (Opponent->Sigils.Num() > 1)
+			{
+				if (CurrentState.bFacingRight)
+					Opponent->Sigils[1]->Activate(FVector2D(CurrentState.Position.X - PushboxWidth - 25), FRotator(-90, 0, 20));
+				else
+					Opponent->Sigils[1]->Activate(FVector2D(CurrentState.Position.X + PushboxWidth + 25), FRotator(90, 0, 20));
+			}
+		}
+
 		return EnterNewAnimation(WallBounce);
 	}
 
@@ -1222,6 +1267,20 @@ void ABTCharacterBase::Jumping()
 	if (CurrentState.bIsAirborne)
 	{
 		CurrentState.Velocity.Y *= .5f;
+
+		if (Sigils.Num() > 0)
+		{
+			FRotator SigilRotation = FRotator(0, 0, 20);
+			if ((CurrentState.bFacingRight && CurrentState.bForwardJump) || (!CurrentState.bFacingRight && CurrentState.bBackwardJump))
+			{
+				SigilRotation.Pitch = -15;
+			}
+			else if ((!CurrentState.bFacingRight && CurrentState.bForwardJump) || (CurrentState.bFacingRight && CurrentState.bBackwardJump))
+			{
+				SigilRotation.Pitch = 15;
+			}
+			Sigils[0]->Activate(CurrentState.Position, SigilRotation);
+		}
 	}
 
 	CurrentState.AirJump = 0;
@@ -1684,6 +1743,8 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 	{
 		/*if (Taunt > 0)
 			return EnterNewAnimation(Taunt); */
+		if (CurrentState.bLose)
+			return EnterNewAnimation(TimeOverLose);
 
 		if (CurrentState.DoubleDir6 > 0)
 		{
@@ -1795,6 +1856,11 @@ bool ABTCharacterBase::PassiveTransitions()
 
 bool ABTCharacterBase::ExitTimeTransitions()
 {
+	if (CurrentState.CurrentAnimation == &TimeOverLose)
+	{
+		return EnterNewAnimation(LoseCycle);
+	}
+
 	if (CurrentState.CurrentAnimation == &PreJump) // Transition from PreJump frames to JumpAnimation
 	{
 		if (CurrentState.bForwardJump && ForwardJump.Num() > 0)
@@ -1830,10 +1896,10 @@ bool ABTCharacterBase::ExitTimeTransitions()
 		CurrentState.CurrentAnimation == &HitCOut || CurrentState.CurrentAnimation == &HitCHeavyOut)
 		return EnterNewAnimation(IdleCrouch);
 
-	if (CurrentState.CurrentAnimation == &KnockDownFaceDown || CurrentState.CurrentAnimation == &Crumple)
+	if ((CurrentState.CurrentAnimation == &KnockDownFaceDown || CurrentState.CurrentAnimation == &Crumple) && (CurrentState.Health != 0))
 		return EnterNewAnimation(WakeUpFaceDown);
 
-	if (CurrentState.CurrentAnimation == &KnockDownFaceUp)
+	if ((CurrentState.CurrentAnimation == &KnockDownFaceUp) && (CurrentState.Health != 0))
 		return EnterNewAnimation(WakeUpFaceUp);
 
 	if (CurrentState.CurrentAnimation == &GuardHiIn)
@@ -2527,5 +2593,21 @@ void ABTCharacterBase::SetSounds()
 	else
 	{
 		CharacterVoice->SetSound(NULL);
+	}
+}
+
+void ABTCharacterBase::SaveSigilStates()
+{
+	if (CurrentState.CurrentSigilStates.Num() < Sigils.Num()) //first time saving sigils to character state
+	{
+		for (int32 i = 0; i < Sigils.Num(); i++)
+		{
+			CurrentState.CurrentSigilStates.Add(Sigils[i]->CurrentState);
+		}
+	}
+
+	for (int32 i = 0; i < Sigils.Num(); i++)
+	{
+		CurrentState.CurrentSigilStates[i] = Sigils[i]->CurrentState;
 	}
 }
