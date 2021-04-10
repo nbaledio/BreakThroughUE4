@@ -5,6 +5,10 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "BreakThroughPlayerController.h"
+#include "BTProjectileBase.h"
+#include "Sigil.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundCue.h"
 #include "BTCharacterBase.generated.h"
 
 #define OUT
@@ -12,9 +16,9 @@
 enum GuardHeight
 {
 	Mid,
-	Low,
 	High,
 	Overhead,
+	Low,
 	Unblockable,
 	Throw,
 	CommandThrow,
@@ -33,6 +37,7 @@ enum SpecialStates
 	HiCounter,
 	LowCounter,
 	AllCounter,
+	SuperCounter,
 	FaceDown,
 	FaceUp,
 	OTG // 30% damage and halved hitstun
@@ -58,24 +63,32 @@ enum CharacterActions
 
 enum AttackProperties
 {
-	CanGroundBounce = (1 << 0), //can be bounced against the ground
-	CanWallBounce = (1 << 1), //can be bounced off of walls
-	CanWallStick = (1 << 2), //can be stuck against walls
-	Sweep = (1 << 3), //sweep: no special properties
-	Launch = (1 << 4), //launch: no special properties, purely aesthetic
-	Stagger = (1 << 5), //stagger: can still be thrown despite being a hitstun state, need to hold button to recover back to standing position once hitstun ends
-	Crumple = (1 << 6), //crumple: long hitstun state with preset duration, ends in facedown knockdown, can still be thrown despite being a hitstun state
-	KnockAway = (1 << 7), //knock away: no special properties, purely aesthetic
-	Deflect = (1 << 8), //deflect: non-deflect attacks are deflected by a hitbox with this property, character enters a hitstun state with preset duration, can still be thrown, two deflective attacks will clash normally
-	Tumbling = (1 << 9), //tumbling: an airborne hitstun state that cannot be air recovered from
-	ComboThrow = (1 << 10), //Throws with this flag can hit opponents even if they are in hitstun
-	PlayHitEffect = (1 << 11),
-	IsSpecial = (1 << 12),
-	IsSuper = (1 << 13),
-	IsSlash = (1 << 14),
-	IsVertical = (1 << 15),
-	LowerBodyHit = (1 << 16),
+	Piercing = (1 << 0), //Attack ignores armor
+	Shatter = (1 << 1), //Attack destroys armor
+	CanGroundBounce = (1 << 2), //can be bounced against the ground
+	CanWallBounce = (1 << 3), //can be bounced off of walls
+	CanWallStick = (1 << 4), //can be stuck against walls, wall stick transitions into crumple if hits the ground before wallsticktime is up
+	CanSweep = (1 << 5), //sweep: no special properties
+	CanLaunch = (1 << 6), //launch: no special properties, purely aesthetic
+	CanStagger = (1 << 7), //stagger: can still be thrown despite being a hitstun state, need to hold button to recover back to standing position once hitstun ends
+	CanCrumple = (1 << 8), //crumple: long hitstun state with preset duration, ends in facedown knockdown, can still be thrown despite being a hitstun state
+	CanKnockAway = (1 << 9), //knock away: no special properties, purely aesthetic
+	CanDeflect = (1 << 10), //deflect: non-deflect attacks are deflected by a hitbox with this property, character enters a hitstun state with preset duration, can still be thrown, two deflective attacks will clash normally
+	CanTumble = (1 << 11), //tumbling: an airborne hitstun state that cannot be air recovered from
+	ComboThrow = (1 << 12), //Throws with this flag can hit opponents even if they are in hitstun
+	PlayHitEffect = (1 << 13),
+	IsSpecial = (1 << 14),
+	IsSuper = (1 << 15),
+	IsSlash = (1 << 16),
+	IsVertical = (1 << 17),
+	IsHorizontal = (1 << 18),
+	LowerBodyHit = (1 << 19),
 };
+
+class ABTProjectileBase;
+struct FProjectileState;
+class ASigil;
+struct FSigilState;
 
 USTRUCT(BlueprintType)
 struct FHurtbox
@@ -119,11 +132,11 @@ struct FHitbox
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		int32 AttackHeight = Mid;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		int32 BaseHitStun = 0;
+		uint8 BaseHitStun = 0;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		int32 BaseHitStop = 0;
+		uint8 BaseHitStop = 0;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		int32 BaseBlockStun = 0;
+		uint8 BaseBlockStun = 0;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		float InitProration = 1.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
@@ -142,7 +155,7 @@ struct FAnimationFrame
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
 		UAnimationAsset* Pose;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
-		int32 PlayDuration;
+		uint8 PlayDuration;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
 		bool bDoesCycle;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
@@ -194,6 +207,162 @@ struct FAnimationFrame
 		bool bLockPosition;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		FVector2D Acceleration; //add to character's velocity upon entering the animation frame
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Audio")
+		USoundCue* VoiceLines;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Audio")
+		USoundCue* SFX;
+};
+
+USTRUCT(BlueprintType)
+struct FCharacterState
+{
+	GENERATED_BODY()
+
+	TArray<FAnimationFrame>* CurrentAnimation;
+	FAnimationFrame* CurrentAnimFrame;
+	TArray<FHitbox>* CurrentHitbox;
+	TArray<FHurtbox>* CurrentHurtbox;
+	TArray<FProjectileState> CurrentProjectileStates;
+	TArray<FSigilState> CurrentSigilStates;
+
+	uint8 AnimFrameIndex;
+	uint8 PosePlayTime = 0;
+	uint8 IdleCycle = 0;
+	bool bPlaySound = false;
+
+	UPROPERTY(EditAnywhere, Category = "Battle Stats")
+		bool bFacingRight = true;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		uint8 HitStun = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		uint8 BlockStun = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		uint8 LandingLag = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		uint8 HitStop = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		uint8 GravDefyTime = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		uint8 ShatteredTime = 0;
+	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
+		uint8 SlowMoTime = 0;
+
+	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
+		uint8 JumpsUsed = 0;
+
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bIsAirborne = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bIsCrouching = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bIsGuarding = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bTouchingWall = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bTouchingOpponent = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		int32 JustDefense = 5;
+
+	TArray<int32> SpecialVariables; //Store any unique character variables here
+	int32 Seals = 0;
+	int32 SealTimer = 0;
+
+	//character's vitality, loses when it hits zero
+	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
+		int32 Health;
+	//the resolve that must be broken through
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
+		uint8 Resolve = 4;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
+		int32 Durability = 100;
+
+	uint8 ResolveRecoverTimer; //Resolve starts passive recovery after 3 seconds of not being used and while not shattered, does not increment while shattered
+	uint8 RecoverInterval; //dictates how quickly Resolve replenishes, recovers more quickly the lower the character's life, doubled while in slow mo
+
+	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
+		FVector2D Position; // Y = 0 is considered the ground, X = (-/+)10 are the left and right walls respectively
+	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
+		FVector2D Velocity;
+
+	UPROPERTY(VisibleAnywhere, Category = "Movement Properties") //keeps track of non-movement acceleration to apply once hitstop is zero
+		FVector2D KnockBack;
+
+	//value that increasingly scales positive vertical knockback the longer a character is in a combo
+	//causes a character to not be launched as high the more hits there are in a combo
+	int ComboCount = 0; //keeps track of the number of hits in a combo performed by this character
+	int ComboTimer = 0; //keeps track of the amount of time this character has spent in hitstun in frames
+	bool bTrueCombo = true; //keeps track of whether or not a character could have escaped a combo at some point
+	float SpecialProration = 1;
+
+	// ints to denote active time on directional inputs
+	uint8 Dir1 = 0;
+	uint8 Dir2 = 0;
+	uint8 Dir3 = 0;
+	uint8 Dir4 = 0;
+	uint8 Dir6 = 0;
+	uint8 Dir7 = 0;
+	uint8 Dir8 = 0;
+	uint8 Dir9 = 0;
+	uint8 DoubleDir2 = 0;
+	uint8 DoubleDir6 = 0;
+	uint8 DoubleDir4 = 0;
+	uint8 AirJump = 0;
+	bool Resolute; // Set to true when no inputs are held down
+
+	uint8 Charge2 = 0;
+	uint8 Charge4 = 0;
+	//uint8 Charge5 = 0;
+	uint8 Charge6 = 0;
+	uint8 Charge8 = 0;
+
+	uint8 Charge2Life = 0;
+	uint8 Charge4Life = 0;
+	//uint8 Charge5Life = 0;
+	uint8 Charge6Life = 0;
+	uint8 Charge8Life = 0;
+
+	// ints to denote active time on button inputs
+	uint8 LPressed = 0;
+	uint8 MPressed = 0;
+	uint8 HPressed = 0;
+	uint8 BPressed = 0;
+	uint8 LReleased = 0;
+	uint8 MReleased = 0;
+	uint8 HReleased = 0;
+	uint8 BReleased = 0;
+
+	//booleans to track if buttons are being held down
+	bool bIsLDown;
+	bool bIsMDown;
+	bool bIsHDown;
+	bool bIsBDown;
+
+	//int using bit flags to track to actions available to the character
+	int32 AvailableActions;
+	int32 MoveList;
+
+	//booleans to dictate the character's current state
+	bool bIsRunning = false;
+	bool bForwardJump = false;
+	bool bBackwardJump = false;
+	bool bArmorActive = false;
+	bool bCounterHitState = false;
+	int32 CharacterHitState = None; //determines if character can be bounced against/ stuck to surfaces, uses AttackProperties enum
+
+//keeps track of whether an attack has already hit something
+//attack effects are only applied based on the first overlap interaction with the attack (!bAttackMadeContact)
+	bool bAttackMadeContact = false;
+	//keeps track if an attack makes a hit, used for attacks that have a followup when they hit
+	bool bHitSuccess = false;
+	bool bClash = false;
+	bool bBlitzing;
+	bool bWin = false;
+	bool bLose = false;
+
+	int32 StatusTimer; //only mixes with status color as long as this is greater than zero
 };
 
 UCLASS()
@@ -220,17 +389,38 @@ public:
 
 	void PushboxSolver(); //only called once by gamestate, do not call for each character
 
-	virtual void DrawCharacter();
+	virtual void DrawCharacter();  //set material parameters from child class
 
 	ABTCharacterBase* Opponent;
 
+	FCharacterState CurrentState{0};
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectiles")
+		TArray<ABTProjectileBase*> Projectiles;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sigils")
+		TArray<ASigil*> Sigils;
+
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		USceneComponent* Transform;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		USkeletalMeshComponent* BaseMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UAudioComponent* CharacterVoice;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UAudioComponent* CharacterSoundEffects;
+
 	// Called when the game starts or when spawned
 	virtual void BeginPlay();
 
 	virtual void ProcessInputs(int32 Inputs);
 
 	virtual void AnimationStateMachine();
+
+	virtual bool NonKnockdownLanding(); //transitions triggered by touching the ground while not in a hitstun animation
 
 	virtual bool ActiveTransitions(); //Animation transitions triggered by player input
 
@@ -256,37 +446,15 @@ protected:
 
 	bool FC();
 
-	TArray<FAnimationFrame>* CurrentAnimation;
-	FAnimationFrame* CurrentAnimFrame;
-	TArray<FHitbox>* CurrentHitbox;
-	TArray<FHurtbox>* CurrentHurtbox;
-
-	int32 AnimFrameIndex;
-	int32 PosePlayTime = 0;
+	void RefreshMovelist();
 
 	TArray<int32> InputHistory;
-	int32 Seals = 0;
-	int32 SealTimer = 0;
-
-	//character's vitality, loses when it hits zero
-	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
-		int32 Health;
+	
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
 		int32 MaxHealth = 1000;
 
-	//the resolve that must be broken through
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
-		int32 Resolve = 4;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
-		int32 Durability = 100;
-
-	int32 ResolveRecoverTimer; //Resolve starts passive recovery after 3 seconds of not being used and while not shattered, does not increment while shattered
-	int32 RecoverInterval; //dictates how quickly Resolve replenishes, recovers more quickly the lower the character's life, doubled while in slow mo
-
 	//values that represent a character's resilience as a battle rages on
 	//scales down damage received based on how low the character's health is
-	/*UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
-		float CurrentValor;*/
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
 		float Valor100;
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
@@ -295,43 +463,6 @@ protected:
 		float Valor25;
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
 		float Valor10;
-
-	UPROPERTY(EditAnywhere, Category = "Battle Stats")
-		bool bFacingRight = true;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		int32 HitStun = 0;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		int32 BlockStun = 0;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		int32 LandingLag = 0;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		int32 HitStop = 0;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		int32 GravDefyTime = 0;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		int32 ShatteredTime = 0;
-	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
-		int32 SlowMoTime = 0;
-	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
-		int32 WallStickTime = 0;
-
-	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
-		int32 JumpsUsed = 0;
-
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		bool bIsAirborne = false;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		bool bIsCrouching = false;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		bool bIsGuarding = false;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		bool bTouchingWall = false;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		bool bTouchingOpponent = false;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-		int32 JustDefense = 5;
 
 	/* Affects how quickly the character falls to the ground (See below for values per weight class)
 		Featherweight = .95 
@@ -348,6 +479,10 @@ protected:
 		float PushboxWidth = 1;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float AirPushboxVerticalOffset = 0;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float AirDashForwardOffset = 0;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float AirDashBackOffset = 0;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float WalkSpeed = 1;
@@ -360,7 +495,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float BlitzDashForce = 2;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		int32 MaxJumps = 2;
+		uint8 MaxJumps = 2;
 	//x dictates horizontal acceleration, z dictates vertical acceleration. y should never be changed or touched
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		FVector2D BackDashForce;
@@ -368,209 +503,203 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		FVector2D JumpForce;
 
-	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
-		FVector2D Position; // Y = 0 is considered the ground, X = (-/+)10 are the left and right walls respectively
-	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
-		FVector2D Velocity;
-
-	UPROPERTY(VisibleAnywhere, Category = "Movement Properties") //keeps track of non-movement acceleration to apply once hitstop is zero
-		FVector2D KnockBack;
-
-	//value that increasingly scales positive vertical knockback the longer a character is in a combo
-	//causes a character to not be launched as high the more hits there are in a combo
-		float ComboGravity = 1;
-		int ComboCount = 0; //keeps track of the number of hits in a combo performed by this character
-		int ComboTimer = 0; //keeps track of the amount of time this character has spent in hitstun in frames
-		bool bTrueCombo = true; //keeps track of whether or not a character could have escaped a combo at some point
-
 	//number of frames that an input is active for
-		int32 InputTime = 10;
-	// ints to denote active time on directional inputs
-		int32 Dir1 = 0;
-		int32 Dir2 = 0;
-		int32 Dir3 = 0;
-		int32 Dir4 = 0;
-		int32 Dir6 = 0;
-		int32 Dir7 = 0;
-		int32 Dir8 = 0;
-		int32 Dir9 = 0;
-		int32 DoubleDir2 = 0;
-		int32 DoubleDir6 = 0;
-		int32 DoubleDir4 = 0;
-		int32 AirJump = 0;
-		bool Resolute; // Set to true when no inputs are held down
+		uint8 InputTime = 10;
 
-		int32 Charge2 = 0;
-		int32 Charge4 = 0;
-		//int32 Charge5 = 0;
-		int32 Charge6 = 0;
-		int32 Charge8 = 0;
-
-		int32 Charge2Life = 0;
-		int32 Charge4Life = 0;
-		//int32 Charge5Life = 0;
-		int32 Charge6Life = 0;
-		int32 Charge8Life = 0;
-
-	// ints to denote active time on button inputs
-		int32 LPressed = 0;
-		int32 MPressed = 0;
-		int32 HPressed = 0;
-		int32 BPressed = 0;
-		int32 LReleased = 0;
-		int32 MReleased = 0;
-		int32 HReleased = 0;
-		int32 BReleased = 0;
-	
-	//booleans to track if buttons are being held down
-		bool bIsLDown;
-		bool bIsMDown;
-		bool bIsHDown;
-		bool bIsBDown;
-
-	//int using bit flags to track to actions available to the character
-		int32 AvailableActions;
-
-	//booleans to dictate the character's current state
-		bool bIsRunning = false;
-		bool bForwardJump = false;
-		bool bBackwardJump = false;
-		bool bArmorActive = false;
-		bool bCounterHitState = false;
-		int32 CharacterHitState = None; //determines if character should be in a specific animation state (crumple, sweep, launch, etc.), or if they can be bounced against/ stuck to surfaces, uses AttackProperties enum
-
-	//keeps track of whether an attack has already hit something
-	//attack effects are only applied based on the first overlap interaction with the attack (!bAttackMadeContact)
-		bool bAttackMadeContact = false;
-	//keeps track if an attack makes a hit, used for attacks that have a followup when they hit
-		bool bHitSuccess = false;
-		bool bClash = false;
-		bool bBlitzing;
-
-	//Sets the corresponding vectors on character's materials
+	//Sets the corresponding parameters on character's materials
 		FVector MainLightVector;
 		FVector FillLightVector;
 		FVector MainLightColor;
 		FVector FillLightColor;
+		FVector RimLightColor;
+		FVector StatusColor;
+		float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
+		float LightIntensity;
+		float OverallBrightness;
+		float LineThickness; //0-1 during cinematics, 2 during normal gameplay
 
 	//Idle Stance Animations
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> IdleStand;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
+		TArray<FAnimationFrame> IdleStandBlink;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
+		TArray<FAnimationFrame> StandIdleAction;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> IdleCrouch;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
+		TArray<FAnimationFrame> IdleCrouchBlink;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
+		TArray<FAnimationFrame> CrouchIdleAction;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> TurnAroundStand;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> TurnAroundCrouch;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> StandUp;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> CrouchDown;
 
 	//Locomotion Animations
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> WalkForward;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> WalkBackward;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> PreJump;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> NeutralJump;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> ForwardJump;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> BackwardJump;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> MidJump;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> JumpTransition;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> JumpDescent;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> RunStart;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> RunCycle;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> Brake;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> BackDash;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> AirDashForward;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> AirDashBackward;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
+		TArray<FAnimationFrame> AirRecovery;
 
 	//Guard Animations
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardHiIn;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardHi;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardHiHeavy;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardHiVertical;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardHiOut;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardLoIn;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardLo;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardLoHeavy;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardLoOut;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardAir;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardAirOut;
 
-	//Hitstun Animations
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
-		TArray<FAnimationFrame> HitstunAir;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Resolute Counters")
+		TArray<FAnimationFrame> ResoluteCounter;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Resolute Counters")
+		TArray<FAnimationFrame> AirResoluteCounter;
+
+	//Ground Hitstun Animations
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> HitSHIn;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> HitSHOut;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> HitSHHeavyIn;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> HitSHHeavyOut;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> HitSLIn;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> HitSLOut;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> HitSLHeavyIn;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> HitSLHeavyOut;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> HitCIn;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> HitCOut;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> HitCHeavyIn;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> HitCHeavyOut;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> Deflected;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
-		TArray<FAnimationFrame> Crumple;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
-		TArray<FAnimationFrame> Stagger;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> DeflectedAir;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
 		TArray<FAnimationFrame> ThrowEscape;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
-		TArray<FAnimationFrame> WallBounce; //sweep
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> ThrowEscapeAir;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> Crumple;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Hitstun Anims")
+		TArray<FAnimationFrame> Stagger;
+
+	//Airborne hitstun Anims
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
+		TArray<FAnimationFrame> HitstunAir;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
+		TArray<FAnimationFrame> HitstunAirCycle;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
+		TArray<FAnimationFrame> KnockAway;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
+		TArray<FAnimationFrame> LaunchCycle;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
+		TArray<FAnimationFrame> LaunchTransition;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
+		TArray<FAnimationFrame> LaunchFallCycle;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
+		TArray<FAnimationFrame> Tumble;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
+		TArray<FAnimationFrame> Sweep;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> FallingForward;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> GroundBounce;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
+		TArray<FAnimationFrame> WallBounce;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> WallStick;
 
 	//Blitz Cancel
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
 		TArray<FAnimationFrame> FocusBlitz;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
 		TArray<FAnimationFrame> BreakerBlitz;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
 		TArray<FAnimationFrame> BlitzOutAir;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
 		TArray<FAnimationFrame> BlitzOutStanding;
 
 	//Knockdown/WakeUp Animations
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "KD Anims")
 		TArray<FAnimationFrame> KnockDownFaceDown;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "KD Anims")
 		TArray<FAnimationFrame> KnockDownFaceUp;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "KD Anims")
 		TArray<FAnimationFrame> WakeUpFaceDown;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "KD Anims")
 		TArray<FAnimationFrame> WakeUpFaceUp;
 
-private:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-		USceneComponent* Transform;
+	//Win/Lose Animation Cycles ---> Actual Round Win Animations located on character that transition to the win cycles below to account for unique dialogue that may play based on opponent's character
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Win/Lose Anims")
+		TArray<FAnimationFrame> WinCycle;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Win/Lose Anims")
+		TArray<FAnimationFrame> WinCycle2;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Win/Lose Anims")
+		TArray<FAnimationFrame> TimeOverLose;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Win/Lose Anims")
+		TArray<FAnimationFrame> LoseCycle;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-		USkeletalMeshComponent* BaseMesh;
+private:
 
 	//Take in information from CurrentAnimFrame
 	void ProcessAnimationFrame();
@@ -611,9 +740,15 @@ private:
 
 	bool RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2D Size1, FVector2D Size2);
 
-	void ContactHit(FHitbox Hitbox);
+	void ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter);
 
 	void ContactThrow(FHitbox Hitbox, int32 ThrowType);
+
+	void AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter);
+
+	void SetSounds();
+
+	void SaveSigilStates();
 };
 
 /* 
