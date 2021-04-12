@@ -59,5 +59,41 @@ protected:
 	virtual bool ExitTimeTransitions() override; //Animation transitions triggered by finishing an animation, called from within PassiveTransitions
 
 	virtual void AnimationEvents() override;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* SpearBC;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* SpearSSS;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* SpearILM;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* SpearLines;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* SealsBC;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
+		UMaterialInterface* Outline;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
+		UMaterialInterface* Main;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
+		UMaterialInterface* Metallic;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
+		UMaterialInterface* Specular;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
+		UMaterialInterface* Seals;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
+		UMaterialInterface* RightEye;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
+		UMaterialInterface* SpearEdge;
+
+	UMaterialInstanceDynamic* DynamicOutline;
+	UMaterialInstanceDynamic* DynamicBodyMain;
+	UMaterialInstanceDynamic* DynamicBodyMetallic;
+	UMaterialInstanceDynamic* DynamicBodySpec;
+	UMaterialInstanceDynamic* DynamicSeals;
+	UMaterialInstanceDynamic* DynamicRightEye;
+	UMaterialInstanceDynamic* DynamicSpearMetallic;
+	UMaterialInstanceDynamic* DynamicSpearSpec;
+	UMaterialInstanceDynamic* DynamicSpearEdge;
 	
 };

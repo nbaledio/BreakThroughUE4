@@ -26,6 +26,20 @@ ABTCharacterBase::ABTCharacterBase()
 void ABTCharacterBase::BeginPlay()
 {
 	EnterNewAnimation(IdleStand);
+
+	if (BlitzImage != NULL) //setup an attached blitzimage actor
+	{
+		BlitzImage->AssignOwner(this);
+		CurrentState.CurrentBlitzState.Add(BlitzImage->CurrentState);
+	}
+
+	if (CurrentState.CurrentSigilStates.Num() < Sigils.Num()) //first time saving sigils to character state
+	{
+		for (int32 i = 0; i < Sigils.Num(); i++)
+		{
+			CurrentState.CurrentSigilStates.Add(Sigils[i]->CurrentState);
+		}
+	}
 }
 
 // Called every frame
@@ -101,9 +115,9 @@ void ABTCharacterBase::HitDetection()
 							KnockbackToApply *= 0;
 							Opponent->CurrentState.Durability += 35; //reward opponent for blocking with exceptional timing
 							//make opponent flash white
-							StatusMix = 3;
+							CurrentState.StatusMix = 3;
 							CurrentState.StatusTimer = 5;
-							StatusColor = FVector(1, 1, 1);
+							CurrentState.StatusColor = FVector(1, 1, 1);
 							UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
 						}
 
@@ -282,8 +296,8 @@ void ABTCharacterBase::HitDetection()
 			//logic to follow for throws
 			else if (((((*CurrentState.CurrentHitbox)[0].AttackHeight == CommandThrow || (*CurrentState.CurrentHitbox)[0].AttackHeight == Throw) && !Opponent->CurrentState.bIsAirborne) ||
 				(((*CurrentState.CurrentHitbox)[0].AttackHeight == AirCommandThrow || (*CurrentState.CurrentHitbox)[0].AttackHeight == AirThrow) && Opponent->CurrentState.bIsAirborne)) &&
-				((Opponent->CurrentState.HitStun == 0 && Opponent->CurrentState.BlockStun == 0) || (*CurrentState.CurrentHitbox)[0].AttackProperties & ComboThrow || Opponent->CurrentState.CurrentAnimation == &Opponent->Stagger ||
-				Opponent->CurrentState.CurrentAnimation == &Opponent->Crumple) && Opponent->CurrentState.CurrentAnimFrame->Invincibility != ThrowInvincible &&
+				((Opponent->CurrentState.HitStun == 0) || (*CurrentState.CurrentHitbox)[0].AttackProperties & ComboThrow || Opponent->CurrentState.CurrentAnimation == &Opponent->Stagger ||
+				Opponent->CurrentState.CurrentAnimation == &Opponent->Crumple) && Opponent->CurrentState.BlockStun == 0 && Opponent->CurrentState.CurrentAnimFrame->Invincibility != ThrowInvincible &&
 				Opponent->CurrentState.CurrentAnimFrame->Invincibility != FullInvincible && Opponent->CurrentState.CurrentAnimFrame->Invincibility != Intangible && Opponent->CurrentState.CurrentAnimFrame->Invincibility != OTG)
 			{
 				for (int32 i = 0; i < CurrentState.CurrentHitbox->Num() && !CurrentState.bAttackMadeContact; i++)
@@ -327,9 +341,10 @@ void ABTCharacterBase::HitDetection()
 void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs)
 {
 	//Check inputs and add them to InputQueue
-	//Process inputs from n frames ago (n = frame delay), 
+	UpdateInputHistory(CurrentInputs);
 
-	ProcessInputs(CurrentInputs); //(Inputs[GameState->FrameCount - FrameDelay]);
+	//if (Inputs.Num() > GameState->FrameDelay)
+	ProcessInputs(CurrentInputs); //(Inputs[GameState->FrameCount - GameState->FrameDelay]);
 
 	if (CurrentState.HitStop == 0)
 	{
@@ -364,10 +379,20 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs)
 			CurrentState.Resolute = true; //Character with Resolute state will gain meter instead of being hit by a Blitz wave and will automatically counter normal throws
 	}
 
-	for (ASigil* Sigil : Sigils)
+	if (Opponent != NULL)
 	{
-		Sigil->Update();
+		if (!CurrentState.CurrentAnimFrame->bSuperFlash && !Opponent->CurrentState.CurrentAnimFrame->bSuperFlash)
+		{
+			for (ASigil* Sigil : Sigils)
+			{
+				Sigil->Update();
+			}
+
+			if (BlitzImage != NULL)
+				BlitzImage->Update();
+		}
 	}
+	
 
 	SetSounds();
 }
@@ -480,7 +505,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 			CurrentState.ComboCount = 0;
 	}	
 
-	SaveSigilStates();
+	SaveFXStates();
 	InputCountdown();
 }
 
@@ -837,7 +862,7 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 void ABTCharacterBase::DrawCharacter()
 {
 	if (CurrentState.CurrentAnimFrame != NULL && CurrentState.CurrentAnimFrame->Pose != NULL)
-		BaseMesh->SetAnimation(CurrentState.CurrentAnimFrame->Pose);
+		BaseMesh->PlayAnimation(CurrentState.CurrentAnimFrame->Pose, false);
 
 	if (!CurrentState.bFacingRight && BaseMesh->GetRelativeScale3D().X != -1)
 	{
@@ -866,6 +891,11 @@ void ABTCharacterBase::DrawCharacter()
 	{
 		Sigil->DrawSigil();
 	}
+
+	//draw blitz image effects if active
+	if (BlitzImage != NULL)
+		BlitzImage->DrawBlitz();
+
 	//if Hitbox View is on also loop through hitbox and hurtbox arrays and draw to screen
 }
 
@@ -1583,7 +1613,7 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 
 void ABTCharacterBase::UpdateInputHistory(int32 Inputs) //Called to add current inputs to input history
 {
-	InputHistory.Add(Inputs)
+	InputHistory.Add(Inputs);
 }
 
 void ABTCharacterBase::InputCountdown() //decrement input values
@@ -1689,8 +1719,8 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			}
 			CurrentState.Velocity.Y = .5f;
 			//make flash white and play chime
-			StatusMix = 3;
-			StatusColor = FVector(1, 1, 1);
+			CurrentState.StatusMix = 3;
+			CurrentState.StatusColor = FVector(1, 1, 1);
 			CurrentState.StatusTimer = 5;
 			return EnterNewAnimation(AirRecovery);
 		}
@@ -1701,8 +1731,8 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		if (CurrentState.LPressed > 0 || CurrentState.MPressed > 0 || CurrentState.HPressed > 0 || CurrentState.BPressed > 0) //press any attack button once hitstun has ended to recover from stagger
 		{
 			//make flash white and play chime
-			StatusMix = 3;
-			StatusColor = FVector(1, 1, 1);
+			CurrentState.StatusMix = 3;
+			CurrentState.StatusColor = FVector(1, 1, 1);
 			CurrentState.StatusTimer = 5;
 			CurrentState.LPressed = 0;
 			CurrentState.MPressed = 0;
@@ -1802,17 +1832,17 @@ bool ABTCharacterBase::ConditionalTransitions()
 		if (CurrentState.CurrentAnimation == &GuardAir && CurrentState.BlockStun == 0)
 			return EnterNewAnimation(GuardAirOut);
 
-		if (CurrentState.CurrentAnimation == &HitSLIn && CurrentState.BlockStun == 0)
+		if (CurrentState.CurrentAnimation == &HitSLIn && CurrentState.HitStun == 0)
 			return EnterNewAnimation(HitSLOut);
-		if (CurrentState.CurrentAnimation == &HitSLHeavyIn && CurrentState.BlockStun == 0)
+		if (CurrentState.CurrentAnimation == &HitSLHeavyIn && CurrentState.HitStun == 0)
 			return EnterNewAnimation(HitSLHeavyOut);
-		if (CurrentState.CurrentAnimation == &HitSHIn && CurrentState.BlockStun == 0)
+		if (CurrentState.CurrentAnimation == &HitSHIn && CurrentState.HitStun == 0)
 			return EnterNewAnimation(HitSHOut);
-		if (CurrentState.CurrentAnimation == &HitSHHeavyIn && CurrentState.BlockStun == 0)
+		if (CurrentState.CurrentAnimation == &HitSHHeavyIn && CurrentState.HitStun == 0)
 			return EnterNewAnimation(HitSHHeavyOut);
-		if (CurrentState.CurrentAnimation == &HitCIn && CurrentState.BlockStun == 0)
+		if (CurrentState.CurrentAnimation == &HitCIn && CurrentState.HitStun == 0)
 			return EnterNewAnimation(HitCOut);
-		if (CurrentState.CurrentAnimation == &HitCHeavyIn && CurrentState.BlockStun == 0)
+		if (CurrentState.CurrentAnimation == &HitCHeavyIn && CurrentState.HitStun == 0)
 			return EnterNewAnimation(HitCHeavyOut);
 	}
 	return false;
@@ -2071,14 +2101,15 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			KnockbackToApply *= 0;
 			Opponent->CurrentState.Durability += 35; //reward opponent for blocking with exceptional timing
 			//make opponent flash white
-			StatusMix = 3;
+			CurrentState.StatusMix = 3;
 			CurrentState.StatusTimer = 5;
-			StatusColor = FVector(1, 1, 1);
+			CurrentState.StatusColor = FVector(1, 1, 1);
 			UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
 		}
 		else
 		{
 			Opponent->CurrentState.ResolveRecoverTimer = 0;
+			Opponent->CurrentState.RecoverInterval = 0;
 
 			//blocked hits chip away at durability
 			if (Opponent->CurrentState.Resolve > 0)
@@ -2185,14 +2216,15 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 	else if (Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve > 0 && !(Hitbox.AttackProperties & Piercing) && !(Hitbox.AttackProperties & Shatter))
 	{
 		Opponent->CurrentState.ResolveRecoverTimer = 0;
+		Opponent->CurrentState.RecoverInterval = 0;
 		Opponent->CurrentState.Durability -= Hitbox.DurabilityDamage;
 		Opponent->CurrentState.Resolve -= Hitbox.ResolveDamage;
 		CurrentState.HitStop = Hitbox.BaseHitStop;
 		Opponent->CurrentState.HitStop = CurrentState.HitStop;
 		//make opponent flash red
-		StatusMix = .8f;
+		CurrentState.StatusMix = .8f;
 		CurrentState.StatusTimer = 5;
-		StatusColor = FVector(1, 0, 0);
+		CurrentState.StatusColor = FVector(1, 0, 0);
 
 		//available actions are more limited when hitting an opponent's armor
 		if (Hitbox.PotentialActions & AcceptSpecial)
@@ -2259,6 +2291,8 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		if ((Opponent->CurrentState.bArmorActive || Opponent->CurrentState.bCounterHitState) && Hitbox.AttackProperties & Shatter)
 		{
 			Opponent->CurrentState.ShatteredTime = 120;
+			Opponent->CurrentState.ResolveRecoverTimer = 0;
+			Opponent->CurrentState.RecoverInterval = 0;
 			HitStunToApply *= 1.2f;
 			Opponent->CurrentState.CharacterHitState |= Hitbox.CounterAttackProperties;
 			//set shatter UI effect to play
@@ -2580,39 +2614,46 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 
 void ABTCharacterBase::SetSounds()
 {
-	if (CurrentState.CurrentAnimFrame->SFX != NULL)
+	if (CurrentState.PosePlayTime == 0)
 	{
-		CharacterSoundEffects->SetSound(CurrentState.CurrentAnimFrame->SFX);
-		CurrentState.bPlaySound = true;
-	}
-	else
-	{
-		CharacterSoundEffects->SetSound(NULL);
-	}
+		if (CurrentState.CurrentAnimFrame->SFX != NULL)
+		{
+			CharacterSoundEffects->SetSound(CurrentState.CurrentAnimFrame->SFX);
+			CurrentState.bPlaySound = true;
+		}
+		else
+		{
+			CharacterSoundEffects->SetSound(NULL);
+		}
 
-	if (CurrentState.CurrentAnimFrame->VoiceLines != NULL)
-	{
-		CharacterVoice->SetSound(CurrentState.CurrentAnimFrame->VoiceLines);
-		CurrentState.bPlaySound = true;
-	}
-	else
-	{
-		CharacterVoice->SetSound(NULL);
+		if (CurrentState.CurrentAnimFrame->VoiceLines != NULL)
+		{
+			CharacterVoice->SetSound(CurrentState.CurrentAnimFrame->VoiceLines);
+			CurrentState.bPlaySound = true;
+		}
+		else
+		{
+			CharacterVoice->SetSound(NULL);
+		}
 	}
 }
 
-void ABTCharacterBase::SaveSigilStates()
+void ABTCharacterBase::SaveFXStates()
 {
-	if (CurrentState.CurrentSigilStates.Num() < Sigils.Num()) //first time saving sigils to character state
-	{
-		for (int32 i = 0; i < Sigils.Num(); i++)
-		{
-			CurrentState.CurrentSigilStates.Add(Sigils[i]->CurrentState);
-		}
-	}
-
 	for (int32 i = 0; i < Sigils.Num(); i++)
 	{
 		CurrentState.CurrentSigilStates[i] = Sigils[i]->CurrentState;
 	}
+
+	if (CurrentState.CurrentBlitzState.Num() > 0)
+		CurrentState.CurrentBlitzState[0] = BlitzImage->CurrentState;
+}
+
+void ABTCharacterBase::SetColor(uint8 ColorID)
+{
+	//switch statement to set color/emissivity values for all dynamic materials for a character based on colorID
+	//search for textures using filepaths, BC, SSS
+	//ILMs and Lines should be pointers in character classes
+	//set parameters in dynamic material instances for Character Mesh and BlitzImage Mesh
+	//Cast blitzimage as character's unique blitz image actor and set texture/vector parameters for blitzimage materials
 }

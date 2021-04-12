@@ -39,8 +39,8 @@ void ASigil::BeginPlay()
 		{
 			if (SigilImage != NULL)
 			{
-				DynamicSigilMaterial->SetTextureParameterValue("SigilTexture", SigilImage);
-				DynamicEchoMaterial->SetTextureParameterValue("SigilTexture", SigilImage);
+				DynamicSigilMaterial->SetTextureParameterValue(FName("SigilTexture"), SigilImage);
+				DynamicEchoMaterial->SetTextureParameterValue(FName("SigilTexture"), SigilImage);
 			}
 		}
 	}
@@ -104,8 +104,12 @@ void ASigil::DrawSigil()
 		Transform->SetWorldLocation(FVector(CurrentState.Position.X, -25, CurrentState.Position.Y));
 		Transform->SetWorldRotation(CurrentState.Rotation);
 
-		MainMesh->SetRelativeScale3D(FVector(FMath::Lerp(0.f, 1.f, FMath::Min(1.f, CurrentState.MainScaleAlpha))));
-		Echo->SetRelativeScale3D(FVector(FMath::Lerp(0.f, 1.5f, FMath::Min(1.f, CurrentState.EchoScaleAlpha)), FMath::Lerp(0.f, 1.75f, FMath::Min(1.f, CurrentState.EchoScaleAlpha)), 1));
+		//if (CurrentState.MainScaleAlpha < 1)
+			MainMesh->SetRelativeScale3D(FVector(FMath::Lerp(0.f, 1.f, FMath::Min(1.f, CurrentState.MainScaleAlpha))));
+		/*else if (CurrentState.MainEmissiveAlpha >= .5)
+			MainMesh->SetRelativeScale3D(FVector(FMath::Lerp(1.f, 1.3f, FMath::Min(1.f, 2 *(CurrentState.MainEmissiveAlpha - .5f)))));*/
+		
+		Echo->SetRelativeScale3D(FVector(FMath::Lerp(0.f, 2.f, FMath::Min(1.f, CurrentState.EchoScaleAlpha)), FMath::Lerp(0.f, 1.75f, FMath::Min(1.f, CurrentState.EchoScaleAlpha)), 1));
 
 		FVector EchoLocation = FVector(0, 0, FMath::Lerp(0.f, -150.f, FMath::Min(1.f, CurrentState.EchoScaleAlpha)));
 		Echo->SetRelativeLocation(EchoLocation);

@@ -40,9 +40,9 @@ public:
 	// Sets default values for this actor's properties
 	ABTProjectileBase();
 
-	FProjectileState CurrentState;
+	void AssignOwner(ABTCharacterBase* NewOwner) { Owner = NewOwner; }
 
-	ABTCharacterBase* Owner;
+	FProjectileState CurrentState;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		FVector2D InitSpeed;
@@ -76,6 +76,8 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	ABTCharacterBase* Owner;
 
 public:	
 	// Called every frame
