@@ -7,7 +7,7 @@
 ASigil::ASigil()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	Transform = CreateDefaultSubobject<USceneComponent>(TEXT("Transform"));
 	RootComponent = Transform;
@@ -24,32 +24,35 @@ void ASigil::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (BaseSigilMaterial != NULL)
+	if (BaseSigilMaterial != nullptr)
 	{
 		DynamicSigilMaterial = UMaterialInstanceDynamic::Create(BaseSigilMaterial, this);
 	}
-	if (EchoSigilMaterial != NULL)
+	if (EchoSigilMaterial != nullptr)
 	{
 		DynamicEchoMaterial = UMaterialInstanceDynamic::Create(EchoSigilMaterial, this);
 	}
 
-	if (DynamicSigilMaterial != NULL)
+	if (DynamicSigilMaterial != nullptr)
 	{
-		if (DynamicEchoMaterial != NULL)
+		if (DynamicEchoMaterial != nullptr)
 		{
-			if (SigilImage != NULL)
+			if (SigilImage != nullptr)
 			{
 				DynamicSigilMaterial->SetTextureParameterValue(FName("SigilTexture"), SigilImage);
 				DynamicEchoMaterial->SetTextureParameterValue(FName("SigilTexture"), SigilImage);
 			}
 		}
 	}
-	if (DynamicSigilMaterial != NULL)
+	if (DynamicSigilMaterial != nullptr)
 		MainMesh->SetMaterial(0, DynamicSigilMaterial);
-	if (DynamicEchoMaterial != NULL)
+	if (DynamicEchoMaterial != nullptr)
 		Echo->SetMaterial(0, DynamicEchoMaterial);
 
-	Activate(FVector2D(0), FRotator(-15, 0, 20));
+	CurrentState.bIsActive = false;
+	MainMesh->SetVisibility(false);
+	Echo->SetVisibility(false);
+	//Activate(FVector2D(0), FRotator(-15, 0, 20));
 }
 
 void ASigil::Tick(float DeltaTime)
@@ -118,12 +121,12 @@ void ASigil::DrawSigil()
 		Echo->SetRelativeRotation(FRotator(MainMesh->GetRelativeRotation().Pitch, MainMesh->GetRelativeRotation().Yaw - 2, MainMesh->GetRelativeRotation().Roll));
 
 		//set material parameters
-		if (DynamicSigilMaterial != NULL)
+		if (DynamicSigilMaterial != nullptr)
 		{
 			DynamicSigilMaterial->SetScalarParameterValue(FName("Alpha"), CurrentState.MainEmissiveAlpha);
 			DynamicSigilMaterial->SetVectorParameterValue(FName("SigilColor"), SigilColor);
 		}
-		if (DynamicEchoMaterial != NULL)
+		if (DynamicEchoMaterial != nullptr)
 		{
 			DynamicEchoMaterial->SetScalarParameterValue(FName("Alpha"), CurrentState.EchoScaleAlpha);
 			DynamicEchoMaterial->SetVectorParameterValue(FName("EchoColor"), EchoColor);

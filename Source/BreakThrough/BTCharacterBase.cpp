@@ -26,20 +26,10 @@ ABTCharacterBase::ABTCharacterBase()
 void ABTCharacterBase::BeginPlay()
 {
 	EnterNewAnimation(IdleStand);
-
-	if (BlitzImage != NULL) //setup an attached blitzimage actor
-	{
-		BlitzImage->AssignOwner(this);
-		CurrentState.CurrentBlitzState.Add(BlitzImage->CurrentState);
-	}
-
-	if (CurrentState.CurrentSigilStates.Num() < Sigils.Num()) //first time saving sigils to character state
-	{
-		for (int32 i = 0; i < Sigils.Num(); i++)
-		{
-			CurrentState.CurrentSigilStates.Add(Sigils[i]->CurrentState);
-		}
-	}
+	CurrentState.Position = FVector2D(GetActorLocation().X, GetActorLocation().Z);
+	CreateMaterials();
+	SpawnPBS();
+	SetColor(1);
 }
 
 // Called every frame
@@ -50,7 +40,7 @@ void ABTCharacterBase::Tick(float DeltaTime)
 
 void ABTCharacterBase::SuperFlashSolver() //Only play once from Player1
 {
-	if (Opponent != NULL) //Keeps game from freezing or slowing down if both characters super flash on the exact same frame, Player 1 Anim will play first
+	if (Opponent != nullptr) //Keeps game from freezing or slowing down if both characters super flash on the exact same frame, Player 1 Anim will play first
 	{
 		if ((CurrentState.CurrentAnimFrame->bSuperFlash && Opponent->CurrentState.CurrentAnimFrame->bSuperFlash) || (CurrentState.CurrentAnimFrame->bSuperFlash))
 		{
@@ -65,7 +55,7 @@ void ABTCharacterBase::SuperFlashSolver() //Only play once from Player1
 
 void ABTCharacterBase::HitDetection()
 {
-	if (Opponent != NULL && !CurrentState.bClash)
+	if (Opponent != nullptr && !CurrentState.bClash)
 	{
 		CurrentState.bHitSuccess = false;
 		if (CurrentState.bBlitzing)
@@ -115,9 +105,9 @@ void ABTCharacterBase::HitDetection()
 							KnockbackToApply *= 0;
 							Opponent->CurrentState.Durability += 35; //reward opponent for blocking with exceptional timing
 							//make opponent flash white
-							CurrentState.StatusMix = 3;
+							StatusMix = 3;
 							CurrentState.StatusTimer = 5;
-							CurrentState.StatusColor = FVector(1, 1, 1);
+							StatusColor = FVector(1, 1, 1);
 							UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
 						}
 
@@ -379,7 +369,7 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs)
 			CurrentState.Resolute = true; //Character with Resolute state will gain meter instead of being hit by a Blitz wave and will automatically counter normal throws
 	}
 
-	if (Opponent != NULL)
+	if (Opponent != nullptr)
 	{
 		if (!CurrentState.CurrentAnimFrame->bSuperFlash && !Opponent->CurrentState.CurrentAnimFrame->bSuperFlash)
 		{
@@ -388,7 +378,7 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs)
 				Sigil->Update();
 			}
 
-			if (BlitzImage != NULL)
+			if (BlitzImage != nullptr)
 				BlitzImage->Update();
 		}
 	}
@@ -399,7 +389,7 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs)
 
 void ABTCharacterBase::VelocitySolver()
 {
-	if (Opponent != NULL)
+	if (Opponent != nullptr)
 	{
 		if (CurrentState.bTouchingOpponent)
 		{
@@ -499,7 +489,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 	if (CurrentState.SlowMoTime > 0)
 		CurrentState.SlowMoTime--;
 
-	if (Opponent != NULL)
+	if (Opponent != nullptr)
 	{
 		if ((Opponent->CurrentState.HitStun == 0 && !Opponent->CurrentState.bIsAirborne) || (Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.CurrentAnimFrame->Invincibility != FaceDown && Opponent->CurrentState.CurrentAnimFrame->Invincibility != FaceUp))
 			CurrentState.ComboCount = 0;
@@ -511,9 +501,9 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 
 void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick after updating characters, do not call on multiple characters
 {
-	if (Opponent != NULL)
+	if (Opponent != nullptr)
 	{
-		if (CurrentState.CurrentAnimFrame != NULL && Opponent->CurrentState.CurrentAnimFrame != NULL)
+		if (CurrentState.CurrentAnimFrame != nullptr && Opponent->CurrentState.CurrentAnimFrame != nullptr)
 		{
 			if (!CurrentState.CurrentAnimFrame->bCinematic && !Opponent->CurrentState.CurrentAnimFrame->bCinematic)
 			{
@@ -861,7 +851,7 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 
 void ABTCharacterBase::DrawCharacter()
 {
-	if (CurrentState.CurrentAnimFrame != NULL && CurrentState.CurrentAnimFrame->Pose != NULL)
+	if (CurrentState.CurrentAnimFrame != nullptr && CurrentState.CurrentAnimFrame->Pose != nullptr)
 		BaseMesh->PlayAnimation(CurrentState.CurrentAnimFrame->Pose, false);
 
 	if (!CurrentState.bFacingRight && BaseMesh->GetRelativeScale3D().X != -1)
@@ -878,9 +868,9 @@ void ABTCharacterBase::DrawCharacter()
 	//play sounds if any
 	if (CurrentState.bPlaySound)
 	{
-		if (CharacterVoice->Sound != NULL)
+		if (CharacterVoice->Sound != nullptr)
 			CharacterVoice->Play();
-		if (CharacterSoundEffects->Sound != NULL)
+		if (CharacterSoundEffects->Sound != nullptr)
 			CharacterSoundEffects->Play();
 
 		CurrentState.bPlaySound = false;
@@ -893,7 +883,7 @@ void ABTCharacterBase::DrawCharacter()
 	}
 
 	//draw blitz image effects if active
-	if (BlitzImage != NULL)
+	if (BlitzImage != nullptr)
 		BlitzImage->DrawBlitz();
 
 	//if Hitbox View is on also loop through hitbox and hurtbox arrays and draw to screen
@@ -901,7 +891,7 @@ void ABTCharacterBase::DrawCharacter()
 
 void ABTCharacterBase::ProcessAnimationFrame()
 {
-	if (CurrentState.CurrentAnimFrame != NULL)
+	if (CurrentState.CurrentAnimFrame != nullptr)
 	{
 		if (CurrentState.PosePlayTime == 0)
 		{
@@ -972,7 +962,7 @@ bool ABTCharacterBase::EnterNewAnimation(TArray<FAnimationFrame> Animation, int3
 	//check if the specified animation and frame exist
 	if (Animation.Num() > FrameNumber)
 	{
-		if (Animation[FrameNumber].Pose != NULL)
+		if (Animation[FrameNumber].Pose != nullptr)
 		{
 			CurrentState.PosePlayTime = 0; // reset pose play time to make sure new frame is played for the correct amount of time
 			CurrentState.CurrentAnimation = &Animation;
@@ -989,7 +979,7 @@ bool ABTCharacterBase::EnterNewAnimation(TArray<FAnimationFrame> Animation, int3
 
 void ABTCharacterBase::TurnAroundCheck()
 {
-	if (Opponent != NULL)
+	if (Opponent != nullptr)
 	{
 		if (!CurrentState.bTouchingWall)
 		{
@@ -1012,7 +1002,6 @@ void ABTCharacterBase::TriggerTurnAround()
 	//Trigger turnaround animation if in idle stand or crouch;
 	if (CurrentState.AvailableActions & AcceptMove && !CurrentState.bIsAirborne && CurrentState.Velocity.X == 0)
 	{
-		CurrentState.PosePlayTime = 0;
 		if (CurrentState.bIsCrouching)
 		{
 			EnterNewAnimation(TurnAroundCrouch);
@@ -1026,7 +1015,7 @@ void ABTCharacterBase::TriggerTurnAround()
 
 bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when a character touches a surface with certain conditions
 {
-	if (((CurrentState.bIsAirborne && CurrentState.Position.Y <= 0 && CurrentState.Velocity.Y <= 0) || (CurrentState.CharacterHitState & CanGroundBounce && !CurrentState.bIsAirborne)) && CurrentState.CurrentAnimFrame != NULL) //landing on the ground
+	if (((CurrentState.bIsAirborne && CurrentState.Position.Y <= 0 && CurrentState.Velocity.Y <= 0) || (CurrentState.CharacterHitState & CanGroundBounce && !CurrentState.bIsAirborne)) && CurrentState.CurrentAnimFrame != nullptr) //landing on the ground
 	{
 		//logic for setting character's state when they hit the ground (land on feet, knockdown, groundbounce)
 		if (CurrentState.CharacterHitState & CanGroundBounce)
@@ -1037,7 +1026,7 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 			if (CurrentState.Velocity.Y < 3)
 				CurrentState.Velocity.Y = 3;
 
-			if (Opponent != NULL)
+			if (Opponent != nullptr)
 			{
 				if (Opponent->Sigils.Num() > 1)
 				{
@@ -1051,7 +1040,6 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 		{
 			CurrentState.Velocity.Y = 0;
 			CurrentState.bIsAirborne = false;
-			TurnAroundCheck();
 			if (CurrentState.CurrentAnimFrame->Invincibility != FaceDown) //cause hard knockdown if in a hitstun state
 			{
 				CurrentState.SlowMoTime = 0;
@@ -1068,6 +1056,8 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 			}
 			else //if a character is not in a hit state, they will land on their feet
 			{
+				TurnAroundCheck();
+
 				if (CurrentState.LandingLag > 4) //landing lag puts character in a recovery state when landing
 				{
 
@@ -1078,9 +1068,15 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 
 					return EnterNewAnimation(CrouchDown);
 				}
-				else
+				else if (CurrentState.BlockStun > 0)
 				{
-					NonKnockdownLanding();
+					CurrentState.BlockStun += 4; //Add to blockstun when transitioning from air to ground
+
+					return EnterNewAnimation(GuardLo);
+				}
+				else if (NonKnockdownLanding())
+				{
+					return true;
 				}
 			}
 		}
@@ -1123,7 +1119,7 @@ bool ABTCharacterBase::HitWall()
 			CurrentState.HitStun = WallStickHitStun;
 		}
 
-		if (Opponent != NULL)
+		if (Opponent != nullptr)
 		{
 			if (Opponent->Sigils.Num() > 1)
 			{
@@ -1147,7 +1143,7 @@ bool ABTCharacterBase::HitWall()
 		if (CurrentState.Velocity.Y < 1.5f)
 			CurrentState.Velocity.Y = 1.5f;
 
-		if (Opponent != NULL)
+		if (Opponent != nullptr)
 		{
 			if (Opponent->Sigils.Num() > 1)
 			{
@@ -1342,7 +1338,7 @@ void ABTCharacterBase::GravityCalculation()
 void ABTCharacterBase::ApplyKnockBack()
 {
 	float ComboGravity = 1;
-	if (Opponent != NULL)
+	if (Opponent != nullptr)
 	{
 		if (Opponent->CurrentState.ComboCount <= 8 || CurrentState.CharacterHitState & IsSuper || CurrentState.ShatteredTime > 0)
 			ComboGravity = 1;
@@ -1387,37 +1383,41 @@ void ABTCharacterBase::ApplyKnockBack()
 
 void ABTCharacterBase::UpdateResolve()
 {
-	if (CurrentState.ShatteredTime == 0 && !CurrentState.CurrentAnimFrame->bCinematic && !CurrentState.CurrentAnimFrame->bSuperFlash)
+	if (Opponent != nullptr)
 	{
-		if (CurrentState.ResolveRecoverTimer >= 180) //Resolve starts passively regenerating after three seconds without being used or broken, resolve regen speeds up if the character is not inputting anything
+		if (CurrentState.ShatteredTime == 0 && !CurrentState.CurrentAnimFrame->bCinematic && !CurrentState.CurrentAnimFrame->bSuperFlash && 
+			!Opponent->CurrentState.CurrentAnimFrame->bCinematic && !Opponent->CurrentState.CurrentAnimFrame->bSuperFlash && !CurrentState.bWin && !Opponent->CurrentState.bWin)
 		{
-			if ((float)CurrentState.Health / (float)MaxHealth <= .1f && (CurrentState.SlowMoTime == 0 || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 2)))
+			if (CurrentState.ResolveRecoverTimer >= 180) //Resolve starts passively regenerating after three seconds without being used or broken, resolve regen speeds up if the character is not inputting anything
 			{
-				CurrentState.Durability++;
-				if (CurrentState.Resolute)
+				if ((float)CurrentState.Health / (float)MaxHealth <= .1f && (CurrentState.SlowMoTime == 0 || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 2)))
+				{
 					CurrentState.Durability++;
-				CurrentState.RecoverInterval = 0;
-			}
-			else if ((float)CurrentState.Health / (float)MaxHealth <= .25f && ((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 2)|| (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 4) || (CurrentState.SlowMoTime == 0 && CurrentState.Resolute)))
-			{
-				CurrentState.Durability++;
-				CurrentState.RecoverInterval = 0;
-			}
-			else if ((float)CurrentState.Health / (float)MaxHealth <= .5f && ((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 3) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 6) || (CurrentState.SlowMoTime == 0 && CurrentState.Resolute && CurrentState.RecoverInterval >= 2)))
-			{
-				CurrentState.Durability++;
-				CurrentState.RecoverInterval = 0;
-			}
-			else if (((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 4) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 8) || (CurrentState.SlowMoTime == 0 && CurrentState.Resolute && CurrentState.RecoverInterval >= 3)))
-			{
-				CurrentState.Durability++;
-				CurrentState.RecoverInterval = 0;
+					if (CurrentState.Resolute)
+						CurrentState.Durability++;
+					CurrentState.RecoverInterval = 0;
+				}
+				else if ((float)CurrentState.Health / (float)MaxHealth <= .25f && ((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 2) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 4) || (CurrentState.SlowMoTime == 0 && CurrentState.Resolute)))
+				{
+					CurrentState.Durability++;
+					CurrentState.RecoverInterval = 0;
+				}
+				else if ((float)CurrentState.Health / (float)MaxHealth <= .5f && ((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 3) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 6) || (CurrentState.SlowMoTime == 0 && CurrentState.Resolute && CurrentState.RecoverInterval >= 2)))
+				{
+					CurrentState.Durability++;
+					CurrentState.RecoverInterval = 0;
+				}
+				else if (((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 4) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 8) || (CurrentState.SlowMoTime == 0 && CurrentState.Resolute && CurrentState.RecoverInterval >= 3)))
+				{
+					CurrentState.Durability++;
+					CurrentState.RecoverInterval = 0;
+				}
+				else
+					CurrentState.RecoverInterval++;
 			}
 			else
-				CurrentState.RecoverInterval++;
+				CurrentState.ResolveRecoverTimer++;
 		}
-		else
-			CurrentState.ResolveRecoverTimer++;
 	}
 
 	if (CurrentState.Durability > 100)
@@ -1555,7 +1555,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		}
 	}
 
-	if (Opponent != NULL)
+	if (Opponent != nullptr)
 	{
 		if ((Opponent->CurrentState.Position.X < CurrentState.Position.X && Inputs & INPUT_RIGHT) || (Opponent->CurrentState.Position.X > CurrentState.Position.X && Inputs & INPUT_LEFT))
 			CurrentState.bIsGuarding = true;
@@ -1719,9 +1719,10 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			}
 			CurrentState.Velocity.Y = .5f;
 			//make flash white and play chime
-			CurrentState.StatusMix = 3;
-			CurrentState.StatusColor = FVector(1, 1, 1);
+			StatusMix = 3;
+			StatusColor = FVector(1, 1, 1);
 			CurrentState.StatusTimer = 5;
+			CurrentState.JumpsUsed = 0;
 			return EnterNewAnimation(AirRecovery);
 		}
 	}
@@ -1731,8 +1732,8 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		if (CurrentState.LPressed > 0 || CurrentState.MPressed > 0 || CurrentState.HPressed > 0 || CurrentState.BPressed > 0) //press any attack button once hitstun has ended to recover from stagger
 		{
 			//make flash white and play chime
-			CurrentState.StatusMix = 3;
-			CurrentState.StatusColor = FVector(1, 1, 1);
+			StatusMix = 3;
+			StatusColor = FVector(1, 1, 1);
 			CurrentState.StatusTimer = 5;
 			CurrentState.LPressed = 0;
 			CurrentState.MPressed = 0;
@@ -1815,7 +1816,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 
 bool ABTCharacterBase::ConditionalTransitions()
 {
-	if (CurrentState.CurrentAnimation != NULL)
+	if (CurrentState.CurrentAnimation != nullptr)
 	{
 		if (CurrentState.CurrentAnimation == &MidJump && CurrentState.Velocity.Y < 0)
 			return EnterNewAnimation(JumpTransition);
@@ -1932,10 +1933,24 @@ bool ABTCharacterBase::ExitTimeTransitions()
 		return EnterNewAnimation(IdleCrouch);
 
 	if ((CurrentState.CurrentAnimation == &KnockDownFaceDown || CurrentState.CurrentAnimation == &Crumple) && (CurrentState.Health != 0))
+	{
+		if (CurrentState.Resolve == 0)
+		{
+			CurrentState.Resolve = 1;
+			CurrentState.Durability = 80;
+		}
 		return EnterNewAnimation(WakeUpFaceDown);
+	}
 
 	if ((CurrentState.CurrentAnimation == &KnockDownFaceUp) && (CurrentState.Health != 0))
+	{
+		if (CurrentState.Resolve == 0)
+		{
+			CurrentState.Resolve = 1;
+			CurrentState.Durability = 80;
+		}
 		return EnterNewAnimation(WakeUpFaceUp);
+	}
 
 	if (CurrentState.CurrentAnimation == &GuardHiIn)
 		return EnterNewAnimation(GuardHi);
@@ -2101,9 +2116,9 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			KnockbackToApply *= 0;
 			Opponent->CurrentState.Durability += 35; //reward opponent for blocking with exceptional timing
 			//make opponent flash white
-			CurrentState.StatusMix = 3;
+			StatusMix = 3;
 			CurrentState.StatusTimer = 5;
-			CurrentState.StatusColor = FVector(1, 1, 1);
+			StatusColor = FVector(1, 1, 1);
 			UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
 		}
 		else
@@ -2116,6 +2131,13 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			{
 				if (CurrentState.bIsAirborne)
 				{
+					if (Hitbox.AttackProperties & AntiAir) //attacks with the anti air property must be Instant Blocked
+					{
+						Opponent->CurrentState.Durability = -1;
+						AttackCalculation(Hitbox, HurtboxCenter);
+						return;
+					}
+
 					if (Hitbox.AttackProperties & IsSuper)
 						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .35f);
 					else if (Hitbox.AttackProperties & IsSpecial)
@@ -2162,6 +2184,11 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 
 		if (Opponent->CurrentState.bIsCrouching) //extra blockstun if the opponent is crouching
 			Opponent->CurrentState.BlockStun += 2;
+		else if (Opponent->CurrentState.bIsAirborne)
+		{
+			Opponent->CurrentState.BlockStun += 3;
+			Opponent->CurrentState.JumpsUsed = 0;
+		}
 
 		//apply hitstop
 		Opponent->CurrentState.HitStop = Hitbox.BaseHitStop - 2;
@@ -2182,10 +2209,13 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 
 		//Made contact so can cancel into other actions
 		CurrentState.AvailableActions = Hitbox.PotentialActions;
-		CurrentState.AvailableActions &= AcceptAll - AcceptJump;
+		CurrentState.AvailableActions &= AcceptAll - AcceptJump - AcceptBlitz;
 
 		if (Hitbox.PotentialActions & JumpCancelOnBlock && Hitbox.PotentialActions & AcceptJump) //can only jump cancel if the move allows it on block
 			CurrentState.AvailableActions |= AcceptJump;
+
+		if (!(Hitbox.PotentialActions & BlitzOnHitOnly) && Hitbox.PotentialActions & AcceptBlitz) //can blitz cancel if it allows it on block
+			CurrentState.AvailableActions |= AcceptBlitz;
 
 		//update opponent's animation to guarding
 		if (CurrentState.bIsAirborne)
@@ -2222,9 +2252,9 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		CurrentState.HitStop = Hitbox.BaseHitStop;
 		Opponent->CurrentState.HitStop = CurrentState.HitStop;
 		//make opponent flash red
-		CurrentState.StatusMix = .8f;
+		StatusMix = .8f;
 		CurrentState.StatusTimer = 5;
-		CurrentState.StatusColor = FVector(1, 0, 0);
+		StatusColor = FVector(1, 0, 0);
 
 		//available actions are more limited when hitting an opponent's armor
 		if (Hitbox.PotentialActions & AcceptSpecial)
@@ -2616,24 +2646,24 @@ void ABTCharacterBase::SetSounds()
 {
 	if (CurrentState.PosePlayTime == 0)
 	{
-		if (CurrentState.CurrentAnimFrame->SFX != NULL)
+		if (CurrentState.CurrentAnimFrame->SFX != nullptr)
 		{
 			CharacterSoundEffects->SetSound(CurrentState.CurrentAnimFrame->SFX);
 			CurrentState.bPlaySound = true;
 		}
 		else
 		{
-			CharacterSoundEffects->SetSound(NULL);
+			CharacterSoundEffects->SetSound(nullptr);
 		}
 
-		if (CurrentState.CurrentAnimFrame->VoiceLines != NULL)
+		if (CurrentState.CurrentAnimFrame->VoiceLines != nullptr)
 		{
 			CharacterVoice->SetSound(CurrentState.CurrentAnimFrame->VoiceLines);
 			CurrentState.bPlaySound = true;
 		}
 		else
 		{
-			CharacterVoice->SetSound(NULL);
+			CharacterVoice->SetSound(nullptr);
 		}
 	}
 }
@@ -2647,6 +2677,171 @@ void ABTCharacterBase::SaveFXStates()
 
 	if (CurrentState.CurrentBlitzState.Num() > 0)
 		CurrentState.CurrentBlitzState[0] = BlitzImage->CurrentState;
+
+	if (CurrentState.CurrentProjectileStates.Num() == Projectiles.Num() && CurrentState.CurrentProjectileStates.Num() > 0)
+	{
+		for (int32 i = 0; i < Projectiles.Num(); i++)
+		{
+			CurrentState.CurrentProjectileStates[i] = Projectiles[i]->CurrentState;
+		}
+	}
+}
+
+bool ABTCharacterBase::BlitzCancel()
+{
+	if ((CurrentState.AvailableActions & AcceptBlitz || (CurrentState.BlockStun > 0 && !CurrentState.bIsAirborne)) && CurrentState.Resolve > 0 &&
+		CurrentState.MPressed > 0 && CurrentState.HPressed > 0 && FMath::Abs(CurrentState.MPressed - CurrentState.HPressed) <= 3) //Blitz cancel is performed by hitting M and H at the same time
+	{
+		CurrentState.Resolve--;
+		CurrentState.Durability = 80;
+		CurrentState.MPressed = 0;
+		CurrentState.HPressed = 0;
+		CurrentState.ResolveRecoverTimer = 0;
+		CurrentState.RecoverInterval = 0;
+
+		if (CurrentState.bIsAirborne && CurrentState.BlockStun == 0)
+		{
+			if (CurrentState.Dir6 == InputTime) //blitz air dash forward
+			{
+				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 0);
+				CurrentState.Velocity = FVector2D(BlitzDashForce, 0);
+				CurrentState.GravDefyTime = 24;
+				if (!CurrentState.bFacingRight)
+					CurrentState.Velocity.X *= -1;
+
+				CurrentState.bBlitzing = true;
+
+				FRotator SigilRotation = FRotator(0, 0, 20);
+				if (CurrentState.bFacingRight)
+				{
+					SigilRotation.Pitch = -80;
+				}
+				else
+				{
+					SigilRotation.Pitch = 80;
+				}
+
+				FVector2D SigilPosition = CurrentState.Position;
+				if (CurrentState.bFacingRight)
+				{
+					SigilPosition += AirDashForwardOffset;
+				}
+				else
+				{
+					SigilPosition.X -= AirDashForwardOffset.X;
+					SigilPosition.Y += AirDashForwardOffset.Y;
+				}
+				Sigils[0]->Activate(SigilPosition, SigilRotation);
+
+				return EnterNewAnimation(AirDashForward);
+			}
+			if (CurrentState.Dir4 == InputTime) //blitz air dash backward
+			{
+				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 0);
+				CurrentState.Velocity = FVector2D(-BlitzDashForce, 0);
+				CurrentState.GravDefyTime = 24;
+				if (!CurrentState.bFacingRight)
+					CurrentState.Velocity.X *= -1;
+
+				FRotator SigilRotation = FRotator(0, 0, 20);
+				if (CurrentState.bFacingRight)
+				{
+					SigilRotation.Pitch = 80;
+				}
+				else
+				{
+					SigilRotation.Pitch = -80;
+				}
+
+				FVector2D SigilPosition = CurrentState.Position;
+				if (CurrentState.bFacingRight)
+				{
+					SigilPosition += AirDashBackOffset;
+				}
+				else
+				{
+					SigilPosition.X -= AirDashBackOffset.X;
+					SigilPosition.Y += AirDashBackOffset.Y;
+				}
+				Sigils[0]->Activate(SigilPosition, SigilRotation);
+
+				CurrentState.bBlitzing = true;
+
+				return EnterNewAnimation(AirDashBackward);
+			}
+			if (CurrentState.Dir2 == InputTime) //blitz downward
+			{
+				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 0);
+				CurrentState.Velocity = FVector2D(0, -BlitzDashForce);
+				CurrentState.GravDefyTime = 0;
+
+				CurrentState.bBlitzing = true;
+
+				return EnterNewAnimation(JumpDescent);
+			}
+			if (CurrentState.AvailableActions & AcceptMove) //focus blitz
+			{
+				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 2);
+
+				return EnterNewAnimation(FocusBlitz);
+			}
+
+			BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 0);
+			CurrentState.bBlitzing = true;
+			return EnterNewAnimation(MidJump);
+		}
+		else
+		{
+			if (CurrentState.BlockStun > 0 && CurrentState.Resolve > 1) //breaker blitz
+			{
+				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 1);
+
+				CurrentState.Resolve--;
+
+				return EnterNewAnimation(BreakerBlitz);
+			}
+			if (CurrentState.AvailableActions & AcceptMove) //focus blitz
+			{
+				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 2);
+
+				return EnterNewAnimation(FocusBlitz);
+			}
+
+			BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 0);
+			CurrentState.bBlitzing = true;
+			return EnterNewAnimation(IdleStand);
+		}
+	}
+	return false;
+}
+
+void ABTCharacterBase::CreateMaterials()
+{
+
+}
+
+void ABTCharacterBase::SpawnPBS()
+{
+	if (GetWorld())
+	{
+		FActorSpawnParameters SpawnParams;
+
+		if (SigilBlueprint)
+		{
+			for (int32 i = 0; i < 2; i++)
+			{
+				Sigils.Add(GetWorld()->SpawnActor<ASigil>(SigilBlueprint, GetActorLocation(), FRotator(0), SpawnParams)); //create a sigil
+				CurrentState.CurrentSigilStates.Add(Sigils[i]->CurrentState); //add its state to the serializable characterstate struct
+			}
+		}
+
+		if (BlitzImageBlueprint)
+		{
+			BlitzImage = GetWorld()->SpawnActor<ABlitzImageBase>(BlitzImageBlueprint, GetActorLocation(), FRotator(0), SpawnParams);
+			BlitzImage->AssignOwner(this);
+			CurrentState.CurrentBlitzState.Add(BlitzImage->CurrentState);
+		}
+	}
 }
 
 void ABTCharacterBase::SetColor(uint8 ColorID)

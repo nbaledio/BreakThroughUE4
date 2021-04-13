@@ -24,16 +24,18 @@ void ABlitzImageBase::BeginPlay()
 {
 	Super::BeginPlay();
 	CreateMaterials();
-	Activate(FVector2D(0), DefaultAnimation, true, 2);
+	BaseMesh->SetVisibility(false);
+	BlitzFlash->SetVisibility(false);
+	//Activate(FVector2D(0), DefaultAnimation, true, 1);
 }
 
 // Called every frame
-/*void ABlitzImageBase::Tick(float DeltaTime)
+void ABlitzImageBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	Update();
 	DrawBlitz();
-}*/
+}
 
 void ABlitzImageBase::Activate(FVector2D Location, UAnimationAsset* NewPose, bool FacingRight, uint8 EffectColor)
 {
@@ -55,9 +57,9 @@ void ABlitzImageBase::Update()
 	{
 		CurrentState.Alpha = FMath::Min(1.f, CurrentState.Alpha + .03f);
 
-		if (Owner != NULL)
+		if (Owner != nullptr)
 		{
-			if (Owner->Opponent != NULL)
+			if (Owner->Opponent != nullptr)
 			{
 				if (Owner->Opponent->CurrentState.SlowMoTime > 15)
 				{
@@ -109,8 +111,8 @@ void ABlitzImageBase::DrawBlitz()
 		Transform->SetWorldLocation(FVector(CurrentState.Position.X, 0, CurrentState.Position.Y));
 		BaseMesh->SetRelativeScale3D(Scale);
 
-		if (BaseMesh != NULL)
-			if (CurrentState.Pose != NULL)
+		if (BaseMesh != nullptr)
+			if (CurrentState.Pose != nullptr)
 				BaseMesh->PlayAnimation(CurrentState.Pose, true);
 
 		DynamicLineMaterial->SetVectorParameterValue(FName("DissolveColor"), LineDissolveColor);
@@ -145,16 +147,16 @@ void ABlitzImageBase::DrawBlitz()
 
 void ABlitzImageBase::CreateMaterials()
 {
-	if (FlashMaterial != NULL)
+	if (FlashMaterial != nullptr)
 	{
 		DynamicFlashMaterial = UMaterialInstanceDynamic::Create(FlashMaterial, this);
 	}
 
-	if (LineMaterial != NULL)
+	if (LineMaterial != nullptr)
 	{
 		DynamicLineMaterial = UMaterialInstanceDynamic::Create(LineMaterial, this);
 	}
 
-	if (DynamicFlashMaterial != NULL)
+	if (DynamicFlashMaterial != nullptr)
 		BlitzFlash->SetMaterial(0, DynamicFlashMaterial);
 }

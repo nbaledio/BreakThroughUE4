@@ -60,6 +60,7 @@ enum CharacterActions
 	AcceptAll = AcceptMove + AcceptGuard + AcceptJump + AcceptLight + AcceptMedium + AcceptHeavy + AcceptBreak + AcceptCommandNormal + AcceptSpecial + AcceptSuper + AcceptBlitz,
 	ThrowTech = (1 << 11),
 	JumpCancelOnBlock = (1 << 12),
+	BlitzOnHitOnly = (1 << 13),
 };
 
 enum AttackProperties
@@ -77,13 +78,14 @@ enum AttackProperties
 	CanDeflect = (1 << 10), //deflect: non-deflect attacks are deflected by a hitbox with this property, character enters a hitstun state with preset duration, can still be thrown, two deflective attacks will clash normally
 	CanTumble = (1 << 11), //tumbling: an airborne hitstun state that cannot be air recovered from
 	ComboThrow = (1 << 12), //Throws with this flag can hit opponents even if they are in hitstun
-	PlayHitEffect = (1 << 13),
+	AntiAir = (1 << 13),
 	IsSpecial = (1 << 14),
 	IsSuper = (1 << 15),
 	IsSlash = (1 << 16),
 	IsVertical = (1 << 17),
 	IsHorizontal = (1 << 18),
 	LowerBodyHit = (1 << 19),
+	PlayHitEffect = (1 << 20),
 };
 
 class ABTProjectileBase;
@@ -356,8 +358,8 @@ struct FCharacterState
 	bool bCounterHitState = false;
 	int32 CharacterHitState = None; //determines if character can be bounced against/ stuck to surfaces, uses AttackProperties enum
 
-//keeps track of whether an attack has already hit something
-//attack effects are only applied based on the first overlap interaction with the attack (!bAttackMadeContact)
+	//keeps track of whether an attack has already hit something
+	//attack effects are only applied based on the first overlap interaction with the attack (!bAttackMadeContact)
 	bool bAttackMadeContact = false;
 	//keeps track if an attack makes a hit, used for attacks that have a followup when they hit
 	bool bHitSuccess = false;
@@ -367,17 +369,25 @@ struct FCharacterState
 	bool bLose = false;
 
 	//Sets the corresponding parameters on character's materials
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 	FVector MainLightVector;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 	FVector FillLightVector;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 	FVector MainLightColor;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 	FVector FillLightColor;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 	FVector RimLightColor;
-	FVector StatusColor;
-	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
-	int32 StatusTimer; //only mixes with status color as long as this is greater than zero
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 	float LightIntensity;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 	float OverallBrightness;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 	float LineThickness; //0-1 during cinematics, 2 during normal gameplay
+
+	int32 StatusTimer; //only mixes with status color as long as this is greater than zero
 };
 
 UCLASS()
@@ -408,18 +418,21 @@ public:
 
 	virtual void SetColor(uint8 ColorID);
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
+		TSubclassOf<class ASigil> SigilBlueprint;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
+		TSubclassOf<class ABlitzImageBase> BlitzImageBlueprint;
+
 	ABTCharacterBase* Opponent;
 
 	FCharacterState CurrentState{0};
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectiles")
-		TArray<ABTProjectileBase*> Projectiles;
+	TArray<ABTProjectileBase*> Projectiles;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
-		TArray<ASigil*> Sigils;
+	TArray<ASigil*> Sigils;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
-		ABlitzImageBase* BlitzImage;
+	ABlitzImageBase* BlitzImage;
 
 	//Blitz Cancel
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
@@ -452,6 +465,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* BodyLines;
 
+	FVector StatusColor;
+	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
+	float DepthOffset;
+
 	// Called when the game starts or when spawned
 	virtual void BeginPlay();
 
@@ -470,6 +487,12 @@ protected:
 	virtual bool ExitTimeTransitions(); //Animation transitions triggered by finishing an animation, called from within PassiveTransitions
 
 	virtual void AnimationEvents();
+
+	virtual void CreateMaterials();
+
+	virtual void SpawnPBS(); //spawn in character's projectiles, blitz image, and sigils
+
+	bool BlitzCancel();
 
 	bool QCF();
 
@@ -521,9 +544,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float AirPushboxVerticalOffset = 0;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float AirDashForwardOffset = 0;
+		FVector2D AirDashForwardOffset;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float AirDashBackOffset = 0;
+		FVector2D AirDashBackOffset;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float WalkSpeed = 1;

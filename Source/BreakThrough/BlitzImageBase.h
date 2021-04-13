@@ -42,6 +42,8 @@ public:
 	// Sets default values for this actor's properties
 	ABlitzImageBase();
 
+	virtual void Tick(float DeltaTime) override;
+
 	virtual void AssignOwner(ABTCharacterBase* NewOwner) { Owner = NewOwner; }
 
 	void Activate(FVector2D Location, UAnimationAsset* NewPose, bool FacingRight, uint8 EffectColor);
@@ -55,9 +57,9 @@ public:
 	FBlitzState CurrentState{ 0 };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
-		FVector BlitzColor;
+		FVector BlitzColor = FVector(.05, 1, 1);
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
-		FVector LineDissolveColor;
+		FVector LineDissolveColor = FVector(1);
 
 	UMaterialInstanceDynamic* DynamicFlashMaterial;
 	UMaterialInstanceDynamic* DynamicLineMaterial;

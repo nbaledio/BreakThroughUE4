@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "BTCharacterBase.h"
+#include "BlitzImageACH.h"
 #include "BTCharacterACH.generated.h"
 
 enum Moves  //keeps track of what moves have already been used in a string using bit flags
@@ -47,6 +48,8 @@ public:
 
 	virtual void DrawCharacter() override;
 
+	virtual void SetColor(uint8 ColorID) override;
+
 protected:
 	virtual bool NonKnockdownLanding() override; //transitions triggered by touching the ground while not in a hitstun animation
 
@@ -60,6 +63,10 @@ protected:
 
 	virtual void AnimationEvents() override;
 
+	virtual void CreateMaterials() override;
+
+	virtual void SpawnPBS() override; //spawn in character's projectiles, blitz image, and sigils
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* SpearBC;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
@@ -70,6 +77,8 @@ protected:
 		UTexture* SpearLines;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* SealsBC;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* AltBodyBC;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
 		UMaterialInterface* Outline;
