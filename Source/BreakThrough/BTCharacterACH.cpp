@@ -63,9 +63,6 @@ void ABTCharacterACH::CreateMaterials()
 {
 	ABTCharacterBase::CreateMaterials();
 
-	if (Outline != nullptr)
-		DynamicOutline = UMaterialInstanceDynamic::Create(Outline, this);
-
 	if (Main != nullptr)
 		DynamicBodyMain = UMaterialInstanceDynamic::Create(Main, this);
 
@@ -378,6 +375,49 @@ void ABTCharacterACH::SetColor(uint8 ColorID)
 			}
 		}
 	}
+}
+
+void ABTCharacterACH::LightSettings()
+{
+	ABTCharacterBase::LightSettings();
+
+	FVector MainLightValue = MainLight->GetComponentLocation() - GetActorLocation();
+
+	if (DynamicBodyMain)
+		DynamicBodyMain->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
+	if (DynamicBodyMetallic)
+		DynamicBodyMetallic->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
+	if (DynamicBodySpec)
+		DynamicBodySpec->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
+	if (DynamicSeals)
+		DynamicSeals->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
+	if (DynamicRightEye)
+		DynamicRightEye->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
+	if (DynamicSpearMetallic)
+		DynamicSpearMetallic->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
+	if (DynamicSpearSpec)
+		DynamicSpearSpec->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
+	if (DynamicSpearEdge)
+		DynamicSpearEdge->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
+
+	FVector FillLightValue = FillLight->GetComponentLocation() - GetActorLocation();
+
+	if (DynamicBodyMain)
+		DynamicBodyMain->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
+	if (DynamicBodyMetallic)
+		DynamicBodyMetallic->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
+	if (DynamicBodySpec)
+		DynamicBodySpec->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
+	if (DynamicSeals)
+		DynamicSeals->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
+	if (DynamicRightEye)
+		DynamicRightEye->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
+	if (DynamicSpearMetallic)
+		DynamicSpearMetallic->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
+	if (DynamicSpearSpec)
+		DynamicSpearSpec->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
+	if (DynamicSpearEdge)
+		DynamicSpearEdge->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
 }
 
 void ABTCharacterACH::SpawnPBS()

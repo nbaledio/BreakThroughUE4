@@ -178,10 +178,10 @@ struct FAnimationFrame
 		FRotator CameraRotation;
 	//Changes the main lighting angle on the character, snaps to stored positions while bCinematic, otherwise lerps to new positions
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
-		FVector MainLightVector;
+		FRotator MainLightRotation;
 	//Changes the fill light angle
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
-		FVector FillLightVector;
+		FRotator FillLightRotation;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hitboxes")
 		TArray<FHitbox> Hitboxes;
@@ -370,15 +370,15 @@ struct FCharacterState
 
 	//Sets the corresponding parameters on character's materials
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
-	FVector MainLightVector;
+	FRotator MainLightRotation;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
-	FVector FillLightVector;
+	FRotator FillLightRotation;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
-	FVector MainLightColor;
+	FVector MainLightColor = FVector(1);
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 	FVector FillLightColor;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
-	FVector RimLightColor;
+	FVector RimLightColor = FVector(1);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 	float LightIntensity;
@@ -426,7 +426,8 @@ public:
 
 	ABTCharacterBase* Opponent;
 
-	FCharacterState CurrentState{0};
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "State")
+		FCharacterState CurrentState{0};
 
 	TArray<ABTProjectileBase*> Projectiles;
 
@@ -451,10 +452,22 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		USkeletalMeshComponent* BaseMesh;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+		USceneComponent* MainLightRotator;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
+		USceneComponent* MainLight;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+		USceneComponent* FillLightRotator;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
+		USceneComponent* FillLight;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UAudioComponent* CharacterVoice;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UAudioComponent* CharacterSoundEffects;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
+		UMaterialInterface* Outline;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* BodyBC;
@@ -465,6 +478,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* BodyLines;
 
+	UMaterialInstanceDynamic* DynamicOutline;
 	FVector StatusColor;
 	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
 	float DepthOffset;
@@ -489,6 +503,8 @@ protected:
 	virtual void AnimationEvents();
 
 	virtual void CreateMaterials();
+
+	virtual void LightSettings();
 
 	virtual void SpawnPBS(); //spawn in character's projectiles, blitz image, and sigils
 

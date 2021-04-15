@@ -7,7 +7,7 @@
 ABlitzImageBase::ABlitzImageBase()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	Transform = CreateDefaultSubobject<USceneComponent>(TEXT("Transform"));
 	RootComponent = Transform;
@@ -24,9 +24,7 @@ void ABlitzImageBase::BeginPlay()
 {
 	Super::BeginPlay();
 	CreateMaterials();
-	BaseMesh->SetVisibility(false);
-	BlitzFlash->SetVisibility(false);
-	//Activate(FVector2D(0), DefaultAnimation, true, 1);
+	//Activate(FVector2D(0), DefaultAnimation, true, 0);
 }
 
 // Called every frame
@@ -121,7 +119,7 @@ void ABlitzImageBase::DrawBlitz()
 	else
 		BaseMesh->SetVisibility(false);
 
-	if (CurrentState.FlashEffectFrameIndex < 7)
+	if (CurrentState.FlashEffectFrameIndex < 7 && CurrentState.bIsActive)
 	{
 		BlitzFlash->SetVisibility(true);
 

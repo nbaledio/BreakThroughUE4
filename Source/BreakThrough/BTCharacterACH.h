@@ -65,6 +65,8 @@ protected:
 
 	virtual void CreateMaterials() override;
 
+	virtual void LightSettings() override;
+
 	virtual void SpawnPBS() override; //spawn in character's projectiles, blitz image, and sigils
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
@@ -81,8 +83,6 @@ protected:
 		UTexture* AltBodyBC;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
-		UMaterialInterface* Outline;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
 		UMaterialInterface* Main;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
 		UMaterialInterface* Metallic;
@@ -95,7 +95,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
 		UMaterialInterface* SpearEdge;
 
-	UMaterialInstanceDynamic* DynamicOutline;
 	UMaterialInstanceDynamic* DynamicBodyMain;
 	UMaterialInstanceDynamic* DynamicBodyMetallic;
 	UMaterialInstanceDynamic* DynamicBodySpec;
