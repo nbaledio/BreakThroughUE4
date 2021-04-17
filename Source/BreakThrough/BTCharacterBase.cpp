@@ -22,12 +22,12 @@ ABTCharacterBase::ABTCharacterBase()
 	CharacterSoundEffects->SetupAttachment(RootComponent);
 
 	MainLightRotator = CreateDefaultSubobject<USceneComponent>(TEXT("Main Light Rotator"));
-	MainLightRotator->SetupAttachment(RootComponent);
+	MainLightRotator->SetupAttachment(BaseMesh);
 	MainLight = CreateDefaultSubobject<USceneComponent>(TEXT("Main Light"));
 	MainLight->SetupAttachment(MainLightRotator);
 
 	FillLightRotator = CreateDefaultSubobject<USceneComponent>(TEXT("Fill Light Rotator"));
-	FillLightRotator->SetupAttachment(RootComponent);
+	FillLightRotator->SetupAttachment(BaseMesh);
 	FillLight = CreateDefaultSubobject<USceneComponent>(TEXT("Fill Light"));
 	FillLight->SetupAttachment(FillLightRotator);
 }
@@ -51,7 +51,7 @@ void ABTCharacterBase::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	SuperFlashSolver();
 	HitDetection();
-	UpdateCharacter(0);
+	UpdateCharacter(0, 1);
 	VelocitySolver();
 	UpdatePosition();
 	PushboxSolver();
@@ -62,7 +62,7 @@ void ABTCharacterBase::SuperFlashSolver() //Only play once from Player1
 {
 	if (Opponent != nullptr) //Keeps game from freezing or slowing down if both characters super flash on the exact same frame, Player 1 Anim will play first
 	{
-		if ((CurrentState.CurrentAnimFrame->bSuperFlash && Opponent->CurrentState.CurrentAnimFrame->bSuperFlash) || (CurrentState.CurrentAnimFrame->bSuperFlash))
+		if (CurrentState.CurrentAnimFrame->bSuperFlash)
 		{
 			Opponent->CurrentState.HitStop++;
 		}
@@ -348,10 +348,10 @@ void ABTCharacterBase::HitDetection()
 	//HitDetection is done at the beginning of every frame, hit detection can also cause animation transitions to hitstun states
 }
 
-void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs)
+void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 {
 	//Check inputs and add them to InputQueue
-	UpdateInputHistory(CurrentInputs);
+	UpdateInputHistory(CurrentInputs, FrameNumber);
 
 	//if (Inputs.Num() > GameState->FrameDelay)
 	ProcessInputs(CurrentInputs); //(Inputs[GameState->FrameCount - GameState->FrameDelay]);
@@ -426,8 +426,10 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs)
 		}
 		else
 		{
-			//CurrentState.MainLightRotation = StageFillLightRotation
+			//CurrentState.FillLightRotation = StageFillLightRotation
 		}
+
+		//first setting of light colors
 	}
 		
 
@@ -1668,9 +1670,12 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	}
 }
 
-void ABTCharacterBase::UpdateInputHistory(int32 Inputs) //Called to add current inputs to input history
+void ABTCharacterBase::UpdateInputHistory(int32 Inputs, int32 FrameNumber) //Called to add current inputs to input history
 {
-	InputHistory.Add(Inputs);
+	if (InputHistory.Num() < FrameNumber)
+		InputHistory.Add(Inputs);
+	else
+		InputHistory[FMath::Max(0, FrameNumber - 1)] = Inputs;
 }
 
 void ABTCharacterBase::InputCountdown() //decrement input values
@@ -2920,4 +2925,18 @@ void ABTCharacterBase::SetColor(uint8 ColorID)
 	//Cast blitzimage as character's unique blitz image actor and set texture/vector parameters for blitzimage materials
 }
 
-void ABTCharacterBase::LightSettings() {}
+void ABTCharacterBase::LightSettings() 
+{
+	MainLightRotator->SetRelativeRotation(CurrentState.MainLightRotation);
+	FillLightRotator->SetRelativeRotation(CurrentState.FillLightRotation);
+
+	if (CurrentState.CurrentAnimFrame) //light color overrides if the animation frame specifies
+	{
+		if (CurrentState.CurrentAnimFrame->MainLightColor != FVector(0))
+			CurrentState.MainLightColor = CurrentState.CurrentAnimFrame->MainLightColor;
+		if (CurrentState.CurrentAnimFrame->RimLightColor != FVector(0))
+			CurrentState.RimLightColor = CurrentState.CurrentAnimFrame->RimLightColor;
+		if (CurrentState.CurrentAnimFrame->FillLightColor != FVector(0))
+			CurrentState.FillLightColor = CurrentState.CurrentAnimFrame->FillLightColor;
+	}
+}

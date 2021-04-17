@@ -79,13 +79,14 @@ enum AttackProperties
 	CanTumble = (1 << 11), //tumbling: an airborne hitstun state that cannot be air recovered from
 	ComboThrow = (1 << 12), //Throws with this flag can hit opponents even if they are in hitstun
 	AntiAir = (1 << 13),
-	IsSpecial = (1 << 14),
-	IsSuper = (1 << 15),
-	IsSlash = (1 << 16),
-	IsVertical = (1 << 17),
-	IsHorizontal = (1 << 18),
-	LowerBodyHit = (1 << 19),
-	PlayHitEffect = (1 << 20),
+	DisableBurst = (1 << 14),
+	IsSpecial = (1 << 15),
+	IsSuper = (1 << 16),
+	IsSlash = (1 << 17),
+	IsVertical = (1 << 18),
+	IsHorizontal = (1 << 19),
+	LowerBodyHit = (1 << 20),
+	PlayHitEffect = (1 << 21),
 };
 
 class ABTProjectileBase;
@@ -177,11 +178,20 @@ struct FAnimationFrame
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
 		FRotator CameraRotation;
 	//Changes the main lighting angle on the character, snaps to stored positions while bCinematic, otherwise lerps to new positions
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 		FRotator MainLightRotation;
 	//Changes the fill light angle
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 		FRotator FillLightRotation;
+	//overrides color of mainlight
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+		FVector MainLightColor;
+	//overrides color of rim light
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+		FVector RimLightColor;
+	//overrides color of fill light
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+		FVector FillLightColor;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hitboxes")
 		TArray<FHitbox> Hitboxes;
@@ -406,7 +416,7 @@ public:
 
 	virtual void HitDetection();
 
-	virtual void UpdateCharacter(int32 CurrentInputs);
+	virtual void UpdateCharacter(int32 CurrentInputs, int32 FrameNumber);
 
 	void VelocitySolver(); //only called once by gamestate, do not call for each character
 
@@ -434,6 +444,8 @@ public:
 	TArray<ASigil*> Sigils;
 
 	ABlitzImageBase* BlitzImage;
+
+	TArray<int32> InputHistory;
 
 	//Blitz Cancel
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
@@ -527,8 +539,6 @@ protected:
 	void RefreshMovelist();
 
 	bool EnterNewAnimation(TArray<FAnimationFrame> Animation, int32 FrameNumber = 0);
-
-	TArray<int32> InputHistory;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
 		int32 MaxHealth = 1000;
@@ -790,7 +800,7 @@ private:
 
 	void ButtonInputs(int32 Inputs);
 
-	void UpdateInputHistory(int32 Inputs);
+	void UpdateInputHistory(int32 Inputs, int32 FrameNumber);
 
 	void InputCountdown();
 

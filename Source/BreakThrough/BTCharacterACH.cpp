@@ -8,9 +8,9 @@ void ABTCharacterACH::HitDetection()
 	ABTCharacterBase::HitDetection();
 }
 
-void ABTCharacterACH::UpdateCharacter(int32 CurrentInputs)
+void ABTCharacterACH::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 {
-	ABTCharacterBase::UpdateCharacter(CurrentInputs);
+	ABTCharacterBase::UpdateCharacter(CurrentInputs, FrameNumber);
 }
 
 void ABTCharacterACH::UpdatePosition()
@@ -382,42 +382,65 @@ void ABTCharacterACH::LightSettings()
 	ABTCharacterBase::LightSettings();
 
 	FVector MainLightValue = MainLight->GetComponentLocation() - GetActorLocation();
-
-	if (DynamicBodyMain)
-		DynamicBodyMain->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
-	if (DynamicBodyMetallic)
-		DynamicBodyMetallic->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
-	if (DynamicBodySpec)
-		DynamicBodySpec->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
-	if (DynamicSeals)
-		DynamicSeals->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
-	if (DynamicRightEye)
-		DynamicRightEye->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
-	if (DynamicSpearMetallic)
-		DynamicSpearMetallic->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
-	if (DynamicSpearSpec)
-		DynamicSpearSpec->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
-	if (DynamicSpearEdge)
-		DynamicSpearEdge->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
-
 	FVector FillLightValue = FillLight->GetComponentLocation() - GetActorLocation();
 
 	if (DynamicBodyMain)
+	{
+		DynamicBodyMain->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
 		DynamicBodyMain->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
+		DynamicBodyMain->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
+		DynamicBodyMain->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+	}
 	if (DynamicBodyMetallic)
+	{
+		DynamicBodyMetallic->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
 		DynamicBodyMetallic->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
+		DynamicBodyMetallic->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
+		DynamicBodyMetallic->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+	}
+		
 	if (DynamicBodySpec)
+	{
+		DynamicBodySpec->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
 		DynamicBodySpec->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
+		DynamicBodySpec->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
+		DynamicBodySpec->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+	}
 	if (DynamicSeals)
+	{
+		DynamicSeals->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
 		DynamicSeals->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
+		DynamicSeals->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
+		DynamicSeals->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+	}
 	if (DynamicRightEye)
+	{
+		DynamicRightEye->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
 		DynamicRightEye->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
+		DynamicRightEye->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
+		DynamicRightEye->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+	}
 	if (DynamicSpearMetallic)
+	{
+		DynamicSpearMetallic->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
 		DynamicSpearMetallic->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
+		DynamicSpearMetallic->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
+		DynamicSpearMetallic->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+	}
 	if (DynamicSpearSpec)
+	{
+		DynamicSpearSpec->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
 		DynamicSpearSpec->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
+		DynamicSpearSpec->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
+		DynamicSpearSpec->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+	}
 	if (DynamicSpearEdge)
+	{
+		DynamicSpearEdge->SetVectorParameterValue(FName("MainLightVector"), MainLightValue);
 		DynamicSpearEdge->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
+		DynamicSpearEdge->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
+		DynamicSpearEdge->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+	}	
 }
 
 void ABTCharacterACH::SpawnPBS()

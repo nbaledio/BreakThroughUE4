@@ -47,6 +47,8 @@ void ABlitzImageBase::Activate(FVector2D Location, UAnimationAsset* NewPose, boo
 	CurrentState.WaveEffectFrameIndex = 0;
 	CurrentState.WaveEffectFramePlayTime = 0;
 	CurrentState.EffectColor = EffectColor;
+
+	BaseMesh->SetRelativeLocation(FVector(0));
 }
 
 void ABlitzImageBase::Update()
@@ -73,12 +75,15 @@ void ABlitzImageBase::Update()
 				else
 					CurrentState.Pose = (*Owner->CurrentState.CurrentAnimation)[Owner->CurrentState.AnimFrameIndex].Pose;
 
+				float BaseMeshOffset;
 				if (CurrentState.bFacingRight)
-					CurrentState.Position.X = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X - 100, 
+					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X - 100, 
 						FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 3 + CurrentState.FlashEffectFramePlayTime)/21));
 				else
-					CurrentState.Position.X = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X + 100, 
+					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X + 100, 
 						FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 3 + CurrentState.FlashEffectFramePlayTime)/21));
+
+				BaseMesh->SetRelativeLocation(FVector(BaseMeshOffset, 0, 0));
 			}
 		}
 

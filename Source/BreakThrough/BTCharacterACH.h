@@ -7,7 +7,7 @@
 #include "BlitzImageACH.h"
 #include "BTCharacterACH.generated.h"
 
-enum Moves  //keeps track of what moves have already been used in a string using bit flags
+enum Moves  //keeps track of what moves have already been used in a string using bit flags, may not have to include supers since they cant cancel into anything
 {
 	n5L = (1 << 0), //used for both air and ground normals
 	n5M = (1 << 1), 
@@ -17,23 +17,20 @@ enum Moves  //keeps track of what moves have already been used in a string using
 	n2M = (1 << 5),
 	n2H = (1 << 6),
 	n2B = (1 << 7),
-	/*CanCrumple = (1 << 8),
-	CanKnockAway = (1 << 9),
-	CanDeflect = (1 << 10), 
-	CanTumble = (1 << 11), 
-	ComboThrow = (1 << 12), 
-	PlayHitEffect = (1 << 13),
-	IsSpecial = (1 << 14),
-	IsSuper = (1 << 15),
-	IsSlash = (1 << 16),
+	n6L = (1 << 8),
+	n6M = (1 << 9),
+	n6B = (1 << 10), 
+	TowerLeap = (1 << 11), //need to keep track of which Specials Achealis has used since she can enter a state where she can cancel specials into each other
+	LevelHell = (1 << 12), 
+	HeavenClimber= (1 << 13),
+	GenesisEdge = (1 << 14),
+	Starfall = (1 << 15),
+	/*IsSlash = (1 << 16),
 	IsVertical = (1 << 17),
 	IsHorizontal = (1 << 18),
 	LowerBodyHit = (1 << 19),*/
 };
 
-/**
- * 
- */
 UCLASS()
 class BREAKTHROUGH_API ABTCharacterACH : public ABTCharacterBase
 {
@@ -42,7 +39,7 @@ class BREAKTHROUGH_API ABTCharacterACH : public ABTCharacterBase
 public:
 	virtual void HitDetection() override;
 
-	virtual void UpdateCharacter(int32 CurrentInputs) override;
+	virtual void UpdateCharacter(int32 CurrentInputs, int32 FrameNumber) override;
 
 	virtual void UpdatePosition() override;
 
