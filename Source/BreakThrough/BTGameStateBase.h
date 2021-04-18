@@ -54,10 +54,20 @@ public:
 
     GameState gs;
     NonGameState ngs;
+    uint8 FrameDelay = 0;
 
     virtual void BeginPlay() override;
 
     virtual void Tick(float DeltaSeconds) override;
+
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+private:
+    bool bSessionStarted;
+
+    float ElapsedTime;
+
+    TArray<FNetworkGraphPlayer> NetworkGraphData;
 
 protected:
     int32 GetLocalInputs(uint8 PlayerIndex = 0);
@@ -100,5 +110,24 @@ private:
 
     //Notification from GGPO that something has happened. Update the status text at the bottom of the screen to notify the user.
     bool __cdecl BTOnEventCallback(GGPOEvent* info);
+
+    void BeginOnlineSession();
+
+    void OnSessionStart();
+
+    TArray<FVector2D> GetNetworkGraphData(int32 Index, ENetworkGraphType Type, FVector2D GraphSize, int32 MinY, int32 MaxY) const;
+
+    static float GraphValue(int32 Value, FVector2D GraphSize, int32 MinY, int32 MaxY);
+
+    TArray<FGGPONetworkStats> GetNetworkStats();
+
+    //Starts a GGPO game session.
+    bool TryStartGGPOPlayerSession(int32 NumPlayers, const UGGPONetwork* NetworkAddresses);
+    // Starts a GGPO spectating game session.
+    bool TryStartGGPOSpectatorSession(const uint16 LocalPort, const int32 NumPlayers, wchar_t* HostParameter);
+
+    void InitOnlineGame(uint16 localport, int32 num_players, GGPOPlayer* players, int32 num_spectators);
+
+    void InitSpectator(uint16 localport, int32 num_players, char* host_ip, uint16 host_port);
 
 };
