@@ -7,6 +7,7 @@
 #include "BreakThroughPlayerController.h"
 #include "BTProjectileBase.h"
 #include "Sigil.h"
+#include "BlitzImageBase.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundCue.h"
 #include "BTCharacterBase.generated.h"
@@ -59,6 +60,7 @@ enum CharacterActions
 	AcceptAll = AcceptMove + AcceptGuard + AcceptJump + AcceptLight + AcceptMedium + AcceptHeavy + AcceptBreak + AcceptCommandNormal + AcceptSpecial + AcceptSuper + AcceptBlitz,
 	ThrowTech = (1 << 11),
 	JumpCancelOnBlock = (1 << 12),
+	BlitzOnHitOnly = (1 << 13),
 };
 
 enum AttackProperties
@@ -76,19 +78,23 @@ enum AttackProperties
 	CanDeflect = (1 << 10), //deflect: non-deflect attacks are deflected by a hitbox with this property, character enters a hitstun state with preset duration, can still be thrown, two deflective attacks will clash normally
 	CanTumble = (1 << 11), //tumbling: an airborne hitstun state that cannot be air recovered from
 	ComboThrow = (1 << 12), //Throws with this flag can hit opponents even if they are in hitstun
-	PlayHitEffect = (1 << 13),
-	IsSpecial = (1 << 14),
-	IsSuper = (1 << 15),
-	IsSlash = (1 << 16),
-	IsVertical = (1 << 17),
-	IsHorizontal = (1 << 18),
-	LowerBodyHit = (1 << 19),
+	AntiAir = (1 << 13),
+	DisableBurst = (1 << 14),
+	IsSpecial = (1 << 15),
+	IsSuper = (1 << 16),
+	IsSlash = (1 << 17),
+	IsVertical = (1 << 18),
+	IsHorizontal = (1 << 19),
+	LowerBodyHit = (1 << 20),
+	PlayHitEffect = (1 << 21),
 };
 
 class ABTProjectileBase;
 struct FProjectileState;
 class ASigil;
 struct FSigilState;
+class ABlitzImageBase;
+struct FBlitzState;
 
 USTRUCT(BlueprintType)
 struct FHurtbox
@@ -171,12 +177,21 @@ struct FAnimationFrame
 	//camera rotation, will snap to rotation if bCinematic is also on, otherwise will lerp to new rotation
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
 		FRotator CameraRotation;
-	//Changes the main lighting angle on the character
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
-		FVector MainLightVector;
+	//Changes the main lighting angle on the character, snaps to stored positions while bCinematic, otherwise lerps to new positions
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+		FRotator MainLightRotation;
 	//Changes the fill light angle
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
-		FVector FillLightVector;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+		FRotator FillLightRotation;
+	//overrides color of mainlight
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+		FVector MainLightColor;
+	//overrides color of rim light
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+		FVector RimLightColor;
+	//overrides color of fill light
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+		FVector FillLightColor;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hitboxes")
 		TArray<FHitbox> Hitboxes;
@@ -225,6 +240,7 @@ struct FCharacterState
 	TArray<FHurtbox>* CurrentHurtbox;
 	TArray<FProjectileState> CurrentProjectileStates;
 	TArray<FSigilState> CurrentSigilStates;
+	TArray<FBlitzState> CurrentBlitzState;
 
 	uint8 AnimFrameIndex;
 	uint8 PosePlayTime = 0;
@@ -352,8 +368,8 @@ struct FCharacterState
 	bool bCounterHitState = false;
 	int32 CharacterHitState = None; //determines if character can be bounced against/ stuck to surfaces, uses AttackProperties enum
 
-//keeps track of whether an attack has already hit something
-//attack effects are only applied based on the first overlap interaction with the attack (!bAttackMadeContact)
+	//keeps track of whether an attack has already hit something
+	//attack effects are only applied based on the first overlap interaction with the attack (!bAttackMadeContact)
 	bool bAttackMadeContact = false;
 	//keeps track if an attack makes a hit, used for attacks that have a followup when they hit
 	bool bHitSuccess = false;
@@ -361,6 +377,25 @@ struct FCharacterState
 	bool bBlitzing;
 	bool bWin = false;
 	bool bLose = false;
+
+	//Sets the corresponding parameters on character's materials
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+	FRotator MainLightRotation;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+	FRotator FillLightRotation;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+	FVector MainLightColor = FVector(1);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+	FVector FillLightColor;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+	FVector RimLightColor = FVector(1);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+	float LightIntensity;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+	float OverallBrightness;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+	float LineThickness; //0-1 during cinematics, 2 during normal gameplay
 
 	int32 StatusTimer; //only mixes with status color as long as this is greater than zero
 };
@@ -381,7 +416,7 @@ public:
 
 	virtual void HitDetection();
 
-	virtual void UpdateCharacter(int32 CurrentInputs);
+	virtual void UpdateCharacter(int32 CurrentInputs, int32 FrameNumber);
 
 	void VelocitySolver(); //only called once by gamestate, do not call for each character
 
@@ -391,15 +426,36 @@ public:
 
 	virtual void DrawCharacter();  //set material parameters from child class
 
+	virtual void SetColor(uint8 ColorID);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
+		TSubclassOf<class ASigil> SigilBlueprint;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
+		TSubclassOf<class ABlitzImageBase> BlitzImageBlueprint;
+
 	ABTCharacterBase* Opponent;
 
-	FCharacterState CurrentState{0};
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "State")
+		FCharacterState CurrentState{0};
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectiles")
-		TArray<ABTProjectileBase*> Projectiles;
+	TArray<ABTProjectileBase*> Projectiles;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sigils")
-		TArray<ASigil*> Sigils;
+	TArray<ASigil*> Sigils;
+
+	ABlitzImageBase* BlitzImage;
+
+	TArray<int32> InputHistory;
+
+	//Blitz Cancel
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
+		TArray<FAnimationFrame> FocusBlitz;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
+		TArray<FAnimationFrame> BreakerBlitz;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
+		TArray<FAnimationFrame> BlitzOutAir;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
+		TArray<FAnimationFrame> BlitzOutStanding;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -408,10 +464,36 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		USkeletalMeshComponent* BaseMesh;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+		USceneComponent* MainLightRotator;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
+		USceneComponent* MainLight;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+		USceneComponent* FillLightRotator;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
+		USceneComponent* FillLight;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UAudioComponent* CharacterVoice;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UAudioComponent* CharacterSoundEffects;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
+		UMaterialInterface* Outline;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* BodyBC;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* BodySSS;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* BodyILM;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* BodyLines;
+
+	UMaterialInstanceDynamic* DynamicOutline;
+	FVector StatusColor;
+	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
+	float DepthOffset;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay();
@@ -432,6 +514,14 @@ protected:
 
 	virtual void AnimationEvents();
 
+	virtual void CreateMaterials();
+
+	virtual void LightSettings();
+
+	virtual void SpawnPBS(); //spawn in character's projectiles, blitz image, and sigils
+
+	bool BlitzCancel();
+
 	bool QCF();
 
 	bool QCB();
@@ -448,7 +538,7 @@ protected:
 
 	void RefreshMovelist();
 
-	TArray<int32> InputHistory;
+	bool EnterNewAnimation(TArray<FAnimationFrame> Animation, int32 FrameNumber = 0);
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
 		int32 MaxHealth = 1000;
@@ -480,9 +570,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float AirPushboxVerticalOffset = 0;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float AirDashForwardOffset = 0;
+		FVector2D AirDashForwardOffset;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float AirDashBackOffset = 0;
+		FVector2D AirDashBackOffset;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float WalkSpeed = 1;
@@ -505,18 +595,6 @@ protected:
 
 	//number of frames that an input is active for
 		uint8 InputTime = 10;
-
-	//Sets the corresponding parameters on character's materials
-		FVector MainLightVector;
-		FVector FillLightVector;
-		FVector MainLightColor;
-		FVector FillLightColor;
-		FVector RimLightColor;
-		FVector StatusColor;
-		float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
-		float LightIntensity;
-		float OverallBrightness;
-		float LineThickness; //0-1 during cinematics, 2 during normal gameplay
 
 	//Idle Stance Animations
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
@@ -669,16 +747,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Air Hitstun Anims")
 		TArray<FAnimationFrame> WallStick;
 
-	//Blitz Cancel
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
-		TArray<FAnimationFrame> FocusBlitz;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
-		TArray<FAnimationFrame> BreakerBlitz;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
-		TArray<FAnimationFrame> BlitzOutAir;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
-		TArray<FAnimationFrame> BlitzOutStanding;
-
 	//Knockdown/WakeUp Animations
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "KD Anims")
 		TArray<FAnimationFrame> KnockDownFaceDown;
@@ -703,8 +771,6 @@ private:
 
 	//Take in information from CurrentAnimFrame
 	void ProcessAnimationFrame();
-
-	bool EnterNewAnimation(TArray<FAnimationFrame> Animation, int32 FrameNumber = 0);
 
 	void TurnAroundCheck();
 
@@ -734,7 +800,7 @@ private:
 
 	void ButtonInputs(int32 Inputs);
 
-	void UpdateInputHistory(int32 Inputs);
+	void UpdateInputHistory(int32 Inputs, int32 FrameNumber);
 
 	void InputCountdown();
 
@@ -748,7 +814,7 @@ private:
 
 	void SetSounds();
 
-	void SaveSigilStates();
+	void SaveFXStates();
 };
 
 /* 

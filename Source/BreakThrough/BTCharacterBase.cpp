@@ -20,25 +20,49 @@ ABTCharacterBase::ABTCharacterBase()
 
 	CharacterSoundEffects = CreateDefaultSubobject<UAudioComponent>(TEXT("Character SFX"));
 	CharacterSoundEffects->SetupAttachment(RootComponent);
+
+	MainLightRotator = CreateDefaultSubobject<USceneComponent>(TEXT("Main Light Rotator"));
+	MainLightRotator->SetupAttachment(BaseMesh);
+	MainLight = CreateDefaultSubobject<USceneComponent>(TEXT("Main Light"));
+	MainLight->SetupAttachment(MainLightRotator);
+
+	FillLightRotator = CreateDefaultSubobject<USceneComponent>(TEXT("Fill Light Rotator"));
+	FillLightRotator->SetupAttachment(BaseMesh);
+	FillLight = CreateDefaultSubobject<USceneComponent>(TEXT("Fill Light"));
+	FillLight->SetupAttachment(FillLightRotator);
 }
 
 // Called when the game starts or when spawned
 void ABTCharacterBase::BeginPlay()
 {
+	Super::BeginPlay();
+
 	EnterNewAnimation(IdleStand);
+	CurrentState.Position = FVector2D(GetActorLocation().X, GetActorLocation().Z);
+	CurrentState.LineThickness = 3;
+	CreateMaterials();
+	SpawnPBS();
+	SetColor(1);
 }
 
 // Called every frame
 void ABTCharacterBase::Tick(float DeltaTime)
 {
-
+	Super::Tick(DeltaTime);
+	SuperFlashSolver();
+	HitDetection();
+	UpdateCharacter(0, 1);
+	VelocitySolver();
+	UpdatePosition();
+	PushboxSolver();
+	DrawCharacter();
 }
 
 void ABTCharacterBase::SuperFlashSolver() //Only play once from Player1
 {
-	if (Opponent != NULL) //Keeps game from freezing or slowing down if both characters super flash on the exact same frame, Player 1 Anim will play first
+	if (Opponent != nullptr) //Keeps game from freezing or slowing down if both characters super flash on the exact same frame, Player 1 Anim will play first
 	{
-		if ((CurrentState.CurrentAnimFrame->bSuperFlash && Opponent->CurrentState.CurrentAnimFrame->bSuperFlash) || (CurrentState.CurrentAnimFrame->bSuperFlash))
+		if (CurrentState.CurrentAnimFrame->bSuperFlash)
 		{
 			Opponent->CurrentState.HitStop++;
 		}
@@ -51,7 +75,7 @@ void ABTCharacterBase::SuperFlashSolver() //Only play once from Player1
 
 void ABTCharacterBase::HitDetection()
 {
-	if (Opponent != NULL && !CurrentState.bClash)
+	if (Opponent != nullptr && !CurrentState.bClash)
 	{
 		CurrentState.bHitSuccess = false;
 		if (CurrentState.bBlitzing)
@@ -282,8 +306,8 @@ void ABTCharacterBase::HitDetection()
 			//logic to follow for throws
 			else if (((((*CurrentState.CurrentHitbox)[0].AttackHeight == CommandThrow || (*CurrentState.CurrentHitbox)[0].AttackHeight == Throw) && !Opponent->CurrentState.bIsAirborne) ||
 				(((*CurrentState.CurrentHitbox)[0].AttackHeight == AirCommandThrow || (*CurrentState.CurrentHitbox)[0].AttackHeight == AirThrow) && Opponent->CurrentState.bIsAirborne)) &&
-				((Opponent->CurrentState.HitStun == 0 && Opponent->CurrentState.BlockStun == 0) || (*CurrentState.CurrentHitbox)[0].AttackProperties & ComboThrow || Opponent->CurrentState.CurrentAnimation == &Opponent->Stagger ||
-				Opponent->CurrentState.CurrentAnimation == &Opponent->Crumple) && Opponent->CurrentState.CurrentAnimFrame->Invincibility != ThrowInvincible &&
+				((Opponent->CurrentState.HitStun == 0) || (*CurrentState.CurrentHitbox)[0].AttackProperties & ComboThrow || Opponent->CurrentState.CurrentAnimation == &Opponent->Stagger ||
+				Opponent->CurrentState.CurrentAnimation == &Opponent->Crumple) && Opponent->CurrentState.BlockStun == 0 && Opponent->CurrentState.CurrentAnimFrame->Invincibility != ThrowInvincible &&
 				Opponent->CurrentState.CurrentAnimFrame->Invincibility != FullInvincible && Opponent->CurrentState.CurrentAnimFrame->Invincibility != Intangible && Opponent->CurrentState.CurrentAnimFrame->Invincibility != OTG)
 			{
 				for (int32 i = 0; i < CurrentState.CurrentHitbox->Num() && !CurrentState.bAttackMadeContact; i++)
@@ -324,12 +348,13 @@ void ABTCharacterBase::HitDetection()
 	//HitDetection is done at the beginning of every frame, hit detection can also cause animation transitions to hitstun states
 }
 
-void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs)
+void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 {
 	//Check inputs and add them to InputQueue
-	//Process inputs from n frames ago (n = frame delay), 
+	UpdateInputHistory(CurrentInputs, FrameNumber);
 
-	ProcessInputs(CurrentInputs); //(Inputs[GameState->FrameCount - FrameDelay]);
+	//if (Inputs.Num() > GameState->FrameDelay)
+	ProcessInputs(CurrentInputs); //(Inputs[GameState->FrameCount - GameState->FrameDelay]);
 
 	if (CurrentState.HitStop == 0)
 	{
@@ -364,17 +389,56 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs)
 			CurrentState.Resolute = true; //Character with Resolute state will gain meter instead of being hit by a Blitz wave and will automatically counter normal throws
 	}
 
-	for (ASigil* Sigil : Sigils)
+	if (CurrentState.CurrentAnimFrame)
 	{
-		Sigil->Update();
+		if (Opponent != nullptr)
+		{
+			if (!CurrentState.CurrentAnimFrame->bSuperFlash && !Opponent->CurrentState.CurrentAnimFrame->bSuperFlash)
+			{
+				for (ASigil* Sigil : Sigils)
+				{
+					Sigil->Update();
+				}
+
+				if (BlitzImage != nullptr)
+					BlitzImage->Update();
+			}
+		}
+
+		if (CurrentState.MainLightRotation != CurrentState.CurrentAnimFrame->MainLightRotation && CurrentState.CurrentAnimFrame->MainLightRotation != FRotator(0))
+		{
+			if (CurrentState.CurrentAnimFrame->bCinematic)
+				CurrentState.MainLightRotation = CurrentState.CurrentAnimFrame->MainLightRotation;
+			else
+				CurrentState.MainLightRotation = FMath::Lerp(CurrentState.MainLightRotation, CurrentState.CurrentAnimFrame->MainLightRotation, .5f);
+		}
+		else
+		{
+			//CurrentState.MainLightRotation = StageMainLightRotation
+		}
+
+		if (CurrentState.FillLightRotation != CurrentState.CurrentAnimFrame->FillLightRotation && CurrentState.CurrentAnimFrame->FillLightRotation != FRotator(0))
+		{
+			if (CurrentState.CurrentAnimFrame->bCinematic)
+				CurrentState.FillLightRotation = CurrentState.CurrentAnimFrame->FillLightRotation;
+			else
+				CurrentState.FillLightRotation = FMath::Lerp(CurrentState.FillLightRotation, CurrentState.CurrentAnimFrame->FillLightRotation, .5f);
+		}
+		else
+		{
+			//CurrentState.FillLightRotation = StageFillLightRotation
+		}
+
+		//first setting of light colors
 	}
+		
 
 	SetSounds();
 }
 
 void ABTCharacterBase::VelocitySolver()
 {
-	if (Opponent != NULL)
+	if (Opponent != nullptr)
 	{
 		if (CurrentState.bTouchingOpponent)
 		{
@@ -417,26 +481,29 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 {
 	if (CurrentState.HitStop == 0)
 	{
-		if (CurrentState.SlowMoTime % 2 == 0) //animation speed is halved and stun values decrease at half speed while in slow motion
+		if (CurrentState.CurrentAnimFrame)
 		{
-			if (CurrentState.ShatteredTime % 2 == 0 && CurrentState.PosePlayTime < CurrentState.CurrentAnimFrame->PlayDuration)
+			if (CurrentState.SlowMoTime % 2 == 0) //animation speed is halved and stun values decrease at half speed while in slow motion
 			{
-				CurrentState.PosePlayTime++;
-				if (CurrentState.PosePlayTime == CurrentState.CurrentAnimFrame->PlayDuration)
-					CurrentState.AnimFrameIndex++;
+				if (CurrentState.ShatteredTime % 2 == 0 && CurrentState.PosePlayTime < CurrentState.CurrentAnimFrame->PlayDuration)
+				{
+					CurrentState.PosePlayTime++;
+					if (CurrentState.PosePlayTime == CurrentState.CurrentAnimFrame->PlayDuration)
+						CurrentState.AnimFrameIndex++;
+				}
+				if (CurrentState.HitStun > 0 && CurrentState.CurrentAnimation != &Sweep && CurrentState.CurrentAnimation != &WallBounce && CurrentState.CurrentAnimation != &Crumple && CurrentState.CurrentAnimation != &GroundBounce && CurrentState.CurrentAnimation != &Tumble)
+					CurrentState.HitStun--;
+				if (CurrentState.BlockStun > 0)
+					CurrentState.BlockStun--;
 			}
-			if (CurrentState.HitStun > 0 && CurrentState.CurrentAnimation != &Sweep && CurrentState.CurrentAnimation != &WallBounce && CurrentState.CurrentAnimation != &Crumple && CurrentState.CurrentAnimation != &GroundBounce && CurrentState.CurrentAnimation != &Tumble)
-				CurrentState.HitStun--;
-			if (CurrentState.BlockStun > 0)
-				CurrentState.BlockStun--;
-		}
 
-		if (!CurrentState.CurrentAnimFrame->bLockPosition)
-		{
-			if (CurrentState.SlowMoTime > 0)
-				CurrentState.Position += CurrentState.Velocity * 100 / 120.f;
-			else
-				CurrentState.Position += CurrentState.Velocity * 100 / 60.f;
+			if (!CurrentState.CurrentAnimFrame->bLockPosition)
+			{
+				if (CurrentState.SlowMoTime > 0)
+					CurrentState.Position += CurrentState.Velocity * 100 / 120.f;
+				else
+					CurrentState.Position += CurrentState.Velocity * 100 / 60.f;
+			}
 		}
 
 		if (CurrentState.Position.Y <= 0)
@@ -459,13 +526,16 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 		CurrentState.HitStop--;
 	}
 
-	if ((CurrentState.HitStun > 0 || CurrentState.CurrentAnimFrame->Invincibility == FaceDown || CurrentState.CurrentAnimFrame->Invincibility == FaceUp) && CurrentState.ShatteredTime == 0)
+	if (CurrentState.CurrentAnimFrame)
 	{
-		if (CurrentState.SlowMoTime % 2 == 0)
-			CurrentState.ComboTimer++;
+		if ((CurrentState.HitStun > 0 || CurrentState.CurrentAnimFrame->Invincibility == FaceDown || CurrentState.CurrentAnimFrame->Invincibility == FaceUp) && CurrentState.ShatteredTime == 0)
+		{
+			if (CurrentState.SlowMoTime % 2 == 0)
+				CurrentState.ComboTimer++;
+		}
+		else
+			CurrentState.ComboTimer = 0;
 	}
-	else
-		CurrentState.ComboTimer = 0;
 
 	UpdateResolve();
 		
@@ -474,21 +544,21 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 	if (CurrentState.SlowMoTime > 0)
 		CurrentState.SlowMoTime--;
 
-	if (Opponent != NULL)
+	if (Opponent != nullptr)
 	{
 		if ((Opponent->CurrentState.HitStun == 0 && !Opponent->CurrentState.bIsAirborne) || (Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.CurrentAnimFrame->Invincibility != FaceDown && Opponent->CurrentState.CurrentAnimFrame->Invincibility != FaceUp))
 			CurrentState.ComboCount = 0;
 	}	
 
-	SaveSigilStates();
+	SaveFXStates();
 	InputCountdown();
 }
 
 void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick after updating characters, do not call on multiple characters
 {
-	if (Opponent != NULL)
+	if (Opponent != nullptr)
 	{
-		if (CurrentState.CurrentAnimFrame != NULL && Opponent->CurrentState.CurrentAnimFrame != NULL)
+		if (CurrentState.CurrentAnimFrame != nullptr && Opponent->CurrentState.CurrentAnimFrame != nullptr)
 		{
 			if (!CurrentState.CurrentAnimFrame->bCinematic && !Opponent->CurrentState.CurrentAnimFrame->bCinematic)
 			{
@@ -836,8 +906,12 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 
 void ABTCharacterBase::DrawCharacter()
 {
-	if (CurrentState.CurrentAnimFrame != NULL && CurrentState.CurrentAnimFrame->Pose != NULL)
-		BaseMesh->SetAnimation(CurrentState.CurrentAnimFrame->Pose);
+	LightSettings();
+
+	DynamicOutline->SetScalarParameterValue(FName("LineThickness"), CurrentState.LineThickness);
+
+	if (CurrentState.CurrentAnimFrame != nullptr && CurrentState.CurrentAnimFrame->Pose != nullptr)
+		BaseMesh->PlayAnimation(CurrentState.CurrentAnimFrame->Pose, false);
 
 	if (!CurrentState.bFacingRight && BaseMesh->GetRelativeScale3D().X != -1)
 	{
@@ -853,9 +927,9 @@ void ABTCharacterBase::DrawCharacter()
 	//play sounds if any
 	if (CurrentState.bPlaySound)
 	{
-		if (CharacterVoice->Sound != NULL)
+		if (CharacterVoice->Sound != nullptr)
 			CharacterVoice->Play();
-		if (CharacterSoundEffects->Sound != NULL)
+		if (CharacterSoundEffects->Sound != nullptr)
 			CharacterSoundEffects->Play();
 
 		CurrentState.bPlaySound = false;
@@ -866,12 +940,17 @@ void ABTCharacterBase::DrawCharacter()
 	{
 		Sigil->DrawSigil();
 	}
+
+	//draw blitz image effects if active
+	if (BlitzImage != nullptr)
+		BlitzImage->DrawBlitz();
+
 	//if Hitbox View is on also loop through hitbox and hurtbox arrays and draw to screen
 }
 
 void ABTCharacterBase::ProcessAnimationFrame()
 {
-	if (CurrentState.CurrentAnimFrame != NULL)
+	if (CurrentState.CurrentAnimFrame != nullptr)
 	{
 		if (CurrentState.PosePlayTime == 0)
 		{
@@ -942,7 +1021,7 @@ bool ABTCharacterBase::EnterNewAnimation(TArray<FAnimationFrame> Animation, int3
 	//check if the specified animation and frame exist
 	if (Animation.Num() > FrameNumber)
 	{
-		if (Animation[FrameNumber].Pose != NULL)
+		if (Animation[FrameNumber].Pose != nullptr)
 		{
 			CurrentState.PosePlayTime = 0; // reset pose play time to make sure new frame is played for the correct amount of time
 			CurrentState.CurrentAnimation = &Animation;
@@ -959,7 +1038,7 @@ bool ABTCharacterBase::EnterNewAnimation(TArray<FAnimationFrame> Animation, int3
 
 void ABTCharacterBase::TurnAroundCheck()
 {
-	if (Opponent != NULL)
+	if (Opponent != nullptr)
 	{
 		if (!CurrentState.bTouchingWall)
 		{
@@ -982,7 +1061,6 @@ void ABTCharacterBase::TriggerTurnAround()
 	//Trigger turnaround animation if in idle stand or crouch;
 	if (CurrentState.AvailableActions & AcceptMove && !CurrentState.bIsAirborne && CurrentState.Velocity.X == 0)
 	{
-		CurrentState.PosePlayTime = 0;
 		if (CurrentState.bIsCrouching)
 		{
 			EnterNewAnimation(TurnAroundCrouch);
@@ -996,7 +1074,7 @@ void ABTCharacterBase::TriggerTurnAround()
 
 bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when a character touches a surface with certain conditions
 {
-	if (((CurrentState.bIsAirborne && CurrentState.Position.Y <= 0 && CurrentState.Velocity.Y <= 0) || (CurrentState.CharacterHitState & CanGroundBounce && !CurrentState.bIsAirborne)) && CurrentState.CurrentAnimFrame != NULL) //landing on the ground
+	if (((CurrentState.bIsAirborne && CurrentState.Position.Y <= 0 && CurrentState.Velocity.Y <= 0) || (CurrentState.CharacterHitState & CanGroundBounce && !CurrentState.bIsAirborne)) && CurrentState.CurrentAnimFrame != nullptr) //landing on the ground
 	{
 		//logic for setting character's state when they hit the ground (land on feet, knockdown, groundbounce)
 		if (CurrentState.CharacterHitState & CanGroundBounce)
@@ -1007,7 +1085,7 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 			if (CurrentState.Velocity.Y < 3)
 				CurrentState.Velocity.Y = 3;
 
-			if (Opponent != NULL)
+			if (Opponent != nullptr)
 			{
 				if (Opponent->Sigils.Num() > 1)
 				{
@@ -1021,7 +1099,6 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 		{
 			CurrentState.Velocity.Y = 0;
 			CurrentState.bIsAirborne = false;
-			TurnAroundCheck();
 			if (CurrentState.CurrentAnimFrame->Invincibility != FaceDown) //cause hard knockdown if in a hitstun state
 			{
 				CurrentState.SlowMoTime = 0;
@@ -1038,6 +1115,8 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 			}
 			else //if a character is not in a hit state, they will land on their feet
 			{
+				TurnAroundCheck();
+
 				if (CurrentState.LandingLag > 4) //landing lag puts character in a recovery state when landing
 				{
 
@@ -1048,9 +1127,15 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 
 					return EnterNewAnimation(CrouchDown);
 				}
-				else
+				else if (CurrentState.BlockStun > 0)
 				{
-					NonKnockdownLanding();
+					CurrentState.BlockStun += 4; //Add to blockstun when transitioning from air to ground
+
+					return EnterNewAnimation(GuardLo);
+				}
+				else if (NonKnockdownLanding())
+				{
+					return true;
 				}
 			}
 		}
@@ -1093,7 +1178,7 @@ bool ABTCharacterBase::HitWall()
 			CurrentState.HitStun = WallStickHitStun;
 		}
 
-		if (Opponent != NULL)
+		if (Opponent != nullptr)
 		{
 			if (Opponent->Sigils.Num() > 1)
 			{
@@ -1117,7 +1202,7 @@ bool ABTCharacterBase::HitWall()
 		if (CurrentState.Velocity.Y < 1.5f)
 			CurrentState.Velocity.Y = 1.5f;
 
-		if (Opponent != NULL)
+		if (Opponent != nullptr)
 		{
 			if (Opponent->Sigils.Num() > 1)
 			{
@@ -1312,7 +1397,7 @@ void ABTCharacterBase::GravityCalculation()
 void ABTCharacterBase::ApplyKnockBack()
 {
 	float ComboGravity = 1;
-	if (Opponent != NULL)
+	if (Opponent != nullptr)
 	{
 		if (Opponent->CurrentState.ComboCount <= 8 || CurrentState.CharacterHitState & IsSuper || CurrentState.ShatteredTime > 0)
 			ComboGravity = 1;
@@ -1357,37 +1442,41 @@ void ABTCharacterBase::ApplyKnockBack()
 
 void ABTCharacterBase::UpdateResolve()
 {
-	if (CurrentState.ShatteredTime == 0 && !CurrentState.CurrentAnimFrame->bCinematic && !CurrentState.CurrentAnimFrame->bSuperFlash)
+	if (Opponent != nullptr)
 	{
-		if (CurrentState.ResolveRecoverTimer >= 180) //Resolve starts passively regenerating after three seconds without being used or broken, resolve regen speeds up if the character is not inputting anything
+		if (CurrentState.ShatteredTime == 0 && !CurrentState.CurrentAnimFrame->bCinematic && !CurrentState.CurrentAnimFrame->bSuperFlash && 
+			!Opponent->CurrentState.CurrentAnimFrame->bCinematic && !Opponent->CurrentState.CurrentAnimFrame->bSuperFlash && !CurrentState.bWin && !Opponent->CurrentState.bWin)
 		{
-			if ((float)CurrentState.Health / (float)MaxHealth <= .1f && (CurrentState.SlowMoTime == 0 || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 2)))
+			if (CurrentState.ResolveRecoverTimer >= 180) //Resolve starts passively regenerating after three seconds without being used or broken, resolve regen speeds up if the character is not inputting anything
 			{
-				CurrentState.Durability++;
-				if (CurrentState.Resolute)
+				if ((float)CurrentState.Health / (float)MaxHealth <= .1f && (CurrentState.SlowMoTime == 0 || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 2)))
+				{
 					CurrentState.Durability++;
-				CurrentState.RecoverInterval = 0;
-			}
-			else if ((float)CurrentState.Health / (float)MaxHealth <= .25f && ((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 2)|| (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 4) || (CurrentState.SlowMoTime == 0 && CurrentState.Resolute)))
-			{
-				CurrentState.Durability++;
-				CurrentState.RecoverInterval = 0;
-			}
-			else if ((float)CurrentState.Health / (float)MaxHealth <= .5f && ((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 3) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 6) || (CurrentState.SlowMoTime == 0 && CurrentState.Resolute && CurrentState.RecoverInterval >= 2)))
-			{
-				CurrentState.Durability++;
-				CurrentState.RecoverInterval = 0;
-			}
-			else if (((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 4) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 8) || (CurrentState.SlowMoTime == 0 && CurrentState.Resolute && CurrentState.RecoverInterval >= 3)))
-			{
-				CurrentState.Durability++;
-				CurrentState.RecoverInterval = 0;
+					if (CurrentState.Resolute)
+						CurrentState.Durability++;
+					CurrentState.RecoverInterval = 0;
+				}
+				else if ((float)CurrentState.Health / (float)MaxHealth <= .25f && ((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 2) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 4) || (CurrentState.SlowMoTime == 0 && CurrentState.Resolute)))
+				{
+					CurrentState.Durability++;
+					CurrentState.RecoverInterval = 0;
+				}
+				else if ((float)CurrentState.Health / (float)MaxHealth <= .5f && ((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 3) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 6) || (CurrentState.SlowMoTime == 0 && CurrentState.Resolute && CurrentState.RecoverInterval >= 2)))
+				{
+					CurrentState.Durability++;
+					CurrentState.RecoverInterval = 0;
+				}
+				else if (((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 4) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 8) || (CurrentState.SlowMoTime == 0 && CurrentState.Resolute && CurrentState.RecoverInterval >= 3)))
+				{
+					CurrentState.Durability++;
+					CurrentState.RecoverInterval = 0;
+				}
+				else
+					CurrentState.RecoverInterval++;
 			}
 			else
-				CurrentState.RecoverInterval++;
+				CurrentState.ResolveRecoverTimer++;
 		}
-		else
-			CurrentState.ResolveRecoverTimer++;
 	}
 
 	if (CurrentState.Durability > 100)
@@ -1525,7 +1614,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		}
 	}
 
-	if (Opponent != NULL)
+	if (Opponent != nullptr)
 	{
 		if ((Opponent->CurrentState.Position.X < CurrentState.Position.X && Inputs & INPUT_RIGHT) || (Opponent->CurrentState.Position.X > CurrentState.Position.X && Inputs & INPUT_LEFT))
 			CurrentState.bIsGuarding = true;
@@ -1581,9 +1670,12 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	}
 }
 
-void ABTCharacterBase::UpdateInputHistory(int32 Inputs) //Called to add current inputs to input history
+void ABTCharacterBase::UpdateInputHistory(int32 Inputs, int32 FrameNumber) //Called to add current inputs to input history
 {
-	InputHistory.Add(Inputs)
+	if (InputHistory.Num() < FrameNumber)
+		InputHistory.Add(Inputs);
+	else
+		InputHistory[FMath::Max(0, FrameNumber - 1)] = Inputs;
 }
 
 void ABTCharacterBase::InputCountdown() //decrement input values
@@ -1692,6 +1784,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			StatusMix = 3;
 			StatusColor = FVector(1, 1, 1);
 			CurrentState.StatusTimer = 5;
+			CurrentState.JumpsUsed = 0;
 			return EnterNewAnimation(AirRecovery);
 		}
 	}
@@ -1785,7 +1878,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 
 bool ABTCharacterBase::ConditionalTransitions()
 {
-	if (CurrentState.CurrentAnimation != NULL)
+	if (CurrentState.CurrentAnimation != nullptr)
 	{
 		if (CurrentState.CurrentAnimation == &MidJump && CurrentState.Velocity.Y < 0)
 			return EnterNewAnimation(JumpTransition);
@@ -1802,17 +1895,17 @@ bool ABTCharacterBase::ConditionalTransitions()
 		if (CurrentState.CurrentAnimation == &GuardAir && CurrentState.BlockStun == 0)
 			return EnterNewAnimation(GuardAirOut);
 
-		if (CurrentState.CurrentAnimation == &HitSLIn && CurrentState.BlockStun == 0)
+		if (CurrentState.CurrentAnimation == &HitSLIn && CurrentState.HitStun == 0)
 			return EnterNewAnimation(HitSLOut);
-		if (CurrentState.CurrentAnimation == &HitSLHeavyIn && CurrentState.BlockStun == 0)
+		if (CurrentState.CurrentAnimation == &HitSLHeavyIn && CurrentState.HitStun == 0)
 			return EnterNewAnimation(HitSLHeavyOut);
-		if (CurrentState.CurrentAnimation == &HitSHIn && CurrentState.BlockStun == 0)
+		if (CurrentState.CurrentAnimation == &HitSHIn && CurrentState.HitStun == 0)
 			return EnterNewAnimation(HitSHOut);
-		if (CurrentState.CurrentAnimation == &HitSHHeavyIn && CurrentState.BlockStun == 0)
+		if (CurrentState.CurrentAnimation == &HitSHHeavyIn && CurrentState.HitStun == 0)
 			return EnterNewAnimation(HitSHHeavyOut);
-		if (CurrentState.CurrentAnimation == &HitCIn && CurrentState.BlockStun == 0)
+		if (CurrentState.CurrentAnimation == &HitCIn && CurrentState.HitStun == 0)
 			return EnterNewAnimation(HitCOut);
-		if (CurrentState.CurrentAnimation == &HitCHeavyIn && CurrentState.BlockStun == 0)
+		if (CurrentState.CurrentAnimation == &HitCHeavyIn && CurrentState.HitStun == 0)
 			return EnterNewAnimation(HitCHeavyOut);
 	}
 	return false;
@@ -1821,109 +1914,128 @@ bool ABTCharacterBase::ConditionalTransitions()
 bool ABTCharacterBase::PassiveTransitions()
 {
 	//Animation transitions triggered by having finished the current animation
-	if (CurrentState.AnimFrameIndex == CurrentState.CurrentAnimation->Num()) // When hitting the end of an animation
+	if (CurrentState.CurrentAnimation != nullptr)
 	{
-		if (CurrentState.CurrentAnimFrame->bDoesCycle) //if the anim cycles and are currently at the end of the animation, play it again
+		if (CurrentState.AnimFrameIndex == CurrentState.CurrentAnimation->Num()) // When hitting the end of an animation
 		{
-			if (CurrentState.CurrentAnimation == &IdleStand || CurrentState.CurrentAnimation == &IdleCrouch)
-				CurrentState.IdleCycle++;
+			if (CurrentState.CurrentAnimFrame->bDoesCycle) //if the anim cycles and are currently at the end of the animation, play it again
+			{
+				if (CurrentState.CurrentAnimation == &IdleStand || CurrentState.CurrentAnimation == &IdleCrouch)
+					CurrentState.IdleCycle++;
 
-			if (CurrentState.IdleCycle == 2)
-			{
-				CurrentState.IdleCycle = 0;
-				if (CurrentState.CurrentAnimation == &IdleStand)
-					return EnterNewAnimation(IdleStandBlink);
-				else
-					return EnterNewAnimation(IdleCrouchBlink);
+				if (CurrentState.IdleCycle == 2)
+				{
+					CurrentState.IdleCycle = 0;
+					if (CurrentState.CurrentAnimation == &IdleStand)
+						return EnterNewAnimation(IdleStandBlink);
+					else
+						return EnterNewAnimation(IdleCrouchBlink);
+				}
+				/*else if (IdleCycle == 4)
+				{
+					IdleCycle = 0;
+					if (CurrentAnimation == &IdleStand)
+						return EnterNewAnimation(StandIdleAction);
+					else
+						return EnterNewAnimation(CrouchIdleAction);
+				}*/
+				return EnterNewAnimation(*CurrentState.CurrentAnimation);
 			}
-			/*else if (IdleCycle == 4)
+			else //certain animations need to transition to other animations upon finishing
 			{
-				IdleCycle = 0;
-				if (CurrentAnimation == &IdleStand)
-					return EnterNewAnimation(StandIdleAction);
-				else
-					return EnterNewAnimation(CrouchIdleAction);
-			}*/
-			return EnterNewAnimation(*CurrentState.CurrentAnimation);
+				return ExitTimeTransitions();
+			}
 		}
-		else //certain animations need to transition to other animations upon finishing
+		else if (CurrentState.PosePlayTime == CurrentState.CurrentAnimFrame->PlayDuration && CurrentState.AnimFrameIndex < CurrentState.CurrentAnimation->Num()) //Move to next frame of current animation
 		{
-			return ExitTimeTransitions();
+			CurrentState.CurrentAnimFrame = &(*CurrentState.CurrentAnimation)[CurrentState.AnimFrameIndex];
+			CurrentState.PosePlayTime = 0;
 		}
-	}
-	else if (CurrentState.PosePlayTime == CurrentState.CurrentAnimFrame->PlayDuration && CurrentState.AnimFrameIndex < CurrentState.CurrentAnimation->Num()) //Move to next frame of current animation
-	{
-		CurrentState.CurrentAnimFrame = &(*CurrentState.CurrentAnimation)[CurrentState.AnimFrameIndex];
-		CurrentState.PosePlayTime = 0;
 	}
 	return false;
 }
 
 bool ABTCharacterBase::ExitTimeTransitions()
 {
-	if (CurrentState.CurrentAnimation == &TimeOverLose)
+	if (CurrentState.CurrentAnimation != nullptr)
 	{
-		return EnterNewAnimation(LoseCycle);
+		if (CurrentState.CurrentAnimation == &TimeOverLose)
+		{
+			return EnterNewAnimation(LoseCycle);
+		}
+
+		if (CurrentState.CurrentAnimation == &PreJump) // Transition from PreJump frames to JumpAnimation
+		{
+			if (CurrentState.bForwardJump && ForwardJump.Num() > 0)
+				return EnterNewAnimation(ForwardJump);
+			else if (CurrentState.bBackwardJump && BackwardJump.Num() > 0)
+				return EnterNewAnimation(BackwardJump);
+			else
+				return EnterNewAnimation(NeutralJump);
+		}
+
+		if (CurrentState.CurrentAnimation == &NeutralJump || CurrentState.CurrentAnimation == &ForwardJump || CurrentState.CurrentAnimation == &BackwardJump || CurrentState.CurrentAnimation == &GuardAirOut ||
+			CurrentState.CurrentAnimation == &DeflectedAir || CurrentState.CurrentAnimation == &ThrowEscapeAir || CurrentState.CurrentAnimation == &BlitzOutAir)
+		{
+			return EnterNewAnimation(MidJump);
+		}
+
+		if (CurrentState.CurrentAnimation == &JumpTransition)
+		{
+			return EnterNewAnimation(JumpDescent);
+		}
+
+		if (CurrentState.CurrentAnimation == &LaunchTransition)
+		{
+			return EnterNewAnimation(LaunchFallCycle);
+		}
+
+		if (CurrentState.CurrentAnimation == &StandUp || CurrentState.CurrentAnimation == &Brake || CurrentState.CurrentAnimation == &WakeUpFaceDown || CurrentState.CurrentAnimation == &WakeUpFaceUp || CurrentState.CurrentAnimation == &GuardHiOut ||
+			CurrentState.CurrentAnimation == &HitSLOut || CurrentState.CurrentAnimation == &HitSHOut || CurrentState.CurrentAnimation == &HitSLHeavyOut || CurrentState.CurrentAnimation == &HitSHHeavyOut || CurrentState.CurrentAnimation == &IdleStandBlink ||
+			CurrentState.CurrentAnimation == &StandIdleAction || CurrentState.CurrentAnimation == &Deflected || CurrentState.CurrentAnimation == &ThrowEscape || CurrentState.CurrentAnimation == &BlitzOutStanding)
+			return EnterNewAnimation(IdleStand);
+
+		if (CurrentState.CurrentAnimation == &CrouchDown || CurrentState.CurrentAnimation == &GuardLoOut || CurrentState.CurrentAnimation == &IdleCrouchBlink || CurrentState.CurrentAnimation == &CrouchIdleAction ||
+			CurrentState.CurrentAnimation == &HitCOut || CurrentState.CurrentAnimation == &HitCHeavyOut)
+			return EnterNewAnimation(IdleCrouch);
+
+		if ((CurrentState.CurrentAnimation == &KnockDownFaceDown || CurrentState.CurrentAnimation == &Crumple) && (CurrentState.Health != 0))
+		{
+			if (CurrentState.Resolve == 0)
+			{
+				CurrentState.Resolve = 1;
+				CurrentState.Durability = 80;
+			}
+			return EnterNewAnimation(WakeUpFaceDown);
+		}
+
+		if ((CurrentState.CurrentAnimation == &KnockDownFaceUp) && (CurrentState.Health != 0))
+		{
+			if (CurrentState.Resolve == 0)
+			{
+				CurrentState.Resolve = 1;
+				CurrentState.Durability = 80;
+			}
+			return EnterNewAnimation(WakeUpFaceUp);
+		}
+
+		if (CurrentState.CurrentAnimation == &GuardHiIn)
+			return EnterNewAnimation(GuardHi);
+
+		if (CurrentState.CurrentAnimation == &GuardLoIn)
+			return EnterNewAnimation(GuardLo);
+
+		if (CurrentState.CurrentAnimation == &Sweep || CurrentState.CurrentAnimation == &WallBounce)
+			return EnterNewAnimation(FallingForward);
+
+		if (CurrentState.CurrentAnimation == &FocusBlitz || CurrentState.CurrentAnimation == &BreakerBlitz)
+		{
+			if (CurrentState.bIsAirborne)
+				return EnterNewAnimation(BlitzOutAir);
+			else
+				return EnterNewAnimation(BlitzOutStanding);
+		}
 	}
-
-	if (CurrentState.CurrentAnimation == &PreJump) // Transition from PreJump frames to JumpAnimation
-	{
-		if (CurrentState.bForwardJump && ForwardJump.Num() > 0)
-			return EnterNewAnimation(ForwardJump);
-		else if (CurrentState.bBackwardJump && BackwardJump.Num() > 0)
-			return EnterNewAnimation(BackwardJump);
-		else
-			return EnterNewAnimation(NeutralJump);
-	}
-
-	if (CurrentState.CurrentAnimation == &NeutralJump || CurrentState.CurrentAnimation == &ForwardJump || CurrentState.CurrentAnimation == &BackwardJump || CurrentState.CurrentAnimation == &GuardAirOut ||
-		CurrentState.CurrentAnimation == &DeflectedAir || CurrentState.CurrentAnimation == &ThrowEscapeAir || CurrentState.CurrentAnimation == &BlitzOutAir)
-	{
-		return EnterNewAnimation(MidJump);
-	}
-
-	if (CurrentState.CurrentAnimation == &JumpTransition)
-	{
-		return EnterNewAnimation(JumpDescent);
-	}
-
-	if (CurrentState.CurrentAnimation == &LaunchTransition)
-	{
-		return EnterNewAnimation(LaunchFallCycle);
-	}
-
-	if (CurrentState.CurrentAnimation == &StandUp || CurrentState.CurrentAnimation == &Brake || CurrentState.CurrentAnimation == &WakeUpFaceDown || CurrentState.CurrentAnimation == &WakeUpFaceUp || CurrentState.CurrentAnimation == &GuardHiOut ||
-		CurrentState.CurrentAnimation == &HitSLOut || CurrentState.CurrentAnimation == &HitSHOut || CurrentState.CurrentAnimation == &HitSLHeavyOut || CurrentState.CurrentAnimation == &HitSHHeavyOut || CurrentState.CurrentAnimation == &IdleStandBlink || 
-		CurrentState.CurrentAnimation == &StandIdleAction || CurrentState.CurrentAnimation == &Deflected || CurrentState.CurrentAnimation == &ThrowEscape || CurrentState.CurrentAnimation == &BlitzOutStanding)
-		return EnterNewAnimation(IdleStand);
-
-	if (CurrentState.CurrentAnimation == &CrouchDown || CurrentState.CurrentAnimation == &GuardLoOut || CurrentState.CurrentAnimation == &IdleCrouchBlink || CurrentState.CurrentAnimation == &CrouchIdleAction ||
-		CurrentState.CurrentAnimation == &HitCOut || CurrentState.CurrentAnimation == &HitCHeavyOut)
-		return EnterNewAnimation(IdleCrouch);
-
-	if ((CurrentState.CurrentAnimation == &KnockDownFaceDown || CurrentState.CurrentAnimation == &Crumple) && (CurrentState.Health != 0))
-		return EnterNewAnimation(WakeUpFaceDown);
-
-	if ((CurrentState.CurrentAnimation == &KnockDownFaceUp) && (CurrentState.Health != 0))
-		return EnterNewAnimation(WakeUpFaceUp);
-
-	if (CurrentState.CurrentAnimation == &GuardHiIn)
-		return EnterNewAnimation(GuardHi);
-
-	if (CurrentState.CurrentAnimation == &GuardLoIn)
-		return EnterNewAnimation(GuardLo);
-
-	if (CurrentState.CurrentAnimation == &Sweep || CurrentState.CurrentAnimation == &WallBounce)
-		return EnterNewAnimation(FallingForward);
-
-	if (CurrentState.CurrentAnimation == &FocusBlitz || CurrentState.CurrentAnimation == &BreakerBlitz)
-	{
-		if (CurrentState.bIsAirborne)
-			return EnterNewAnimation(BlitzOutAir);
-		else
-			return EnterNewAnimation(BlitzOutStanding);
-	}
-
 
 	return false;
 }
@@ -2079,12 +2191,20 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		else
 		{
 			Opponent->CurrentState.ResolveRecoverTimer = 0;
+			Opponent->CurrentState.RecoverInterval = 0;
 
 			//blocked hits chip away at durability
 			if (Opponent->CurrentState.Resolve > 0)
 			{
 				if (CurrentState.bIsAirborne)
 				{
+					if (Hitbox.AttackProperties & AntiAir) //attacks with the anti air property must be Instant Blocked
+					{
+						Opponent->CurrentState.Durability = -1;
+						AttackCalculation(Hitbox, HurtboxCenter);
+						return;
+					}
+
 					if (Hitbox.AttackProperties & IsSuper)
 						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .35f);
 					else if (Hitbox.AttackProperties & IsSpecial)
@@ -2129,8 +2249,11 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		//apply final blockstun calculation
 		Opponent->CurrentState.BlockStun = BlockstunToApply;
 
-		if (Opponent->CurrentState.bIsCrouching) //extra blockstun if the opponent is crouching
-			Opponent->CurrentState.BlockStun += 2;
+		if (Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.JustDefense < 0) //extra blockstun if the opponent is airborne
+		{
+			Opponent->CurrentState.BlockStun += 3;
+			Opponent->CurrentState.JumpsUsed = 0;
+		}
 
 		//apply hitstop
 		Opponent->CurrentState.HitStop = Hitbox.BaseHitStop - 2;
@@ -2151,10 +2274,13 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 
 		//Made contact so can cancel into other actions
 		CurrentState.AvailableActions = Hitbox.PotentialActions;
-		CurrentState.AvailableActions &= AcceptAll - AcceptJump;
+		CurrentState.AvailableActions &= AcceptAll - AcceptJump - AcceptBlitz;
 
 		if (Hitbox.PotentialActions & JumpCancelOnBlock && Hitbox.PotentialActions & AcceptJump) //can only jump cancel if the move allows it on block
 			CurrentState.AvailableActions |= AcceptJump;
+
+		if (!(Hitbox.PotentialActions & BlitzOnHitOnly) && Hitbox.PotentialActions & AcceptBlitz) //can blitz cancel if it allows it on block
+			CurrentState.AvailableActions |= AcceptBlitz;
 
 		//update opponent's animation to guarding
 		if (CurrentState.bIsAirborne)
@@ -2185,6 +2311,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 	else if (Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve > 0 && !(Hitbox.AttackProperties & Piercing) && !(Hitbox.AttackProperties & Shatter))
 	{
 		Opponent->CurrentState.ResolveRecoverTimer = 0;
+		Opponent->CurrentState.RecoverInterval = 0;
 		Opponent->CurrentState.Durability -= Hitbox.DurabilityDamage;
 		Opponent->CurrentState.Resolve -= Hitbox.ResolveDamage;
 		CurrentState.HitStop = Hitbox.BaseHitStop;
@@ -2259,6 +2386,8 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		if ((Opponent->CurrentState.bArmorActive || Opponent->CurrentState.bCounterHitState) && Hitbox.AttackProperties & Shatter)
 		{
 			Opponent->CurrentState.ShatteredTime = 120;
+			Opponent->CurrentState.ResolveRecoverTimer = 0;
+			Opponent->CurrentState.RecoverInterval = 0;
 			HitStunToApply *= 1.2f;
 			Opponent->CurrentState.CharacterHitState |= Hitbox.CounterAttackProperties;
 			//set shatter UI effect to play
@@ -2342,7 +2471,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			HitStunToApply *= .9f;
 	}
 	Opponent->CurrentState.HitStun = HitStunToApply;
-	if (Opponent->CurrentState.bIsCrouching) //two extra frames of hitstun if hitting a crouching opponent
+	if (Opponent->CurrentState.bIsCrouching || Opponent->CurrentState.CurrentAnimation == &Opponent->GuardLo || Opponent->CurrentState.CurrentAnimation == &Opponent->GuardLoHeavy) //two extra frames of hitstun if hitting a crouching opponent
 		Opponent->CurrentState.HitStun += 2;
 
 	//apply hitstop
@@ -2442,7 +2571,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			Opponent->EnterNewAnimation(Opponent->Crumple);
 		else if (Hitbox.AttackProperties & CanStagger)
 			Opponent->EnterNewAnimation(Opponent->Stagger);
-		else if (Opponent->CurrentState.bIsCrouching)
+		else if (Opponent->CurrentState.bIsCrouching || Opponent->CurrentState.CurrentAnimation == &Opponent->GuardLo || Opponent->CurrentState.CurrentAnimation == &Opponent->GuardLoHeavy)
 		{
 			if (Hitbox.AttackLevel > 2)
 				Opponent->EnterNewAnimation(Opponent->HitCHeavyIn);
@@ -2580,39 +2709,234 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 
 void ABTCharacterBase::SetSounds()
 {
-	if (CurrentState.CurrentAnimFrame->SFX != NULL)
+	if (CurrentState.CurrentAnimFrame != nullptr)
 	{
-		CharacterSoundEffects->SetSound(CurrentState.CurrentAnimFrame->SFX);
-		CurrentState.bPlaySound = true;
-	}
-	else
-	{
-		CharacterSoundEffects->SetSound(NULL);
-	}
+		if (CurrentState.PosePlayTime == 0)
+		{
+			if (CurrentState.CurrentAnimFrame->SFX != nullptr)
+			{
+				CharacterSoundEffects->SetSound(CurrentState.CurrentAnimFrame->SFX);
+				CurrentState.bPlaySound = true;
+			}
+			else
+			{
+				CharacterSoundEffects->SetSound(nullptr);
+			}
 
-	if (CurrentState.CurrentAnimFrame->VoiceLines != NULL)
-	{
-		CharacterVoice->SetSound(CurrentState.CurrentAnimFrame->VoiceLines);
-		CurrentState.bPlaySound = true;
-	}
-	else
-	{
-		CharacterVoice->SetSound(NULL);
+			if (CurrentState.CurrentAnimFrame->VoiceLines != nullptr)
+			{
+				CharacterVoice->SetSound(CurrentState.CurrentAnimFrame->VoiceLines);
+				CurrentState.bPlaySound = true;
+			}
+			else
+			{
+				CharacterVoice->SetSound(nullptr);
+			}
+		}
 	}
 }
 
-void ABTCharacterBase::SaveSigilStates()
+void ABTCharacterBase::SaveFXStates()
 {
-	if (CurrentState.CurrentSigilStates.Num() < Sigils.Num()) //first time saving sigils to character state
-	{
-		for (int32 i = 0; i < Sigils.Num(); i++)
-		{
-			CurrentState.CurrentSigilStates.Add(Sigils[i]->CurrentState);
-		}
-	}
-
 	for (int32 i = 0; i < Sigils.Num(); i++)
 	{
 		CurrentState.CurrentSigilStates[i] = Sigils[i]->CurrentState;
+	}
+
+	if (CurrentState.CurrentBlitzState.Num() > 0)
+		CurrentState.CurrentBlitzState[0] = BlitzImage->CurrentState;
+
+	if (CurrentState.CurrentProjectileStates.Num() == Projectiles.Num() && CurrentState.CurrentProjectileStates.Num() > 0)
+	{
+		for (int32 i = 0; i < Projectiles.Num(); i++)
+		{
+			CurrentState.CurrentProjectileStates[i] = Projectiles[i]->CurrentState;
+		}
+	}
+}
+
+bool ABTCharacterBase::BlitzCancel()
+{
+	if ((CurrentState.AvailableActions & AcceptBlitz || (CurrentState.BlockStun > 0 && !CurrentState.bIsAirborne)) && CurrentState.Resolve > 0 &&
+		CurrentState.MPressed > 0 && CurrentState.HPressed > 0 && FMath::Abs(CurrentState.MPressed - CurrentState.HPressed) <= 3) //Blitz cancel is performed by hitting M and H at the same time
+	{
+		CurrentState.Resolve--;
+		CurrentState.Durability = 80;
+		CurrentState.MPressed = 0;
+		CurrentState.HPressed = 0;
+		CurrentState.ResolveRecoverTimer = 0;
+		CurrentState.RecoverInterval = 0;
+
+		if (CurrentState.CurrentAnimFrame)
+		{
+			if (CurrentState.bIsAirborne && CurrentState.BlockStun == 0)
+			{
+				if (CurrentState.Dir6 == InputTime) //blitz air dash forward
+				{
+					BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 0);
+					CurrentState.Velocity = FVector2D(BlitzDashForce, 0);
+					CurrentState.GravDefyTime = 24;
+					if (!CurrentState.bFacingRight)
+						CurrentState.Velocity.X *= -1;
+
+					CurrentState.bBlitzing = true;
+
+					FRotator SigilRotation = FRotator(0, 0, 20);
+					if (CurrentState.bFacingRight)
+					{
+						SigilRotation.Pitch = -80;
+					}
+					else
+					{
+						SigilRotation.Pitch = 80;
+					}
+
+					FVector2D SigilPosition = CurrentState.Position;
+					if (CurrentState.bFacingRight)
+					{
+						SigilPosition += AirDashForwardOffset;
+					}
+					else
+					{
+						SigilPosition.X -= AirDashForwardOffset.X;
+						SigilPosition.Y += AirDashForwardOffset.Y;
+					}
+					Sigils[0]->Activate(SigilPosition, SigilRotation);
+
+					return EnterNewAnimation(AirDashForward);
+				}
+				if (CurrentState.Dir4 == InputTime) //blitz air dash backward
+				{
+					BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 0);
+					CurrentState.Velocity = FVector2D(-BlitzDashForce, 0);
+					CurrentState.GravDefyTime = 24;
+					if (!CurrentState.bFacingRight)
+						CurrentState.Velocity.X *= -1;
+
+					FRotator SigilRotation = FRotator(0, 0, 20);
+					if (CurrentState.bFacingRight)
+					{
+						SigilRotation.Pitch = 80;
+					}
+					else
+					{
+						SigilRotation.Pitch = -80;
+					}
+
+					FVector2D SigilPosition = CurrentState.Position;
+					if (CurrentState.bFacingRight)
+					{
+						SigilPosition += AirDashBackOffset;
+					}
+					else
+					{
+						SigilPosition.X -= AirDashBackOffset.X;
+						SigilPosition.Y += AirDashBackOffset.Y;
+					}
+					Sigils[0]->Activate(SigilPosition, SigilRotation);
+
+					CurrentState.bBlitzing = true;
+
+					return EnterNewAnimation(AirDashBackward);
+				}
+				if (CurrentState.Dir2 == InputTime) //blitz downward
+				{
+					BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 0);
+					CurrentState.Velocity = FVector2D(0, -BlitzDashForce);
+					CurrentState.GravDefyTime = 0;
+
+					CurrentState.bBlitzing = true;
+
+					return EnterNewAnimation(JumpDescent);
+				}
+				if (CurrentState.AvailableActions & AcceptMove) //focus blitz
+				{
+					BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 2);
+
+					return EnterNewAnimation(FocusBlitz);
+				}
+
+				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 0);
+				CurrentState.bBlitzing = true;
+				return EnterNewAnimation(MidJump);
+			}
+			else
+			{
+				if (CurrentState.BlockStun > 0 && CurrentState.Resolve > 1) //breaker blitz
+				{
+					BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 1);
+
+					CurrentState.Resolve--;
+
+					return EnterNewAnimation(BreakerBlitz);
+				}
+				if (CurrentState.AvailableActions & AcceptMove) //focus blitz
+				{
+					BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 2);
+
+					return EnterNewAnimation(FocusBlitz);
+				}
+
+				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame->Pose, CurrentState.bFacingRight, 0);
+				CurrentState.bBlitzing = true;
+				return EnterNewAnimation(IdleStand);
+			}
+		}
+	}
+	return false;
+}
+
+void ABTCharacterBase::CreateMaterials()
+{
+	if (Outline != nullptr)
+		DynamicOutline = UMaterialInstanceDynamic::Create(Outline, this);
+}
+
+void ABTCharacterBase::SpawnPBS() //spawn projectiles, blitz image, and sigils
+{
+	if (GetWorld())
+	{
+		FActorSpawnParameters SpawnParams;
+
+		if (SigilBlueprint)
+		{
+			for (int32 i = 0; i < 2; i++)
+			{
+				Sigils.Add(GetWorld()->SpawnActor<ASigil>(SigilBlueprint, GetActorLocation(), FRotator(0), SpawnParams)); //create a sigil
+				CurrentState.CurrentSigilStates.Add(Sigils[i]->CurrentState); //add its state to the serializable characterstate struct
+			}
+		}
+
+		if (BlitzImageBlueprint)
+		{
+			BlitzImage = GetWorld()->SpawnActor<ABlitzImageBase>(BlitzImageBlueprint, GetActorLocation(), FRotator(0), SpawnParams);
+			BlitzImage->AssignOwner(this);
+			CurrentState.CurrentBlitzState.Add(BlitzImage->CurrentState);
+		}
+	}
+}
+
+void ABTCharacterBase::SetColor(uint8 ColorID)
+{
+	//switch statement to set color/emissivity values for all dynamic materials for a character based on colorID
+	//search for textures using filepaths, BC, SSS
+	//ILMs and Lines should be pointers in character classes
+	//set parameters in dynamic material instances for Character Mesh and BlitzImage Mesh
+	//Cast blitzimage as character's unique blitz image actor and set texture/vector parameters for blitzimage materials
+}
+
+void ABTCharacterBase::LightSettings() 
+{
+	MainLightRotator->SetRelativeRotation(CurrentState.MainLightRotation);
+	FillLightRotator->SetRelativeRotation(CurrentState.FillLightRotation);
+
+	if (CurrentState.CurrentAnimFrame) //light color overrides if the animation frame specifies
+	{
+		if (CurrentState.CurrentAnimFrame->MainLightColor != FVector(0))
+			CurrentState.MainLightColor = CurrentState.CurrentAnimFrame->MainLightColor;
+		if (CurrentState.CurrentAnimFrame->RimLightColor != FVector(0))
+			CurrentState.RimLightColor = CurrentState.CurrentAnimFrame->RimLightColor;
+		if (CurrentState.CurrentAnimFrame->FillLightColor != FVector(0))
+			CurrentState.FillLightColor = CurrentState.CurrentAnimFrame->FillLightColor;
 	}
 }

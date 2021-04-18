@@ -7,7 +7,7 @@
 ASigil::ASigil()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	Transform = CreateDefaultSubobject<USceneComponent>(TEXT("Transform"));
 	RootComponent = Transform;
@@ -24,32 +24,35 @@ void ASigil::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (BaseSigilMaterial != NULL)
+	if (BaseSigilMaterial != nullptr)
 	{
 		DynamicSigilMaterial = UMaterialInstanceDynamic::Create(BaseSigilMaterial, this);
 	}
-	if (EchoSigilMaterial != NULL)
+	if (EchoSigilMaterial != nullptr)
 	{
 		DynamicEchoMaterial = UMaterialInstanceDynamic::Create(EchoSigilMaterial, this);
 	}
 
-	if (DynamicSigilMaterial != NULL)
+	if (DynamicSigilMaterial != nullptr)
 	{
-		if (DynamicEchoMaterial != NULL)
+		if (DynamicEchoMaterial != nullptr)
 		{
-			if (SigilImage != NULL)
+			if (SigilImage != nullptr)
 			{
-				DynamicSigilMaterial->SetTextureParameterValue("SigilTexture", SigilImage);
-				DynamicEchoMaterial->SetTextureParameterValue("SigilTexture", SigilImage);
+				DynamicSigilMaterial->SetTextureParameterValue(FName("SigilTexture"), SigilImage);
+				DynamicEchoMaterial->SetTextureParameterValue(FName("SigilTexture"), SigilImage);
 			}
 		}
 	}
-	if (DynamicSigilMaterial != NULL)
+	if (DynamicSigilMaterial != nullptr)
 		MainMesh->SetMaterial(0, DynamicSigilMaterial);
-	if (DynamicEchoMaterial != NULL)
+	if (DynamicEchoMaterial != nullptr)
 		Echo->SetMaterial(0, DynamicEchoMaterial);
 
-	Activate(FVector2D(0), FRotator(-15, 0, 20));
+	CurrentState.bIsActive = false;
+	MainMesh->SetVisibility(false);
+	Echo->SetVisibility(false);
+	//Activate(FVector2D(0), FRotator(-15, 0, 20));
 }
 
 void ASigil::Tick(float DeltaTime)
@@ -104,8 +107,12 @@ void ASigil::DrawSigil()
 		Transform->SetWorldLocation(FVector(CurrentState.Position.X, -25, CurrentState.Position.Y));
 		Transform->SetWorldRotation(CurrentState.Rotation);
 
-		MainMesh->SetRelativeScale3D(FVector(FMath::Lerp(0.f, 1.f, FMath::Min(1.f, CurrentState.MainScaleAlpha))));
-		Echo->SetRelativeScale3D(FVector(FMath::Lerp(0.f, 1.5f, FMath::Min(1.f, CurrentState.EchoScaleAlpha)), FMath::Lerp(0.f, 1.75f, FMath::Min(1.f, CurrentState.EchoScaleAlpha)), 1));
+		//if (CurrentState.MainScaleAlpha < 1)
+			MainMesh->SetRelativeScale3D(FVector(FMath::Lerp(0.f, 1.f, FMath::Min(1.f, CurrentState.MainScaleAlpha))));
+		/*else if (CurrentState.MainEmissiveAlpha >= .5)
+			MainMesh->SetRelativeScale3D(FVector(FMath::Lerp(1.f, 1.3f, FMath::Min(1.f, 2 *(CurrentState.MainEmissiveAlpha - .5f)))));*/
+		
+		Echo->SetRelativeScale3D(FVector(FMath::Lerp(0.f, 2.f, FMath::Min(1.f, CurrentState.EchoScaleAlpha)), FMath::Lerp(0.f, 1.75f, FMath::Min(1.f, CurrentState.EchoScaleAlpha)), 1));
 
 		FVector EchoLocation = FVector(0, 0, FMath::Lerp(0.f, -150.f, FMath::Min(1.f, CurrentState.EchoScaleAlpha)));
 		Echo->SetRelativeLocation(EchoLocation);
@@ -114,12 +121,12 @@ void ASigil::DrawSigil()
 		Echo->SetRelativeRotation(FRotator(MainMesh->GetRelativeRotation().Pitch, MainMesh->GetRelativeRotation().Yaw - 2, MainMesh->GetRelativeRotation().Roll));
 
 		//set material parameters
-		if (DynamicSigilMaterial != NULL)
+		if (DynamicSigilMaterial != nullptr)
 		{
 			DynamicSigilMaterial->SetScalarParameterValue(FName("Alpha"), CurrentState.MainEmissiveAlpha);
 			DynamicSigilMaterial->SetVectorParameterValue(FName("SigilColor"), SigilColor);
 		}
-		if (DynamicEchoMaterial != NULL)
+		if (DynamicEchoMaterial != nullptr)
 		{
 			DynamicEchoMaterial->SetScalarParameterValue(FName("Alpha"), CurrentState.EchoScaleAlpha);
 			DynamicEchoMaterial->SetVectorParameterValue(FName("EchoColor"), EchoColor);

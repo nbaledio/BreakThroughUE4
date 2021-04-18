@@ -21,14 +21,9 @@ struct FSigilState
 	FVector2D Position;
 	FRotator Rotation;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
-		float MainEmissiveAlpha;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
-		float MainScaleAlpha;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
-		float EchoScaleAlpha;
+	float MainEmissiveAlpha;
+	float MainScaleAlpha;
+	float EchoScaleAlpha;
 };
 
 UCLASS()
@@ -48,6 +43,14 @@ public:
 
 	FSigilState CurrentState{true, FVector2D(0), FRotator(0), 0, 0, 0};
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
+		FVector SigilColor;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
+		FVector EchoColor;
+
+	UMaterialInstanceDynamic* DynamicSigilMaterial;
+	UMaterialInstanceDynamic* DynamicEchoMaterial;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -62,19 +65,12 @@ protected:
 		UStaticMeshComponent* Echo;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
-		FVector SigilColor;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
-		FVector EchoColor;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
 		UTexture* SigilImage;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
 	UMaterialInterface* BaseSigilMaterial;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
 	UMaterialInterface* EchoSigilMaterial;
-
-	UMaterialInstanceDynamic* DynamicSigilMaterial;
-	UMaterialInstanceDynamic* DynamicEchoMaterial;
 
 public:	
 	// Called every frame
