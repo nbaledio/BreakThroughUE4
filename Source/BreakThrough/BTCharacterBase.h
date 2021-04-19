@@ -80,13 +80,14 @@ enum AttackProperties
 	ComboThrow = (1 << 12), //Throws with this flag can hit opponents even if they are in hitstun
 	AntiAir = (1 << 13),
 	DisableBurst = (1 << 14),
-	IsSpecial = (1 << 15),
-	IsSuper = (1 << 16),
-	IsSlash = (1 << 17),
-	IsVertical = (1 << 18),
-	IsHorizontal = (1 << 19),
-	LowerBodyHit = (1 << 20),
-	PlayHitEffect = (1 << 21),
+	//ReflectProjectile = (1 << 15),
+	IsSpecial = (1 << 16),
+	IsSuper = (1 << 17),
+	IsSlash = (1 << 18),
+	IsVertical = (1 << 19),
+	IsHorizontal = (1 << 20),
+	LowerBodyHit = (1 << 21),
+	PlayHitEffect = (1 << 22),
 };
 
 class ABTProjectileBase;
@@ -428,6 +429,10 @@ public:
 
 	virtual void SetColor(uint8 ColorID);
 
+	bool EnterNewAnimation(TArray<FAnimationFrame> Animation, int32 FrameNumber = 0);
+
+	bool RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2D Size1, FVector2D Size2);
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
 		TSubclassOf<class ASigil> SigilBlueprint;
 
@@ -446,6 +451,32 @@ public:
 	ABlitzImageBase* BlitzImage;
 
 	TArray<int32> InputHistory;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
+		int32 MaxHealth = 1000;
+
+	//values that represent a character's resilience as a battle rages on
+	//scales down damage received based on how low the character's health is
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
+		float Valor100;
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
+		float Valor50;
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
+		float Valor25;
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
+		float Valor10;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float StandingPushBoxHeight = 1;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float CrouchingPushBoxHeight = 1;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float PushboxWidth = 1;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float AirPushboxVerticalOffset = 0;
+
+	FVector StatusColor;
+	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
 
 	//Blitz Cancel
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
@@ -491,8 +522,6 @@ protected:
 		UTexture* BodyLines;
 
 	UMaterialInstanceDynamic* DynamicOutline;
-	FVector StatusColor;
-	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
 	float DepthOffset;
 
 	// Called when the game starts or when spawned
@@ -538,21 +567,9 @@ protected:
 
 	void RefreshMovelist();
 
-	bool EnterNewAnimation(TArray<FAnimationFrame> Animation, int32 FrameNumber = 0);
-	
-	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-		int32 MaxHealth = 1000;
+	void ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter);
 
-	//values that represent a character's resilience as a battle rages on
-	//scales down damage received based on how low the character's health is
-	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-		float Valor100;
-	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-		float Valor50;
-	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-		float Valor25;
-	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-		float Valor10;
+	void ContactThrow(FHitbox Hitbox, int32 ThrowType);
 
 	/* Affects how quickly the character falls to the ground (See below for values per weight class)
 		Featherweight = .95 
@@ -561,14 +578,6 @@ protected:
 		Heavyweight = 1.03  */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float Weight = 1;
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float StandingPushBoxHeight = 1;
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float CrouchingPushBoxHeight = 1;
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float PushboxWidth = 1;
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float AirPushboxVerticalOffset = 0;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		FVector2D AirDashForwardOffset;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
@@ -596,6 +605,7 @@ protected:
 	//number of frames that an input is active for
 		uint8 InputTime = 10;
 
+public:
 	//Idle Stance Animations
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> IdleStand;
@@ -803,12 +813,6 @@ private:
 	void UpdateInputHistory(int32 Inputs, int32 FrameNumber);
 
 	void InputCountdown();
-
-	bool RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2D Size1, FVector2D Size2);
-
-	void ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter);
-
-	void ContactThrow(FHitbox Hitbox, int32 ThrowType);
 
 	void AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter);
 

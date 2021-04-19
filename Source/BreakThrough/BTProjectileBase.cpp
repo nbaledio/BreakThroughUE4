@@ -9,6 +9,8 @@ ABTProjectileBase::ABTProjectileBase()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	Transform = CreateDefaultSubobject<USceneComponent>(TEXT("Transform"));
+	RootComponent = Transform;
 }
 
 // Called when the game starts or when spawned
@@ -25,3 +27,840 @@ void ABTProjectileBase::Tick(float DeltaTime)
 
 }
 
+void ABTProjectileBase::Activate(bool FacingRight)
+{
+	CurrentState.bFacingRight = FacingRight;
+	CurrentState.bIsActive = true;
+	CurrentState.bHitByOwner = false;
+	CurrentState.bHitByOwner = false;
+	CurrentState.bHitFriend = false;
+	CurrentState.bHitByFriend = false;
+	CurrentState.bHitSuccess = false;
+	CurrentState.bAttackMadeContact = false;
+	CurrentState.bProjectileClash = false;
+}
+
+void ABTProjectileBase::HitDetection()
+{
+	if (CurrentState.bIsActive && CurrentState.CurrentHitbox != nullptr && CurrentState.HitStop == 0 && !CurrentState.bProjectileClash)
+	{
+		CurrentState.bHitSuccess = false;
+		if (Owner)
+		{
+			if (Owner->Opponent)
+			{
+				if (Owner->Opponent->Projectiles.Num() > 0)
+				{
+					for (ABTProjectileBase* Projectile : Owner->Opponent->Projectiles) //check for clashes with opponent's projectiles
+					{
+						if (Projectile->CurrentState.bIsActive && Projectile->CurrentState.CurrentHitbox != nullptr)
+						{
+							if (Projectile->CurrentState.CurrentHitbox->Num() > 0)
+							{
+								for (uint8 i = 0; i < CurrentState.CurrentHitbox->Num() && !CurrentState.bProjectileClash; i++)
+								{
+									FVector2D HitboxCenter;
+									if (CurrentState.bFacingRight)
+										HitboxCenter = CurrentState.Position + (*CurrentState.CurrentHitbox)[i].Position;
+									else
+										HitboxCenter = FVector2D(CurrentState.Position.X - (*CurrentState.CurrentHitbox)[i].Position.X, CurrentState.Position.Y + (*CurrentState.CurrentHitbox)[i].Position.Y);
+
+									for (uint8 j = 0; j < Projectile->CurrentState.CurrentHitbox->Num() && !CurrentState.bProjectileClash; j++)
+									{
+										FVector2D OpponentHitboxCenter;
+										if (Owner->Opponent->CurrentState.bFacingRight)
+											OpponentHitboxCenter = Owner->Opponent->CurrentState.Position + (*Owner->Opponent->CurrentState.CurrentHitbox)[j].Position;
+										else
+											OpponentHitboxCenter = FVector2D(Owner->Opponent->CurrentState.Position.X - (*Owner->Opponent->CurrentState.CurrentHitbox)[j].Position.X,
+												Owner->Opponent->CurrentState.Position.Y + (*Owner->Opponent->CurrentState.CurrentHitbox)[j].Position.Y);
+
+										if (Owner->RectangleOverlap(HitboxCenter, OpponentHitboxCenter, (*CurrentState.CurrentHitbox)[i].Size, (*Owner->Opponent->CurrentState.CurrentHitbox)[j].Size))
+										{
+											CurrentState.bProjectileClash = true;
+											Projectile->CurrentState.bProjectileClash = true;
+											if ((*CurrentState.CurrentHitbox)[i].AttackProperties & CanDeflect && !((*Owner->Opponent->CurrentState.CurrentHitbox)[i].AttackProperties & CanDeflect) && !((*Owner->Opponent->CurrentState.CurrentHitbox)[i].AttackProperties & IsSuper))
+											{
+												Projectile->CurrentState.bIsActive = false;
+											}
+											else if (!((*CurrentState.CurrentHitbox)[i].AttackProperties & CanDeflect) && ((*Owner->Opponent->CurrentState.CurrentHitbox)[i].AttackProperties & CanDeflect) && !((*CurrentState.CurrentHitbox)[i].AttackProperties & IsSuper))
+											{
+												CurrentState.bIsActive = false;
+											}
+											else
+											{
+												Projectile->CurrentState.CurrentHits++;
+												CurrentState.CurrentHits++;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				if (Owner->Opponent->CurrentState.CurrentAnimFrame && !CurrentState.bProjectileClash) //look for hit
+				{
+					//only look for hits if there are hitboxes active, and the current hitbox has not hit anything previously
+					if (CurrentState.CurrentHitbox->Num() > 0 && !CurrentState.bAttackMadeContact && Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility != ProjectileInvincible)
+					{
+						if ((*CurrentState.CurrentHitbox)[0].AttackHeight < Throw) //Current active attack is a strike
+						{
+							if (Owner->Opponent->CurrentState.CurrentHitbox->Num() > 0 && !Owner->Opponent->CurrentState.bAttackMadeContact) //only look for clashes if the opponent has an active attack out
+							{
+								//loop through opponent's active hitboxes
+								for (int32 i = 0; i < CurrentState.CurrentHitbox->Num() && !CurrentState.bAttackMadeContact; i++)
+								{
+									FVector2D HitboxCenter;
+									if (CurrentState.bFacingRight)
+										HitboxCenter = CurrentState.Position + (*CurrentState.CurrentHitbox)[i].Position;
+									else
+										HitboxCenter = FVector2D(CurrentState.Position.X - (*CurrentState.CurrentHitbox)[i].Position.X, CurrentState.Position.Y + (*CurrentState.CurrentHitbox)[i].Position.Y);
+
+									for (int32 j = 0; j < Owner->Opponent->CurrentState.CurrentHitbox->Num() && !CurrentState.bAttackMadeContact; j++)
+									{
+										FVector2D OpponentHitboxCenter;
+										if (Owner->Opponent->CurrentState.bFacingRight)
+											OpponentHitboxCenter = Owner->Opponent->CurrentState.Position + (*Owner->Opponent->CurrentState.CurrentHitbox)[j].Position;
+										else
+											OpponentHitboxCenter = FVector2D(Owner->Opponent->CurrentState.Position.X - (*Owner->Opponent->CurrentState.CurrentHitbox)[j].Position.X,
+												Owner->Opponent->CurrentState.Position.Y + (*Owner->Opponent->CurrentState.CurrentHitbox)[j].Position.Y);
+
+										if (Owner->RectangleOverlap(HitboxCenter, OpponentHitboxCenter, (*CurrentState.CurrentHitbox)[i].Size, (*Owner->Opponent->CurrentState.CurrentHitbox)[j].Size))
+										{
+											CurrentState.CurrentHits++;
+											Owner->Opponent->CurrentState.bClash = true;
+											CurrentState.bAttackMadeContact = true;
+											Owner->Opponent->CurrentState.bAttackMadeContact = true;
+											if (bAttackOwner)
+											{
+												Owner->CurrentState.HitStun = (*Owner->Opponent->CurrentState.CurrentHitbox)[j].BaseHitStun;
+												Owner->CurrentState.HitStop = (*Owner->Opponent->CurrentState.CurrentHitbox)[j].BaseHitStop;
+												CurrentState.HitStop = (*Owner->Opponent->CurrentState.CurrentHitbox)[j].BaseHitStop;
+												Owner->Opponent->CurrentState.HitStop = (*Owner->Opponent->CurrentState.CurrentHitbox)[j].BaseHitStop;
+
+												float OpponentValor;
+												float OpponentHealthPercent = (float)Owner->Opponent->CurrentState.Health / (float)Owner->Opponent->MaxHealth;
+
+												if (OpponentHealthPercent <= .1f)
+													OpponentValor = Owner->Opponent->Valor10;
+												else if (OpponentHealthPercent <= .25f)
+													OpponentValor = Owner->Opponent->Valor25;
+												else if (OpponentHealthPercent <= .5f)
+													OpponentValor = Owner->Opponent->Valor50;
+												else
+													OpponentValor = Owner->Opponent->Valor100;
+
+												Owner->CurrentState.Health -= OpponentValor * (*Owner->Opponent->CurrentState.CurrentHitbox)[j].BaseDamage;
+
+												if (Owner->CurrentState.bIsAirborne || (*Owner->Opponent->CurrentState.CurrentHitbox)[j].PotentialKnockBack.Y > 0)
+												{
+													Owner->CurrentState.KnockBack = (*Owner->Opponent->CurrentState.CurrentHitbox)[j].PotentialAirKnockBack;
+													Owner->EnterNewAnimation(Owner->HitstunAir);
+												}
+												else
+												{
+													Owner->CurrentState.KnockBack.X = (*Owner->Opponent->CurrentState.CurrentHitbox)[j].PotentialKnockBack.X;
+													Owner->EnterNewAnimation(Owner->Stagger);
+												}
+											}
+											//attacks with the deflect can deflect opponents' non-super, non-deflect attacks
+											else if ((*CurrentState.CurrentHitbox)[0].AttackProperties & CanDeflect && !((*Owner->Opponent->CurrentState.CurrentHitbox)[0].AttackProperties & CanDeflect) &&
+												!((*Owner->Opponent->CurrentState.CurrentHitbox)[0].AttackProperties & IsSuper))
+											{
+												Owner->Opponent->CurrentState.AvailableActions = None;
+												if (Owner->Opponent->CurrentState.bIsAirborne)
+													Owner->Opponent->EnterNewAnimation(Owner->Opponent->DeflectedAir);
+												else
+													Owner->Opponent->EnterNewAnimation(Owner->Opponent->Deflected);
+
+												CurrentState.HitStop = 9;
+												Owner->Opponent->CurrentState.HitStop = 9;
+											}
+											//opponent's attack can deflect
+											else if (!((*CurrentState.CurrentHitbox)[0].AttackProperties & CanDeflect) && (*Owner->Opponent->CurrentState.CurrentHitbox)[0].AttackProperties & CanDeflect && !((*CurrentState.CurrentHitbox)[0].AttackProperties & IsSuper))
+											{
+												CurrentState.bIsActive = false;
+												Owner->Opponent->CurrentState.AvailableActions = AcceptAll - (AcceptMove + AcceptGuard);
+
+												CurrentState.HitStop = 9;
+												Owner->Opponent->CurrentState.HitStop = 9;
+											}
+											else //otherwise normal clash
+											{
+												CurrentState.HitStop = 15;
+												Owner->Opponent->CurrentState.HitStop = 15;
+												Owner->Opponent->CurrentState.AvailableActions = AcceptAll - (AcceptMove + AcceptGuard);
+											}
+											//play clash effect
+										}
+									}
+								}
+							}
+							//loop through opponent's active hurtboxes and see if any current hitboxes overlap them
+							if (Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility != StrikeInvincible && Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility != FullInvincible &&
+								!((*CurrentState.CurrentHitbox)[0].AttackHeight == High && Owner->Opponent->CurrentState.bIsCrouching) && !CurrentState.bAttackMadeContact)
+							{
+								if (Owner->Opponent->CurrentState.CurrentHurtbox->Num() > 0)
+								{
+									for (int32 i = 0; i < CurrentState.CurrentHitbox->Num() && !CurrentState.bAttackMadeContact; i++)
+									{
+										FVector2D HitboxCenter;
+										if (CurrentState.bFacingRight)
+											HitboxCenter = CurrentState.Position + (*CurrentState.CurrentHitbox)[i].Position;
+										else
+											HitboxCenter = FVector2D(CurrentState.Position.X - (*CurrentState.CurrentHitbox)[i].Position.X, CurrentState.Position.Y + (*CurrentState.CurrentHitbox)[i].Position.Y);
+
+										for (int32 j = 0; j < Owner->Opponent->CurrentState.CurrentHurtbox->Num() && !CurrentState.bAttackMadeContact; j++)
+										{
+											FVector2D OpponentHurtboxCenter;
+											if (Owner->Opponent->CurrentState.bFacingRight)
+												OpponentHurtboxCenter = Owner->Opponent->CurrentState.Position + (*Owner->Opponent->CurrentState.CurrentHurtbox)[j].Position;
+											else
+												OpponentHurtboxCenter = FVector2D(Owner->Opponent->CurrentState.Position.X - (*Owner->Opponent->CurrentState.CurrentHurtbox)[j].Position.X, Owner->Opponent->CurrentState.Position.Y + (*Owner->Opponent->CurrentState.CurrentHurtbox)[j].Position.Y);
+
+											if (Owner->RectangleOverlap(HitboxCenter, OpponentHurtboxCenter, (*CurrentState.CurrentHitbox)[i].Size, (*Owner->Opponent->CurrentState.CurrentHurtbox)[j].Size))
+											{
+												CurrentState.bAttackMadeContact = true;
+												if (Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility == SuperCounter || (((Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility == AllCounter && (*CurrentState.CurrentHitbox)[i].AttackHeight != Unblockable) ||
+													(Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility == HiCounter && (*CurrentState.CurrentHitbox)[i].AttackHeight < Low) || (Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility == LowCounter && (*CurrentState.CurrentHitbox)[i].AttackHeight == Low)) &&
+													!((*CurrentState.CurrentHitbox)[i].AttackProperties & IsSuper))) //check if the opponent is in a counter stance that can counter the current attack
+												{
+													CurrentState.HitStop = 24;
+													Owner->Opponent->CurrentState.bClash = true;
+												}
+												else
+													ContactHit((*CurrentState.CurrentHitbox)[i], OpponentHurtboxCenter);
+											}
+										}
+									}
+								}
+							}
+						}
+						//logic to follow for throws
+						else if (((((*CurrentState.CurrentHitbox)[0].AttackHeight == CommandThrow || (*CurrentState.CurrentHitbox)[0].AttackHeight == Throw) && !Owner->Opponent->CurrentState.bIsAirborne) ||
+						(((*CurrentState.CurrentHitbox)[0].AttackHeight == AirCommandThrow || (*CurrentState.CurrentHitbox)[0].AttackHeight == AirThrow) && Owner->Opponent->CurrentState.bIsAirborne)) &&
+						((Owner->Opponent->CurrentState.HitStun == 0) || (*CurrentState.CurrentHitbox)[0].AttackProperties & ComboThrow || Owner->Opponent->CurrentState.CurrentAnimation == &Owner->Opponent->Stagger ||
+						Owner->Opponent->CurrentState.CurrentAnimation == &Owner->Opponent->Crumple) && Owner->Opponent->CurrentState.BlockStun == 0 && Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility != ThrowInvincible &&
+						Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility != FullInvincible && Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility != Intangible && Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility != OTG)
+						{
+							for (int32 i = 0; i < CurrentState.CurrentHitbox->Num() && !CurrentState.bAttackMadeContact; i++)
+							{
+								FVector2D HitboxCenter;
+								if (CurrentState.bFacingRight)
+									HitboxCenter = CurrentState.Position + (*CurrentState.CurrentHitbox)[i].Position;
+								else
+									HitboxCenter = FVector2D(CurrentState.Position.X - (*CurrentState.CurrentHitbox)[i].Position.X, CurrentState.Position.Y + (*CurrentState.CurrentHitbox)[i].Position.Y);
+
+								FVector2D OpponentPushboxCenter = FVector2D(Owner->Opponent->CurrentState.Position.X, Owner->Opponent->CurrentState.Position.Y);
+								FVector2D OpponentPushboxSize = FVector2D(Owner->Opponent->PushboxWidth, Owner->Opponent->StandingPushBoxHeight);
+
+								if (Owner->Opponent->CurrentState.bIsAirborne)
+								{
+									OpponentPushboxCenter.Y += .5f * Owner->Opponent->CrouchingPushBoxHeight + Owner->Opponent->AirPushboxVerticalOffset;
+									OpponentPushboxSize.Y = Owner->Opponent->CrouchingPushBoxHeight;
+								}
+								else if (Owner->Opponent->CurrentState.bIsCrouching)
+								{
+									OpponentPushboxCenter.Y += .5f * Owner->Opponent->CrouchingPushBoxHeight;
+									OpponentPushboxSize.Y = Owner->Opponent->CrouchingPushBoxHeight;
+								}
+								else
+									OpponentPushboxCenter.Y += .5f * Owner->Opponent->StandingPushBoxHeight;
+
+								if (Owner->RectangleOverlap(HitboxCenter, OpponentPushboxCenter, (*CurrentState.CurrentHitbox)[i].Size, OpponentPushboxSize))
+								{
+									CurrentState.bAttackMadeContact = true;
+									ContactThrow((*CurrentState.CurrentHitbox)[i], (*CurrentState.CurrentHitbox)[0].AttackHeight);
+								}
+							}
+						}
+					}
+				}
+			}
+			if (bCheckFriends) //see if the hitbox hits any friendly projectile hitboxes
+			{
+				if (Owner)
+				{
+					if (Owner->Projectiles.Num() > 1)
+					{
+						if (CurrentState.CurrentHitbox)
+						{
+							for (ABTProjectileBase* Projectile : Owner->Projectiles)
+							{
+								if (Projectile != this && Projectile->CurrentState.bIsActive && Projectile->CurrentState.CurrentHitbox)
+								{
+									for (uint8 i = 0; i < Projectile->CurrentState.CurrentHitbox->Num() && !Projectile->CurrentState.bHitByFriend; i++)
+									{
+										FVector2D FriendHitboxCenter;
+										if (CurrentState.bFacingRight)
+											FriendHitboxCenter = Projectile->CurrentState.Position + (*Projectile->CurrentState.CurrentHitbox)[i].Position;
+										else
+											FriendHitboxCenter = FVector2D(Projectile->CurrentState.Position.X - (*Projectile->CurrentState.CurrentHitbox)[i].Position.X, Projectile->CurrentState.Position.Y + (*Projectile->CurrentState.CurrentHitbox)[i].Position.Y);
+
+										for (uint8 j = 0; j < CurrentState.CurrentHitbox->Num() && !Projectile->CurrentState.bHitByFriend; j++)
+										{
+											FVector2D HitboxCenter;
+											if (CurrentState.bFacingRight)
+												HitboxCenter = CurrentState.Position + (*CurrentState.CurrentHitbox)[j].Position;
+											else
+												HitboxCenter = FVector2D(CurrentState.Position.X - (*CurrentState.CurrentHitbox)[j].Position.X, CurrentState.Position.Y + (*CurrentState.CurrentHitbox)[j].Position.Y);
+
+											if (Owner->RectangleOverlap(FriendHitboxCenter, HitboxCenter, (*Projectile->CurrentState.CurrentHitbox)[i].Size, (*CurrentState.CurrentHitbox)[j].Size))
+											{
+												Projectile->CurrentState.bHitByFriend = true;
+												CurrentState.bHitFriend = true;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			if (bCheckHitByOwner && !CurrentState.bHitByOwner) //see if the owner's attack hits this projectile
+			{
+				if (Owner)
+				{
+					if (Owner->CurrentState.CurrentHitbox)
+					{
+						if (CurrentState.CurrentHitbox)
+						{
+							for (uint8 i = 0; i < Owner->CurrentState.CurrentHitbox->Num() && !CurrentState.bHitByOwner; i++)
+							{
+								FVector2D OwnerHitboxCenter;
+								if (Owner->CurrentState.bFacingRight)
+									OwnerHitboxCenter = Owner->CurrentState.Position + (*Owner->CurrentState.CurrentHitbox)[i].Position;
+								else
+									OwnerHitboxCenter = FVector2D(Owner->CurrentState.Position.X - (*Owner->CurrentState.CurrentHitbox)[i].Position.X, Owner->CurrentState.Position.Y + (*Owner->CurrentState.CurrentHitbox)[i].Position.Y);
+
+								for (uint8 j = 0; j < CurrentState.CurrentHitbox->Num() && !CurrentState.bHitByOwner; j++)
+								{
+									FVector2D HitboxCenter;
+									if (CurrentState.bFacingRight)
+										HitboxCenter = CurrentState.Position + (*CurrentState.CurrentHitbox)[j].Position;
+									else
+										HitboxCenter = FVector2D(CurrentState.Position.X - (*CurrentState.CurrentHitbox)[j].Position.X, CurrentState.Position.Y + (*CurrentState.CurrentHitbox)[j].Position.Y);
+
+									if (Owner->RectangleOverlap(OwnerHitboxCenter, HitboxCenter, (*Owner->Opponent->CurrentState.CurrentHitbox)[i].Size, (*CurrentState.CurrentHitbox)[j].Size))
+									{
+										CurrentState.bHitByOwner = true;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	CurrentState.bProjectileClash = false;
+}
+
+void ABTProjectileBase::UpdateProjectile()
+{
+	//trigger stuff for certain projectiles if they make contact here
+
+	if (bHasHits)
+	{
+		if (CurrentState.CurrentHits < MaxHits)
+			CurrentState.bAttackMadeContact = false;
+		else if (CurrentState.CurrentHits >= MaxHits)
+			CurrentState.bIsActive = false;
+	}
+
+	if (bHasLifeSpan)
+	{
+		CurrentState.CurrentLife++;
+		if (CurrentState.CurrentLife > MaxLife)
+			CurrentState.bIsActive = false;
+	}
+}
+
+void ABTProjectileBase::UpdatePosition()
+{
+	if (CurrentState.HitStop == 0)
+	{
+		if (Owner)
+		{
+			if (Owner->CurrentState.SlowMoTime > 0)
+				CurrentState.Position += CurrentState.Velocity * 100 / 120.f;
+			else
+				CurrentState.Position += CurrentState.Velocity * 100 / 60.f;
+		}
+	}
+	else
+	{
+		CurrentState.HitStop--;
+	}
+
+	if (bCanTouchSurfaces)
+	{
+		if (CurrentState.Position.Y <= .5f * SurfaceBounds.Y)
+			CurrentState.Position.Y = .5f * SurfaceBounds.Y;
+
+		if (CurrentState.Position.X <= 1000 + .5f * SurfaceBounds.X)
+			CurrentState.Position.X = 1000 + .5f * SurfaceBounds.X;
+
+		if (CurrentState.Position.X >= 1000 - .5f * SurfaceBounds.X)
+			CurrentState.Position.X = 1000 - .5f * SurfaceBounds.X;
+	}
+}
+
+void ABTProjectileBase::DrawProjectile()
+{
+	/*if (CurrentState.bIsActive && CurrentState.AnimFrameIndex > MaxFrameIndex)
+		SetVisibility(false);*/
+}
+
+void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter)
+{
+	if (Hitbox.AttackHeight < Throw)
+		Owner->CurrentState.ComboCount++;
+	Owner->Opponent->CurrentState.BlockStun = 0;
+
+	if (Hitbox.AttackHeight < Throw && Owner->Opponent->CurrentState.CurrentAnimation == &Owner->Opponent->Crumple) //treat opponent as if airborne if hitting them in crumple
+		Owner->Opponent->CurrentState.bIsAirborne = true;
+
+	if (Owner->CurrentState.ComboCount >= 2)
+	{
+		//if the opponent is in an aerial hitstun animation or staggered but their hitstun is zero, they could have escaped
+		if ((Owner->Opponent->CurrentState.HitStun == 0 && Owner->Opponent->CurrentState.ShatteredTime == 0 && Owner->Opponent->CurrentState.bIsAirborne &&
+			(Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility == FaceDown || Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility == FaceUp)) ||
+			(Owner->Opponent->CurrentState.CurrentAnimation == &Owner->Opponent->Stagger && Owner->Opponent->CurrentState.HitStun == 0))
+			Owner->CurrentState.bTrueCombo = false;
+		//display UI combo counter
+	}
+	else
+	{
+		//hide UI combo counter
+	}
+
+	//calculate damage scaling based on opponent's remaining health
+	float OpponentValor;
+	float OpponentHealthPercent = (float)Owner->Opponent->CurrentState.Health / (float)Owner->Opponent->MaxHealth;
+
+	if (OpponentHealthPercent <= .1f)
+		OpponentValor = Owner->Opponent->Valor10;
+	else if (OpponentHealthPercent <= .25f)
+		OpponentValor = Owner->Opponent->Valor25;
+	else if (OpponentHealthPercent <= .5f)
+		OpponentValor = Owner->Opponent->Valor50;
+	else
+		OpponentValor = Owner->Opponent->Valor100;
+
+	int32 DamageToApply = OpponentValor * Owner->CurrentState.SpecialProration * Hitbox.BaseDamage;
+	uint8 HitStunToApply = Hitbox.BaseHitStun;
+
+	Owner->CurrentState.AvailableActions = Hitbox.PotentialActions;
+	Owner->Opponent->CurrentState.CharacterHitState = Hitbox.AttackProperties;
+	//apply certain modifiers based on circumstances around the hit
+	if (Hitbox.AttackHeight < Throw)
+	{
+		if ((Owner->Opponent->CurrentState.bArmorActive || Owner->Opponent->CurrentState.bCounterHitState) && Hitbox.AttackProperties & Shatter)
+		{
+			Owner->Opponent->CurrentState.ShatteredTime = 120;
+			Owner->Opponent->CurrentState.ResolveRecoverTimer = 0;
+			Owner->Opponent->CurrentState.RecoverInterval = 0;
+			HitStunToApply *= 1.2f;
+			Owner->Opponent->CurrentState.CharacterHitState |= Hitbox.CounterAttackProperties;
+			//set shatter UI effect to play
+		}
+		else if ((Owner->Opponent->CurrentState.bArmorActive || Owner->Opponent->CurrentState.bCounterHitState) && !(Hitbox.AttackProperties & Piercing && Owner->Opponent->CurrentState.bArmorActive && Owner->Opponent->CurrentState.Resolve > 0))
+		{
+			HitStunToApply *= 1.2f;
+			Owner->Opponent->CurrentState.CharacterHitState |= Hitbox.CounterAttackProperties;
+			//set counter hit ui effect to play
+		}
+		else if (Hitbox.AttackProperties & Piercing && Owner->Opponent->CurrentState.bArmorActive && Owner->Opponent->CurrentState.Resolve > 0)
+		{
+			//set piercing ui effect to play
+		}
+	}
+
+	if (Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility == OTG)
+	{
+		DamageToApply = (int32)(.3f * DamageToApply);
+		HitStunToApply = (uint8)(.3f * HitStunToApply);
+	}
+
+	//calculate proration to apply on subsequent hits in a combo
+	if (Owner->CurrentState.ComboCount == 1)
+	{
+		Owner->CurrentState.SpecialProration = Hitbox.InitProration; //initial proration is only applied if its the first hit of a combo
+		Owner->CurrentState.bTrueCombo = true; //reset to true since a new combo has started
+		if ((Owner->Opponent->CurrentState.bArmorActive || Owner->Opponent->CurrentState.bCounterHitState) && Hitbox.AttackProperties & Shatter)
+		{
+			Owner->CurrentState.SpecialProration *= 1.2f;
+			DamageToApply *= 1.2f;
+		}
+		else if (Owner->Opponent->CurrentState.bCounterHitState)
+			Owner->CurrentState.SpecialProration *= 1.1f;
+	}
+	else if (Owner->CurrentState.ComboCount > 1 && Hitbox.ForcedProration != 1)
+		Owner->CurrentState.SpecialProration *= Hitbox.ForcedProration; //forced proration is applied as long as the move is used in combo
+
+	//apply damage, damage is scaled by the number of hits in a combo
+	float ComboProration;
+	if (Owner->CurrentState.ComboCount < 3)
+		ComboProration = 1;
+	else if (Owner->CurrentState.ComboCount < 5)
+		ComboProration = .8f;
+	else if (Owner->CurrentState.ComboCount < 6)
+		ComboProration = .7f;
+	else if (Owner->CurrentState.ComboCount < 7)
+		ComboProration = .6f;
+	else if (Owner->CurrentState.ComboCount < 8)
+		ComboProration = .5f;
+	else if (Owner->CurrentState.ComboCount < 9)
+		ComboProration = .4f;
+	else if (Owner->CurrentState.ComboCount < 10)
+		ComboProration = .3f;
+	else if (Owner->CurrentState.ComboCount < 11)
+		ComboProration = .2f;
+	else
+		ComboProration = .1f;
+
+	DamageToApply *= ComboProration;
+
+	if (Hitbox.AttackProperties & IsSuper)
+		DamageToApply = FMath::Max((int32)(OpponentValor * Hitbox.BaseDamage * .25f), DamageToApply); //Supers will always deal a minimum of 25% their base damage affected by valor
+
+	DamageToApply = FMath::Max(1, DamageToApply); //non-super attacks will always deal a minimum of one damage
+
+	Owner->Opponent->CurrentState.Health -= FMath::Min(DamageToApply, Owner->Opponent->CurrentState.Health);
+
+	//apply hitstun, hitstun is scaled by how much time the opponent has spent in hitstun, supers' hitstun is never scaled
+	if (Owner->Opponent->CurrentState.bIsAirborne && !(Hitbox.AttackProperties & IsSuper))
+	{
+		if (Owner->Opponent->CurrentState.ComboTimer > 960 && !(Hitbox.AttackProperties & IsSpecial)) //16 seconds, normal attacks will only deal 1 frame of hitstun
+			HitStunToApply = 1;
+		else if (Owner->Opponent->CurrentState.ComboTimer > 840) //14 seconds, special attacks have a minimum of 60% their base hitstun
+			HitStunToApply *= .6f;
+		else if (Owner->Opponent->CurrentState.ComboTimer > 600)//10 seconds
+			HitStunToApply *= .7f;
+		else if (Owner->Opponent->CurrentState.ComboTimer > 420)//7 seconds
+			HitStunToApply *= .8f;
+		else if (Owner->Opponent->CurrentState.ComboTimer > 300)//5 seconds
+			HitStunToApply *= .9f;
+	}
+	Owner->Opponent->CurrentState.HitStun = HitStunToApply;
+	if (Owner->Opponent->CurrentState.bIsCrouching || Owner->Opponent->CurrentState.CurrentAnimation == &Owner->Opponent->GuardLo || Owner->Opponent->CurrentState.CurrentAnimation == &Owner->Opponent->GuardLoHeavy) //two extra frames of hitstun if hitting a crouching opponent
+		Owner->Opponent->CurrentState.HitStun += 2;
+
+	//apply hitstop
+	Owner->Opponent->CurrentState.HitStop = Hitbox.BaseHitStop;
+	CurrentState.HitStop = Hitbox.BaseHitStop;
+
+	//meter gain for each character
+	if (Owner->Opponent->CurrentState.ShatteredTime == 0)
+		Owner->Opponent->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * .2f), 1);
+
+	if (Owner->CurrentState.ResolveRecoverTimer >= 180)
+		Owner->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * .1f), 1);
+
+	//Make certain actions available for hitting with an attack
+	Owner->CurrentState.AvailableActions = Hitbox.PotentialActions;
+
+	//Apply knockback to opponent
+	if (Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility == OTG)
+	{
+		Owner->Opponent->CurrentState.KnockBack = FVector2D(1.1f * FMath::Abs(Hitbox.PotentialKnockBack.X), 1.f);
+	}
+	else if (Owner->Opponent->CurrentState.bIsAirborne)
+	{
+		if (Hitbox.PotentialAirKnockBack == FVector2D(0, 0) && Hitbox.PotentialKnockBack.Y == 0)
+			Owner->Opponent->CurrentState.KnockBack = FVector2D(Hitbox.PotentialKnockBack.X, .5f);
+		else
+			Owner->Opponent->CurrentState.KnockBack = Hitbox.PotentialAirKnockBack;
+	}
+	else
+	{
+		Owner->Opponent->CurrentState.KnockBack = Hitbox.PotentialKnockBack;
+	}
+
+	//update opponent's animation
+	if (Hitbox.AttackProperties & CanTumble)
+	{
+		Owner->Opponent->EnterNewAnimation(Owner->Opponent->Tumble);
+	}
+	else if (Hitbox.AttackProperties & CanSweep)
+	{
+		if (Owner->Opponent->CurrentState.KnockBack.Y < 0)
+			Owner->Opponent->EnterNewAnimation(Owner->Opponent->FallingForward);
+		else
+			Owner->Opponent->EnterNewAnimation(Owner->Opponent->Sweep);
+	}
+	else if (Hitbox.AttackProperties & CanLaunch)
+	{
+		if (Owner->Opponent->CurrentState.KnockBack.Y < 0)
+			Owner->Opponent->EnterNewAnimation(Owner->Opponent->LaunchFallCycle);
+		else
+			Owner->Opponent->EnterNewAnimation(Owner->Opponent->LaunchCycle);
+	}
+	else if (Owner->Opponent->CurrentState.bIsAirborne || Owner->Opponent->CurrentState.KnockBack.Y > 0)
+	{
+		if (Hitbox.AttackProperties & CanKnockAway)
+			Owner->Opponent->EnterNewAnimation(Owner->Opponent->KnockAway);
+		else
+			Owner->Opponent->EnterNewAnimation(Owner->Opponent->HitstunAir);
+	}
+	else if (!Owner->Opponent->CurrentState.bIsAirborne) //ground only hit states
+	{
+		if (Hitbox.AttackProperties & CanCrumple || Owner->Opponent->CurrentState.Health == 0)
+			Owner->Opponent->EnterNewAnimation(Owner->Opponent->Crumple);
+		else if (Hitbox.AttackProperties & CanStagger)
+			Owner->Opponent->EnterNewAnimation(Owner->Opponent->Stagger);
+		else if (Owner->Opponent->CurrentState.bIsCrouching || Owner->Opponent->CurrentState.CurrentAnimation == &Owner->Opponent->GuardLo || Owner->Opponent->CurrentState.CurrentAnimation == &Owner->Opponent->GuardLoHeavy)
+		{
+			if (Hitbox.AttackLevel > 2)
+				Owner->Opponent->EnterNewAnimation(Owner->Opponent->HitCHeavyIn);
+			else
+				Owner->Opponent->EnterNewAnimation(Owner->Opponent->HitCIn);
+		}
+		else
+		{
+			if (Hitbox.AttackProperties & LowerBodyHit)
+			{
+				if (Hitbox.AttackLevel > 2)
+					Owner->Opponent->EnterNewAnimation(Owner->Opponent->HitSLHeavyIn);
+				else
+					Owner->Opponent->EnterNewAnimation(Owner->Opponent->HitSLIn);
+			}
+			else
+			{
+				if (Hitbox.AttackLevel > 2)
+					Owner->Opponent->EnterNewAnimation(Owner->Opponent->HitSHHeavyIn);
+				else
+					Owner->Opponent->EnterNewAnimation(Owner->Opponent->HitSHIn);
+			}
+		}
+	}
+
+	//place and play hit effect
+	//place at midpoint between hitbox center and hurtbox center
+	if (Hitbox.AttackProperties & PlayHitEffect)
+	{
+
+	}
+}
+
+void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
+{
+	//If the opponent would be on the ground on the next frame, treat them as if they were hit while on the ground
+	if (Owner->Opponent->CurrentState.HitStun == 0 && Owner->Opponent->CurrentState.bIsAirborne && CurrentState.Position.Y + CurrentState.Velocity.Y * 100 / 60.f <= 0)
+	{
+		Owner->Opponent->CurrentState.Position.Y = 0;
+		Owner->Opponent->CurrentState.Velocity.Y = 0;
+		Owner->Opponent->CurrentState.bIsAirborne = false;
+		if (Owner->Opponent->CurrentState.Dir1 == 10 || Owner->Opponent->CurrentState.Dir2 == 10 || Owner->Opponent->CurrentState.Dir3 == 10)
+		{
+			Owner->Opponent->CurrentState.bIsCrouching = true;
+		}
+	}
+
+
+	//Opponent successfully guarded the attack
+	if (((Owner->Opponent->CurrentState.bIsGuarding && Owner->Opponent->CurrentState.bIsAirborne) || (Owner->Opponent->CurrentState.bIsGuarding && Hitbox.AttackHeight <= High) || (Owner->Opponent->CurrentState.bIsGuarding && !Owner->Opponent->CurrentState.bIsAirborne && Owner->Opponent->CurrentState.bIsCrouching && Hitbox.AttackHeight == Low) ||
+		(Owner->Opponent->CurrentState.bIsGuarding && !Owner->Opponent->CurrentState.bIsAirborne && !Owner->Opponent->CurrentState.bIsCrouching && Hitbox.AttackHeight == Overhead)) && Hitbox.AttackHeight != Unblockable)
+	{
+		int32 BlockstunToApply;
+		FVector2D KnockbackToApply;
+		if (Hitbox.BaseBlockStun == 0)
+			BlockstunToApply = Hitbox.BaseHitStun * .8f;
+		else
+			BlockstunToApply = Hitbox.BaseBlockStun;
+
+		if (Owner->Opponent->CurrentState.bIsAirborne)
+		{
+			if (FMath::Abs(Hitbox.PotentialAirKnockBack.X) > FMath::Abs(Hitbox.PotentialAirKnockBack.Y))
+				KnockbackToApply = FVector2D(Hitbox.PotentialAirKnockBack.X, .3f);
+			else
+				KnockbackToApply = FVector2D(.5f * (Hitbox.PotentialAirKnockBack.X + FMath::Abs(Hitbox.PotentialAirKnockBack.Y)), .3f);
+		}
+		else
+		{
+			if (FMath::Abs(Hitbox.PotentialKnockBack.X) > FMath::Abs(Hitbox.PotentialKnockBack.Y))
+				KnockbackToApply = FVector2D(Hitbox.PotentialKnockBack.X, .3f);
+			else
+				KnockbackToApply = FVector2D(.5f * (Hitbox.PotentialKnockBack.X + FMath::Abs(Hitbox.PotentialKnockBack.Y)), .3f);
+		}
+
+		BlockstunToApply = FMath::Min(BlockstunToApply, 30);
+
+		if (Owner->Opponent->CurrentState.JustDefense >= 0) //if the opponent Instant Blocked the attack
+		{
+			//Cuts blockstun by a third on Just defense, cuts by 2 frame at minimum
+			if (BlockstunToApply < 9)
+				BlockstunToApply -= 2;
+			else
+				BlockstunToApply = BlockstunToApply * 2 / 3;
+
+			BlockstunToApply = FMath::Max(1, BlockstunToApply);
+			KnockbackToApply *= 0;
+			Owner->Opponent->CurrentState.Durability += 35; //reward opponent for blocking with exceptional timing
+			//make opponent flash white
+			Owner->Opponent->StatusMix = 3;
+			Owner->Opponent->CurrentState.StatusTimer = 5;
+			Owner->Opponent->StatusColor = FVector(1, 1, 1);
+			UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
+		}
+		else
+		{
+			Owner->Opponent->CurrentState.ResolveRecoverTimer = 0;
+			Owner->Opponent->CurrentState.RecoverInterval = 0;
+
+			//blocked hits chip away at durability
+			if (Owner->Opponent->CurrentState.Resolve > 0)
+			{
+				if (Owner->CurrentState.bIsAirborne)
+				{
+					if (Hitbox.AttackProperties & AntiAir) //attacks with the anti air property must be Instant Blocked
+					{
+						Owner->Opponent->CurrentState.Durability = -1;
+						AttackCalculation(Hitbox, HurtboxCenter);
+						return;
+					}
+
+					if (Hitbox.AttackProperties & IsSuper)
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .35f);
+					else if (Hitbox.AttackProperties & IsSpecial)
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .25f);
+					else
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .2f);
+				}
+				else
+				{
+					if (Hitbox.AttackProperties & IsSuper)
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .25f);
+					else if (Hitbox.AttackProperties & IsSpecial)
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .15f);
+					else
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .1f);
+				}
+
+			}
+			else
+			{
+				//deal chip damage if the opponent has no resolve left, shatter their guard if they are airborne
+				if (Owner->Opponent->CurrentState.bIsAirborne)
+				{
+					Owner->Opponent->CurrentState.bCounterHitState = true;
+					AttackCalculation(Hitbox, HurtboxCenter);
+					return;
+				}
+				else
+				{
+					int32 ChipDamage = (int32)(Hitbox.BaseDamage * .2f);
+
+					if (Owner->Opponent->CurrentState.Health - ChipDamage <= 0 && Owner->Opponent->CurrentState.Health > 1) //Chip damage reduces character's life to 1 before being lethal
+						ChipDamage = Owner->Opponent->CurrentState.Health - 1;
+					else
+						ChipDamage = FMath::Min(Owner->Opponent->CurrentState.Health, ChipDamage);
+
+					Owner->Opponent->CurrentState.Health -= ChipDamage;
+				}
+			}
+		}
+
+		//apply final blockstun calculation
+		Owner->Opponent->CurrentState.BlockStun = BlockstunToApply;
+
+		if (Owner->Opponent->CurrentState.bIsAirborne && Owner->Opponent->CurrentState.JustDefense < 0) //extra blockstun if the opponent is airborne
+		{
+			Owner->Opponent->CurrentState.BlockStun += 3;
+			Owner->Opponent->CurrentState.JumpsUsed = 0;
+		}
+
+		//apply hitstop
+		Owner->Opponent->CurrentState.HitStop = Hitbox.BaseHitStop - 2;
+		CurrentState.HitStop = Hitbox.BaseHitStop - 2;
+
+		if (Owner->Opponent->CurrentState.bTouchingWall && KnockbackToApply.X >= 0)
+		{
+			if (!(Hitbox.AttackProperties & IsSuper) && !(Hitbox.AttackProperties & IsSpecial))
+				Owner->CurrentState.KnockBack = FVector2D(.75f * KnockbackToApply.X, 0);
+		}
+		else
+		{
+			if (KnockbackToApply.X < 0)
+				Owner->Opponent->CurrentState.KnockBack = FVector2D(.5f * KnockbackToApply.X, KnockbackToApply.Y);
+			else
+				Owner->Opponent->CurrentState.KnockBack = KnockbackToApply;
+		}
+
+		//Made contact so can cancel into other actions
+		Owner->CurrentState.AvailableActions = Hitbox.PotentialActions;
+		Owner->CurrentState.AvailableActions &= AcceptAll - AcceptJump - AcceptBlitz;
+
+		if (Hitbox.PotentialActions & JumpCancelOnBlock && Hitbox.PotentialActions & AcceptJump) //can only jump cancel if the move allows it on block
+			Owner->CurrentState.AvailableActions |= AcceptJump;
+
+		if (!(Hitbox.PotentialActions & BlitzOnHitOnly) && Hitbox.PotentialActions & AcceptBlitz) //can blitz cancel if it allows it on block
+			Owner->CurrentState.AvailableActions |= AcceptBlitz;
+
+		//update opponent's animation to guarding
+		if (Owner->Opponent->CurrentState.bIsAirborne)
+			Owner->Opponent->EnterNewAnimation(Owner->Opponent->GuardAir);
+		else
+		{
+			if (Owner->Opponent->CurrentState.bIsCrouching)
+			{
+				if (Hitbox.AttackLevel > 1)
+					Owner->Opponent->EnterNewAnimation(Owner->Opponent->GuardLoHeavy);
+				else
+					Owner->Opponent->EnterNewAnimation(Owner->Opponent->GuardLo);
+			}
+			else
+			{
+				if (Hitbox.AttackProperties & IsVertical)
+					Owner->Opponent->EnterNewAnimation(Owner->Opponent->GuardHiVertical);
+				else if (Hitbox.AttackLevel > 1)
+					Owner->Opponent->EnterNewAnimation(Owner->Opponent->GuardHiHeavy);
+				else
+					Owner->Opponent->EnterNewAnimation(Owner->Opponent->GuardHi);
+			}
+		}
+
+		//place and play guard effect
+		//place at midpoint between hitbox center and hurtbox center
+	}
+	else if (Owner->Opponent->CurrentState.bArmorActive && Owner->Opponent->CurrentState.Resolve > 0 && !(Hitbox.AttackProperties & Piercing) && !(Hitbox.AttackProperties & Shatter))
+	{
+		Owner->Opponent->CurrentState.ResolveRecoverTimer = 0;
+		Owner->Opponent->CurrentState.RecoverInterval = 0;
+		Owner->Opponent->CurrentState.Durability -= Hitbox.DurabilityDamage;
+		Owner->Opponent->CurrentState.Resolve -= Hitbox.ResolveDamage;
+		Owner->CurrentState.HitStop = Hitbox.BaseHitStop;
+		Owner->Opponent->CurrentState.HitStop = CurrentState.HitStop;
+		//make opponent flash red
+		Owner->Opponent->StatusMix = .8f;
+		Owner->Opponent->CurrentState.StatusTimer = 5;
+		Owner->Opponent->StatusColor = FVector(1, 0, 0);
+
+		//available actions are more limited when hitting an opponent's armor
+		if (Hitbox.PotentialActions & AcceptSpecial)
+			Owner->CurrentState.AvailableActions |= AcceptSpecial;
+		if (Hitbox.PotentialActions & AcceptSuper)
+			Owner->CurrentState.AvailableActions |= AcceptSuper;
+		if (Hitbox.PotentialActions & AcceptJump)
+			Owner->CurrentState.AvailableActions |= AcceptJump;
+		if (Hitbox.PotentialActions & AcceptBlitz)
+			Owner->CurrentState.AvailableActions |= AcceptBlitz;
+
+		//place and play armor hit effect
+		//place at midpoint between hitbox center and hurtbox center
+	}
+	else //the attack hit the opponent
+	{
+		CurrentState.bHitSuccess = true;
+		AttackCalculation(Hitbox, HurtboxCenter);
+	}
+}
+
+void ABTProjectileBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
+{
+	CurrentState.bAttackMadeContact = true;
+	CurrentState.bHitSuccess = true;
+	AttackCalculation(Hitbox, Owner->Opponent->CurrentState.Position);
+}

@@ -75,6 +75,11 @@ void ABTCharacterBase::SuperFlashSolver() //Only play once from Player1
 
 void ABTCharacterBase::HitDetection()
 {
+	for (ABTProjectileBase* Projectile : Projectiles)
+	{
+		Projectile->HitDetection();
+	}
+
 	if (Opponent != nullptr && !CurrentState.bClash)
 	{
 		CurrentState.bHitSuccess = false;
@@ -125,9 +130,9 @@ void ABTCharacterBase::HitDetection()
 							KnockbackToApply *= 0;
 							Opponent->CurrentState.Durability += 35; //reward opponent for blocking with exceptional timing
 							//make opponent flash white
-							StatusMix = 3;
-							CurrentState.StatusTimer = 5;
-							StatusColor = FVector(1, 1, 1);
+							Opponent->StatusMix = 3;
+							Opponent->CurrentState.StatusTimer = 5;
+							Opponent->StatusColor = FVector(1, 1, 1);
 							UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
 						}
 
@@ -193,7 +198,7 @@ void ABTCharacterBase::HitDetection()
 			CurrentState.bBlitzing = false;
 		}
 		//only look for hits if there are hitboxes active, and the current hitbox has not hit anything previously
-		else if (CurrentState.CurrentHitbox->Num() > 0 && !CurrentState.bAttackMadeContact)
+		else if (CurrentState.CurrentHitbox->Num() > 0 && !CurrentState.bAttackMadeContact && CurrentState.HitStop == 0)
 		{
 			if ((*CurrentState.CurrentHitbox)[0].AttackHeight < Throw) //Current active attack is a strike
 			{
@@ -2138,7 +2143,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		Opponent->CurrentState.bIsAirborne = false;
 		if (Opponent->CurrentState.Dir1 == InputTime || Opponent->CurrentState.Dir2 == InputTime || Opponent->CurrentState.Dir3 == InputTime)
 		{
-			CurrentState.bIsCrouching = true;
+			Opponent->CurrentState.bIsCrouching = true;
 		}
 	}
 
@@ -2183,9 +2188,9 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			KnockbackToApply *= 0;
 			Opponent->CurrentState.Durability += 35; //reward opponent for blocking with exceptional timing
 			//make opponent flash white
-			StatusMix = 3;
-			CurrentState.StatusTimer = 5;
-			StatusColor = FVector(1, 1, 1);
+			Opponent->StatusMix = 3;
+			Opponent->CurrentState.StatusTimer = 5;
+			Opponent->StatusColor = FVector(1, 1, 1);
 			UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
 		}
 		else
@@ -2196,7 +2201,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			//blocked hits chip away at durability
 			if (Opponent->CurrentState.Resolve > 0)
 			{
-				if (CurrentState.bIsAirborne)
+				if (Opponent->CurrentState.bIsAirborne)
 				{
 					if (Hitbox.AttackProperties & AntiAir) //attacks with the anti air property must be Instant Blocked
 					{
@@ -2226,7 +2231,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			else
 			{
 				//deal chip damage if the opponent has no resolve left, shatter their guard if they are airborne
-				if (CurrentState.bIsAirborne)
+				if (Opponent->CurrentState.bIsAirborne)
 				{
 					Opponent->CurrentState.bCounterHitState = true;
 					AttackCalculation(Hitbox, HurtboxCenter);
@@ -2283,7 +2288,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			CurrentState.AvailableActions |= AcceptBlitz;
 
 		//update opponent's animation to guarding
-		if (CurrentState.bIsAirborne)
+		if (Opponent->CurrentState.bIsAirborne)
 			Opponent->EnterNewAnimation(Opponent->GuardAir);
 		else
 		{
@@ -2317,9 +2322,9 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		CurrentState.HitStop = Hitbox.BaseHitStop;
 		Opponent->CurrentState.HitStop = CurrentState.HitStop;
 		//make opponent flash red
-		StatusMix = .8f;
-		CurrentState.StatusTimer = 5;
-		StatusColor = FVector(1, 0, 0);
+		Opponent->StatusMix = .8f;
+		Opponent->CurrentState.StatusTimer = 5;
+		Opponent->StatusColor = FVector(1, 0, 0);
 
 		//available actions are more limited when hitting an opponent's armor
 		if (Hitbox.PotentialActions & AcceptSpecial)
@@ -2336,6 +2341,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 	}
 	else //the attack hit the opponent
 	{
+		CurrentState.bHitSuccess = true;
 		AttackCalculation(Hitbox, HurtboxCenter);
 	}
 }
@@ -2365,12 +2371,13 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 	//calculate damage scaling based on opponent's remaining health
 	float OpponentValor;
+	float OpponentHealthPercent = (float)Opponent->CurrentState.Health / (float)Opponent->MaxHealth;
 
-	if ((float)CurrentState.Health / (float)MaxHealth <= .1f)
+	if (OpponentHealthPercent <= .1f)
 		OpponentValor = Opponent->Valor10;
-	else if ((float)CurrentState.Health / (float)MaxHealth <= .25f)
+	else if (OpponentHealthPercent <= .25f)
 		OpponentValor = Opponent->Valor25;
-	else if ((float)CurrentState.Health / (float)MaxHealth <= .5f)
+	else if (OpponentHealthPercent <= .5f)
 		OpponentValor = Opponent->Valor50;
 	else
 		OpponentValor = Opponent->Valor100;
@@ -2398,7 +2405,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			Opponent->CurrentState.CharacterHitState |= Hitbox.CounterAttackProperties;
 			//set counter hit ui effect to play
 		}
-		else if (Hitbox.AttackProperties & Piercing && Opponent -> CurrentState.bArmorActive && Opponent->CurrentState.Resolve > 0)
+		else if (Hitbox.AttackProperties & Piercing && Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve > 0)
 		{
 			//set piercing ui effect to play
 		}
@@ -2703,6 +2710,7 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 	if (!CurrentState.bClash)
 	{
 		CurrentState.bAttackMadeContact = true;
+		CurrentState.bHitSuccess = true;
 		AttackCalculation(Hitbox, Opponent->CurrentState.Position);
 	}
 }
