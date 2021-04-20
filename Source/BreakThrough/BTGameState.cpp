@@ -1,14 +1,9 @@
 // Copyright 2020 ShatterPoint Games. All Rights Reserved.
 
-
 #include "BTGameState.h"
 
 void GameState::Init()
 {
-    //spawn characters based on persistent info and using filepaths
-    //place characters on stage and update character state variables based on whether they should start on the left or right
-    //set stage lighting defaults
-    
     if (Player[0]) //set characters as each others' opponent
     {
         if (Player[1])
@@ -17,7 +12,7 @@ void GameState::Init()
             Player[1]->Opponent = Player[0];
         }
     }
-
+    FrameNumber = 0;
     SaveGameState();//copy the initial character states to this structure
 }
 
@@ -93,4 +88,3 @@ void GameState::DrawFrame() //call at the end of GameState Tick
 
     //also draw round manager, ui, etc.
 }
-

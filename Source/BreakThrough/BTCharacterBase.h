@@ -80,7 +80,7 @@ enum AttackProperties
 	ComboThrow = (1 << 12), //Throws with this flag can hit opponents even if they are in hitstun
 	AntiAir = (1 << 13),
 	DisableBurst = (1 << 14),
-	//ReflectProjectile = (1 << 15),
+	ReflectProjectile = (1 << 15),
 	IsSpecial = (1 << 16),
 	IsSuper = (1 << 17),
 	IsSlash = (1 << 18),

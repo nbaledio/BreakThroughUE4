@@ -407,6 +407,11 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 
 				if (BlitzImage != nullptr)
 					BlitzImage->Update();
+
+				for (ABTProjectileBase* Projectile : Projectiles)
+				{
+					Projectile->UpdateProjectile();
+				}
 			}
 		}
 
@@ -484,6 +489,11 @@ void ABTCharacterBase::VelocitySolver()
 
 void ABTCharacterBase::UpdatePosition() //update character's location based on velocity and decrement certain timed values
 {
+	for (ABTProjectileBase* Projectile : Projectiles)
+	{
+		Projectile->UpdatePosition();
+	}
+
 	if (CurrentState.HitStop == 0)
 	{
 		if (CurrentState.CurrentAnimFrame)
@@ -938,6 +948,11 @@ void ABTCharacterBase::DrawCharacter()
 			CharacterSoundEffects->Play();
 
 		CurrentState.bPlaySound = false;
+	}
+
+	for (ABTProjectileBase* Projectile : Projectiles)
+	{
+		Projectile->DrawProjectile();
 	}
 
 	//draw sigils if they're active
@@ -2247,6 +2262,12 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 						ChipDamage = FMath::Min(Opponent->CurrentState.Health, ChipDamage);
 
 					Opponent->CurrentState.Health -= ChipDamage;
+
+					if (Opponent->CurrentState.Health == 0)
+					{
+						AttackCalculation(Hitbox, HurtboxCenter);
+						return;
+					}
 				}
 			}
 		}

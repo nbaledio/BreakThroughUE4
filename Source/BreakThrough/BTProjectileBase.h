@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "BTCharacterBase.h"
 #include "BTProjectileBase.generated.h"
 
 struct FHitbox;
@@ -17,6 +16,7 @@ struct FProjectileState
 
 	bool bIsActive;
 	bool bFacingRight;
+	bool bReflected;
 	bool bHitByOwner; //a trigger for certain projectiles that activate when the user hits the projectile with an attack
 	bool bHitFriend; //a trigger for certain projectiles that activate when this projectile hits a friendly projectile
 	bool bHitByFriend; //a trigger for certain projectiles that activate when a friendly projectile hits this projectile
@@ -61,8 +61,6 @@ public:
 		bool bHasLifeSpan = false;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		bool bHasHits = true;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		bool bCanHurtOwner; //the hitbox can also damage the owner
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		bool bCanTouchSurfaces; //projectile will stop upon touching walls of the floor
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")

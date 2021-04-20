@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "BTCharacterBase.h"
 #include "Components/MaterialBillboardComponent.h"
 #include "BlitzImageBase.generated.h"
 

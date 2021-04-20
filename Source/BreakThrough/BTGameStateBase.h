@@ -6,11 +6,15 @@
 #include "GameFramework/GameStateBase.h"
 #include "BTGameState.h"
 #include "BTNonGameState.h"
+#include "Kismet/GameplayStatics.h"
 #include "BTGameStateBase.generated.h"
 
 // Forward declarations
 class UGGPONetwork;
 
+#define ARRAYSIZE(a) sizeof(a) / sizeof(a[0])
+#define FRAME_RATE 60
+#define ONE_FRAME (1.0f / FRAME_RATE)
 #define NETWORK_GRAPH_STEPS 720
 
 UENUM(BlueprintType)
@@ -62,15 +66,19 @@ public:
 
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-private:
+protected:
     bool bSessionStarted;
 
     float ElapsedTime;
 
     TArray<FNetworkGraphPlayer> NetworkGraphData;
 
-protected:
     int32 GetLocalInputs(uint8 PlayerIndex = 0);
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Characters")
+    TArray<TSubclassOf<class ABTCharacterBase>> CharacterBlueprints;
+
+    void SpawnCharacters();
 
     virtual void TickGameState();
 
@@ -78,7 +86,9 @@ protected:
     virtual void RunFrame(int32 local_input);
 
     // Advances the game state by exactly 1 frame using the inputs specified for player 1 and player 2.
-    virtual void AdvanceFrame(int32 inputs[], int32 disconnect_flags);
+    virtual void AdvanceFrame(int32 inputs[], int32 disconnect_flags = 0);
+
+    void DrawFrame();
 
     // Spend our idle time in ggpo so it can use whatever time we have left over for its internal bookkeeping.
     void Idle(int32 time);

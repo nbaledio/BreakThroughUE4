@@ -1,6 +1,6 @@
 // Copyright 2020 ShatterPoint Games. All Rights Reserved.
 
-
+#include "BTCharacterBase.h"
 #include "BlitzImageBase.h"
 
 // Sets default values

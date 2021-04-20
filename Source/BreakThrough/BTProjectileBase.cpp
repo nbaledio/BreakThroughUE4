@@ -1,6 +1,6 @@
 // Copyright 2020 ShatterPoint Games. All Rights Reserved.
 
-
+#include "BTCharacterBase.h"
 #include "BTProjectileBase.h"
 
 // Sets default values
@@ -31,6 +31,7 @@ void ABTProjectileBase::Activate(bool FacingRight)
 {
 	CurrentState.bFacingRight = FacingRight;
 	CurrentState.bIsActive = true;
+	CurrentState.bReflected = false;
 	CurrentState.bHitByOwner = false;
 	CurrentState.bHitByOwner = false;
 	CurrentState.bHitFriend = false;
@@ -98,7 +99,7 @@ void ABTProjectileBase::HitDetection()
 						}
 					}
 				}
-				if (Owner->Opponent->CurrentState.CurrentAnimFrame && !CurrentState.bProjectileClash) //look for hit
+				if (Owner->Opponent->CurrentState.CurrentAnimFrame && !CurrentState.bProjectileClash && !CurrentState.bReflected) //look for hit
 				{
 					//only look for hits if there are hitboxes active, and the current hitbox has not hit anything previously
 					if (CurrentState.CurrentHitbox->Num() > 0 && !CurrentState.bAttackMadeContact && Owner->Opponent->CurrentState.CurrentAnimFrame->Invincibility != ProjectileInvincible)
@@ -127,12 +128,11 @@ void ABTProjectileBase::HitDetection()
 
 										if (Owner->RectangleOverlap(HitboxCenter, OpponentHitboxCenter, (*CurrentState.CurrentHitbox)[i].Size, (*Owner->Opponent->CurrentState.CurrentHitbox)[j].Size))
 										{
-											CurrentState.CurrentHits++;
 											Owner->Opponent->CurrentState.bClash = true;
-											CurrentState.bAttackMadeContact = true;
 											Owner->Opponent->CurrentState.bAttackMadeContact = true;
 											if (bAttackOwner)
 											{
+												CurrentState.bIsActive = false;
 												Owner->CurrentState.HitStun = (*Owner->Opponent->CurrentState.CurrentHitbox)[j].BaseHitStun;
 												Owner->CurrentState.HitStop = (*Owner->Opponent->CurrentState.CurrentHitbox)[j].BaseHitStop;
 												CurrentState.HitStop = (*Owner->Opponent->CurrentState.CurrentHitbox)[j].BaseHitStop;
@@ -163,7 +163,7 @@ void ABTProjectileBase::HitDetection()
 													Owner->EnterNewAnimation(Owner->Stagger);
 												}
 											}
-											//attacks with the deflect can deflect opponents' non-super, non-deflect attacks
+											//projectiles with the deflect property can nullify opponents' non-super, non-deflect attacks
 											else if ((*CurrentState.CurrentHitbox)[0].AttackProperties & CanDeflect && !((*Owner->Opponent->CurrentState.CurrentHitbox)[0].AttackProperties & CanDeflect) &&
 												!((*Owner->Opponent->CurrentState.CurrentHitbox)[0].AttackProperties & IsSuper))
 											{
@@ -187,6 +187,8 @@ void ABTProjectileBase::HitDetection()
 											}
 											else //otherwise normal clash
 											{
+												CurrentState.CurrentHits++;
+												CurrentState.bAttackMadeContact = true;
 												CurrentState.HitStop = 15;
 												Owner->Opponent->CurrentState.HitStop = 15;
 												Owner->Opponent->CurrentState.AvailableActions = AcceptAll - (AcceptMove + AcceptGuard);
