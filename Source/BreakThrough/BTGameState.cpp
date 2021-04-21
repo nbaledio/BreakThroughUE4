@@ -33,9 +33,10 @@ void GameState::Update(int inputs[], int disconnect_flags)
         for (int32 i = 0; i < 2; i++)
         {
             if (disconnect_flags & (1 << i) && Player[i])
+            {
                 if (Player[i]->InputHistory.Num() > FrameNumber - 2)
-                Player[i]->UpdateCharacter(Player[i]->InputHistory[FrameNumber - 2], FrameNumber);
-
+                    Player[i]->UpdateCharacter(Player[i]->InputHistory[FrameNumber - 2], FrameNumber);
+            }
             else if (Player[i])
                 Player[i]->UpdateCharacter(inputs[i], FrameNumber);
         }

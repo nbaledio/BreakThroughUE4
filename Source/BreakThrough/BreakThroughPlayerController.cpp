@@ -28,7 +28,7 @@ int32 ABreakThroughPlayerController::GetPlayerInput()
         { EKeys::BackSpace,    INPUT_SELECT },
         { EKeys::Comma,        INPUT_LEFT_STICK_CLICK },
         { EKeys::Period,       INPUT_RIGHT_STICK_CLICK },
-    }; // default keyboard bindings */
+    }; // default keyboard bindings
 
     /*KeyBinding InputTable[] =
     {
@@ -56,7 +56,7 @@ int32 ABreakThroughPlayerController::GetPlayerInput()
 
     int32 inputs = 0;
 
-    for (int32 i = 0; i < sizeof(InputTable) / sizeof(InputTable[0]); i++) {
+    for (int32 i = 0; i < InputTable.Num(); i++) {
         if (IsInputKeyDown(InputTable[i].key)) {
             inputs |= InputTable[i].input;
         }

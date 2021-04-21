@@ -54,6 +54,9 @@ class BREAKTHROUGH_API ABTGameStateBase : public AGameStateBase
 	GENERATED_BODY()
 
 public:
+    // Sets default values for this actor's properties
+    ABTGameStateBase();
+
     GGPOSession* ggpo = nullptr;
 
     GameState gs;

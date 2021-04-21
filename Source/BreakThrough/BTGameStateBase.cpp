@@ -6,6 +6,11 @@
 #include "include/ggponet.h"
 #include "GGPOGameInstance.h"
 
+ABTGameStateBase::ABTGameStateBase()
+{
+    PrimaryActorTick.bCanEverTick = true;
+}
+
 void ABTGameStateBase::BeginPlay()
 {
     Super::BeginPlay();
@@ -126,8 +131,10 @@ int32 ABTGameStateBase::GetLocalInputs(uint8 PlayerIndex)
     ABreakThroughPlayerController* Controller = Cast<ABreakThroughPlayerController>(UGameplayStatics::GetPlayerController(world, PlayerIndex));
     if (Controller)
     {
+        UE_LOG(LogTemp, Warning, TEXT("Fetching inputs for Player %d"), PlayerIndex);
         return Controller->GetPlayerInput();
     }
+    //UE_LOG(LogTemp, Warning, TEXT("No controller detected for Player %d"), PlayerIndex);
     return 0;
 }
 
@@ -142,6 +149,7 @@ void ABTGameStateBase::SpawnCharacters()
         //set stage lighting defaults
         gs.Player[0] = GetWorld()->SpawnActor<ABTCharacterBase>(CharacterBlueprints[0], FVector(-100, 0, 0), FRotator(0), SpawnParams);
         gs.Player[1] = GetWorld()->SpawnActor<ABTCharacterBase>(CharacterBlueprints[0], FVector(100, 0, 0), FRotator(0), SpawnParams);
+        gs.Player[1]->CurrentState.bFacingRight = false;
     }
 }
 
