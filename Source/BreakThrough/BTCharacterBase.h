@@ -181,6 +181,7 @@ struct FCharacterState
 	GENERATED_BODY()
 
 	TArray<FAnimationFrame> CurrentAnimation;
+	FAnimationFrame CurrentAnimFrame;
 	TArray<FProjectileState> CurrentProjectileStates;
 	TArray<FSigilState> CurrentSigilStates;
 	TArray<FBlitzState> CurrentBlitzState;

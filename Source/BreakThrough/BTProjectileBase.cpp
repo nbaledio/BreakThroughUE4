@@ -327,19 +327,19 @@ void ABTProjectileBase::HitDetection()
 			{
 				if (Owner)
 				{
-					if (Owner->CurrentState.CurrentAnimation[Owner->CurrentState.AnimFrameIndex].Hitboxes.Num())
+					if (Owner->CurrentState.CurrentAnimFrame.Hitboxes.Num())
 					{
-						if (Owner->CurrentState.CurrentAnimation[Owner->CurrentState.AnimFrameIndex].Hitboxes.Num())
+						if (Owner->CurrentState.CurrentAnimFrame.Hitboxes.Num())
 						{
 							if (CurrentState.CurrentAnimFrame.Hitboxes.Num())
 							{
-								for (uint8 i = 0; i < Owner->CurrentState.CurrentAnimation[Owner->CurrentState.AnimFrameIndex].Hitboxes.Num() && !CurrentState.bHitByOwner; i++)
+								for (uint8 i = 0; i < Owner->CurrentState.CurrentAnimFrame.Hitboxes.Num() && !CurrentState.bHitByOwner; i++)
 								{
 									FVector2D OwnerHitboxCenter;
 									if (Owner->CurrentState.bFacingRight)
-										OwnerHitboxCenter = Owner->CurrentState.Position + Owner->CurrentState.CurrentAnimation[Owner->CurrentState.AnimFrameIndex].Hitboxes[i].Position;
+										OwnerHitboxCenter = Owner->CurrentState.Position + Owner->CurrentState.CurrentAnimFrame.Hitboxes[i].Position;
 									else
-										OwnerHitboxCenter = FVector2D(Owner->CurrentState.Position.X - Owner->CurrentState.CurrentAnimation[Owner->CurrentState.AnimFrameIndex].Hitboxes[i].Position.X, Owner->CurrentState.Position.Y + Owner->CurrentState.CurrentAnimation[Owner->CurrentState.AnimFrameIndex].Hitboxes[i].Position.Y);
+										OwnerHitboxCenter = FVector2D(Owner->CurrentState.Position.X - Owner->CurrentState.CurrentAnimFrame.Hitboxes[i].Position.X, Owner->CurrentState.Position.Y + Owner->CurrentState.CurrentAnimFrame.Hitboxes[i].Position.Y);
 
 									for (uint8 j = 0; j < CurrentState.CurrentAnimFrame.Hitboxes.Num() && !CurrentState.bHitByOwner; j++)
 									{
