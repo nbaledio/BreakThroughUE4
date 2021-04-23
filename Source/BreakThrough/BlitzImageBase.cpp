@@ -78,10 +78,10 @@ void ABlitzImageBase::Update()
 				float BaseMeshOffset;
 				if (CurrentState.bFacingRight)
 					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X - 100,
-						FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 3 + CurrentState.FlashEffectFramePlayTime) / 21));
+						FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 4 + CurrentState.FlashEffectFramePlayTime) / 28));
 				else
 					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X + 100,
-						FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 3 + CurrentState.FlashEffectFramePlayTime) / 21));
+						FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 4 + CurrentState.FlashEffectFramePlayTime) / 28));
 
 				BaseMesh->SetRelativeLocation(FVector(BaseMeshOffset, 0, 0));
 			}
@@ -89,7 +89,7 @@ void ABlitzImageBase::Update()
 
 		if (CurrentState.FlashEffectFrameIndex < 7)
 		{
-			if (CurrentState.FlashEffectFramePlayTime >= 3)
+			if (CurrentState.FlashEffectFramePlayTime >= 4)
 			{
 				CurrentState.FlashEffectFrameIndex++;
 				CurrentState.FlashEffectFramePlayTime = 0;
