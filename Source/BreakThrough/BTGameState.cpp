@@ -10,6 +10,8 @@ void BTGameState::Init()
         {
             Player[0]->Opponent = Player[1];
             Player[1]->Opponent = Player[0];
+            CharacterStates[0] = Player[0]->CurrentState;
+            CharacterStates[1] = Player[1]->CurrentState;
         }
     }
     FrameNumber = 0;
@@ -28,6 +30,12 @@ void BTGameState::Update(int inputs[], int disconnect_flags)
             {
                 if (Player[i])
                         Player[i]->HitDetection();
+            }
+
+            for (int32 i = 0; i < 2; i++)
+            {
+                if (Player[i])
+                    Player[i]->HitAnimation();
             }
 
             for (int32 i = 0; i < 2; i++)

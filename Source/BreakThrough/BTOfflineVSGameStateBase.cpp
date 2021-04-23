@@ -27,11 +27,10 @@ void ABTOfflineVSGameStateBase::Tick(float DeltaSeconds)
     {
         Inputs[i] = GetLocalInputs(i);
     }
-    //AdvanceFrame(Inputs);
     while (ElapsedTime >= ONE_FRAME) {
         AdvanceFrame(Inputs);
 
         ElapsedTime -= ONE_FRAME;
     }
-    //DrawFrame();
+    DrawFrame();
 }

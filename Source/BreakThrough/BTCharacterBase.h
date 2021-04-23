@@ -4,11 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-//#include "HitHurtboxes.h"
-#include "BreakThroughPlayerController.h"
 #include "BTProjectileBase.h"
 #include "Sigil.h"
 #include "BlitzImageBase.h"
+#include "BreakThroughPlayerController.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundCue.h"
 #include "BTCharacterBase.generated.h"
@@ -87,8 +86,9 @@ enum AttackProperties
 	IsSlash = (1 << 18),
 	IsVertical = (1 << 19),
 	IsHorizontal = (1 << 20),
-	LowerBodyHit = (1 << 21),
-	PlayHitEffect = (1 << 22),
+	IsHeavy = (1 << 21),
+	LowerBodyHit = (1 << 22),
+	PlayHitEffect = (1 << 23),
 };
 
 class ABTProjectileBase;
@@ -97,6 +97,7 @@ class ASigil;
 struct FSigilState;
 class ABlitzImageBase;
 struct FBlitzState;
+class UAnimationFrame;
 
 USTRUCT(BlueprintType)
 struct FAnimationFrame
@@ -179,10 +180,7 @@ struct FCharacterState
 {
 	GENERATED_BODY()
 
-	TArray<FAnimationFrame>* CurrentAnimation;
-	FAnimationFrame* CurrentAnimFrame;
-	TArray<FHitbox>* CurrentHitbox;
-	TArray<FHurtbox>* CurrentHurtbox;
+	TArray<FAnimationFrame> CurrentAnimation;
 	TArray<FProjectileState> CurrentProjectileStates;
 	TArray<FSigilState> CurrentSigilStates;
 	TArray<FBlitzState> CurrentBlitzState;
@@ -422,6 +420,8 @@ public:
 
 	virtual void HitDetection();
 
+	void HitAnimation();
+
 	virtual void UpdateCharacter(int32 CurrentInputs, int32 FrameNumber);
 
 	void VelocitySolver(); //only called once by gamestate, do not call for each character
@@ -435,6 +435,8 @@ public:
 	virtual void SetColor(uint8 ColorID);
 
 	bool EnterNewAnimation(TArray<FAnimationFrame> Animation, int32 FrameNumber = 0);
+
+	bool IsCurrentAnimation(TArray<FAnimationFrame> Animation);
 
 	bool RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2D Size1, FVector2D Size2);
 

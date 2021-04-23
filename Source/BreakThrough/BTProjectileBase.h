@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundCue.h"
 #include "BTProjectileBase.generated.h"
 
 //struct FHitbox;
@@ -67,6 +69,38 @@ struct FHitbox
 };
 
 USTRUCT(BlueprintType)
+struct FProjectileAnimFrame
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hitboxes")
+		TArray<FHitbox> Hitboxes;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
+		UAnimationAsset* Pose;
+
+	//Changes the main lighting angle on the character, snaps to stored positions while bCinematic, otherwise lerps to new positions
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+		FRotator MainLightRotation;
+	//Changes the fill light angle
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+		FRotator FillLightRotation;
+	//overrides color of mainlight
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+		FVector MainLightColor;
+	//overrides color of rim light
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+		FVector RimLightColor;
+	//overrides color of fill light
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+		FVector FillLightColor;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Audio")
+		USoundCue* VoiceLines;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Audio")
+		USoundCue* SFX;
+};
+
+USTRUCT(BlueprintType)
 struct FProjectileState
 {
 	GENERATED_BODY()
@@ -86,7 +120,7 @@ struct FProjectileState
 	int32 CurrentLife;
 	int32 CurrentHits;
 
-	TArray<FHitbox>* CurrentHitbox;
+	FProjectileAnimFrame CurrentAnimFrame;
 	TArray<int32> SpecialVariables; //Store any unique variables here
 	uint8 AnimFrameIndex; //can be used to denote where in the projectile's animation sequence we are (jump to specific numbers to transition to other animation states)
 	uint8 FramePlayTime = 0;
