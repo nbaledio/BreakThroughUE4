@@ -528,6 +528,17 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* BodyLines;
 
+	//Sets the corresponding parameters on character's materials
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+		FRotator DefaultMainLightRotation;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+		FRotator DefaultFillLightRotation;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+		FVector DefaultMainLightColor = FVector(1);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+		FVector DefaultFillLightColor;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+		FVector DefaultRimLightColor = FVector(1);
 	UMaterialInstanceDynamic* DynamicOutline;
 	float DepthOffset;
 

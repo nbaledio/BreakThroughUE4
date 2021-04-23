@@ -47,12 +47,6 @@ void ABTCharacterBase::BeginPlay()
 void ABTCharacterBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	/*SuperFlashSolver();
-	HitDetection();
-	UpdateCharacter(0, 1);
-	VelocitySolver();
-	UpdatePosition();
-	PushboxSolver();*/
 	//DrawCharacter();
 }
 
@@ -258,7 +252,7 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 	}
 	else
 	{
-		//CurrentState.MainLightRotation = StageMainLightRotation
+		CurrentState.MainLightRotation = FMath::Lerp(CurrentState.MainLightRotation, DefaultMainLightRotation, .5f);
 	}
 
 	if (CurrentState.FillLightRotation != CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].FillLightRotation && CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].FillLightRotation != FRotator(0))
@@ -270,7 +264,7 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 	}
 	else
 	{
-		//CurrentState.FillLightRotation = StageFillLightRotation
+		CurrentState.FillLightRotation = FMath::Lerp(CurrentState.FillLightRotation, DefaultFillLightRotation, .5f);
 	}
 
 	//first setting of light colors
@@ -307,9 +301,9 @@ void ABTCharacterBase::VelocitySolver()
 				}
 			}
 			else if (CurrentState.bIsRunning) //opponent provides resistance when dashing against them
-				CurrentState.Velocity.X *= .85f;
+				CurrentState.Velocity.X = .9f * CurrentState.Velocity.X;
 			else if (Opponent->CurrentState.bIsRunning) //provide resistance against dashing opponent
-				Opponent->CurrentState.Velocity.X *= .85f;
+				Opponent->CurrentState.Velocity.X = .9f * CurrentState.Velocity.X;
 			else if ((CurrentState.bFacingRight && CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X < 0) || (!CurrentState.bFacingRight && CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X > 0) &&
 				CurrentState.AvailableActions & AcceptMove && Opponent->CurrentState.AvailableActions & AcceptMove) //both characters stop moving if walking against each other
 			{
@@ -859,9 +853,9 @@ bool ABTCharacterBase::EnterNewAnimation(TArray<FAnimationFrame> Animation, int3
 	if (Animation.Num() > FrameNumber)
 	{
 		CurrentState.PosePlayTime = 0; // reset pose play time to make sure new frame is played for the correct amount of time
+		CurrentState.AnimFrameIndex = FrameNumber;
 		CurrentState.CurrentAnimation = Animation;
 		CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex] = Animation[FrameNumber];
-		CurrentState.AnimFrameIndex = FrameNumber;
 		return true;
 	}
 	return false;
@@ -877,7 +871,9 @@ bool ABTCharacterBase::IsCurrentAnimation(TArray<FAnimationFrame> Animation)
 		if (Animation[i].Pose)
 			if (CurrentState.CurrentAnimation[i].Pose)
 				if (Animation[i].Pose != CurrentState.CurrentAnimation[i].Pose)
+				{
 					return false;
+				}
 	}
 	return true;
 }
@@ -1158,7 +1154,7 @@ void ABTCharacterBase::RunBraking()
 			CurrentState.bIsRunning = false;
 		}
 	}
-	else if (!(CurrentState.AvailableActions & AcceptMove) && !CurrentState.bIsRunning && !CurrentState.bIsAirborne) //braking/friction to slow down character when not voluntarily accelerating
+	else if (/*!(CurrentState.AvailableActions & AcceptMove) &&*/ !CurrentState.bIsRunning && !CurrentState.bIsAirborne) //braking/friction to slow down character when not voluntarily accelerating
 	{
 		if (FMath::Abs(CurrentState.Velocity.X) > 1.f) // 1 is not necessarily the final value, just for testing
 			CurrentState.Velocity.X *= .95f;//test values once more things are put in place
@@ -1400,7 +1396,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 			CurrentState.Dir1 = InputTime;
 		else
 		{
-			if (CurrentState.Dir2 < InputTime && CurrentState.Dir2 > 0 && CurrentState.DoubleDir2 == 0)
+			if (CurrentState.Dir2 < InputTime - 1 && CurrentState.Dir2 > 0 && CurrentState.DoubleDir2 == 0)
 			{
 				CurrentState.DoubleDir2 = InputTime;
 			}
@@ -1423,7 +1419,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 	{
 		if (CurrentState.bFacingRight)
 		{
-			if (CurrentState.Dir6 < InputTime && CurrentState.Dir6 > 0 && CurrentState.DoubleDir4 == 0)
+			if (CurrentState.Dir6 < InputTime - 1 && CurrentState.Dir6 > 0 && CurrentState.DoubleDir4 == 0)
 			{
 				CurrentState.DoubleDir6 = InputTime;
 			}
@@ -1431,7 +1427,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		}
 		else
 		{
-			if (CurrentState.Dir4 < InputTime && CurrentState.Dir4 > 0 && CurrentState.DoubleDir4 == 0)
+			if (CurrentState.Dir4 < InputTime - 1 && CurrentState.Dir4 > 0 && CurrentState.DoubleDir4 == 0)
 			{
 				CurrentState.DoubleDir4 = InputTime;
 			}
@@ -1443,7 +1439,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 	{
 		if (CurrentState.bFacingRight)
 		{
-			if (CurrentState.Dir4 < InputTime && CurrentState.Dir4 > 0 && CurrentState.DoubleDir4 == 0)
+			if (CurrentState.Dir4 < InputTime - 1 && CurrentState.Dir4 > 0 && CurrentState.DoubleDir4 == 0)
 			{
 				CurrentState.DoubleDir4 = InputTime;
 			}
@@ -1452,7 +1448,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		}
 		else
 		{
-			if (CurrentState.Dir6 < InputTime && CurrentState.Dir6 > 0 && CurrentState.DoubleDir4 == 0)
+			if (CurrentState.Dir6 < InputTime - 1 && CurrentState.Dir6 > 0 && CurrentState.DoubleDir4 == 0)
 			{
 				CurrentState.DoubleDir6 = InputTime;
 			}
@@ -1763,9 +1759,11 @@ bool ABTCharacterBase::ConditionalTransitions()
 bool ABTCharacterBase::PassiveTransitions()
 {
 	//Animation transitions triggered by having finished the current animation
-	if (CurrentState.AnimFrameIndex == CurrentState.CurrentAnimation.Num() && CurrentState.PosePlayTime == CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].PlayDuration) // When hitting the end of an animation
+	if (CurrentState.AnimFrameIndex == CurrentState.CurrentAnimation.Num() - 1 && CurrentState.PosePlayTime == CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].PlayDuration) // When hitting the end of an animation
 	{
-		if (CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].bDoesCycle) //if the anim cycles and are currently at the end of the animation, play it again
+		if (ExitTimeTransitions()) //certain animations need to transition to other animations upon finishing
+			return true;
+		else if (CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].bDoesCycle) //if the anim cycles and are currently at the end of the animation, play it again
 		{
 			if (IsCurrentAnimation(IdleStand) || IsCurrentAnimation(IdleCrouch))
 				CurrentState.IdleCycle++;
@@ -1778,19 +1776,15 @@ bool ABTCharacterBase::PassiveTransitions()
 				else if (IsCurrentAnimation(IdleCrouch))
 					return EnterNewAnimation(IdleCrouchBlink);
 			}
-			/*else if (IdleCycle == 4)
+			/*else if (CurrentState.IdleCycle == 4)
 			{
-				IdleCycle = 0;
+				CurrentState.IdleCycle = 0;
 				if (CurrentAnimation == IdleStand)
 					return EnterNewAnimation(StandIdleAction);
 				else
 					return EnterNewAnimation(CrouchIdleAction);
 			}*/
 			return EnterNewAnimation(CurrentState.CurrentAnimation);
-		}
-		else //certain animations need to transition to other animations upon finishing
-		{
-			return ExitTimeTransitions();
 		}
 	}
 	else if (CurrentState.PosePlayTime == CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].PlayDuration && CurrentState.AnimFrameIndex < CurrentState.CurrentAnimation.Num() - 1) //Move to next frame of current animation
@@ -2720,12 +2714,20 @@ void ABTCharacterBase::LightSettings()
 	FillLightRotator->SetRelativeRotation(CurrentState.FillLightRotation);
 
 	//light color overrides if the animation frame specifies
-		if (CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].MainLightColor != FVector(0))
-			CurrentState.MainLightColor = CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].MainLightColor;
-		if (CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].RimLightColor != FVector(0))
-			CurrentState.RimLightColor = CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].RimLightColor;
-		if (CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].FillLightColor != FVector(0))
-			CurrentState.FillLightColor = CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].FillLightColor;
+	if (CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].MainLightColor != FVector(0))
+		CurrentState.MainLightColor = CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].MainLightColor;
+	else
+		CurrentState.MainLightColor = DefaultMainLightColor;
+
+	if (CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].RimLightColor != FVector(0))
+		CurrentState.RimLightColor = CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].RimLightColor;
+	else
+		CurrentState.RimLightColor = DefaultRimLightColor;
+
+	if (CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].FillLightColor != FVector(0))
+		CurrentState.FillLightColor = CurrentState.CurrentAnimation[CurrentState.AnimFrameIndex].FillLightColor;
+	else
+		CurrentState.FillLightColor = DefaultFillLightColor;
 }
 
 void ABTCharacterBase::ProcessBlitz()
