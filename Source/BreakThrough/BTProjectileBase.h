@@ -6,8 +6,65 @@
 #include "GameFramework/Actor.h"
 #include "BTProjectileBase.generated.h"
 
-struct FHitbox;
+//struct FHitbox;
 class ABTCharacterBase;
+
+USTRUCT(BlueprintType)
+struct FHurtbox
+{
+	GENERATED_BODY()
+
+		UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dimensions")
+		FVector2D Position; //position of hurtbox = character position + hurtbox position
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dimensions")
+		FVector2D Size; //hurtbox size radiates out from above position
+};
+
+USTRUCT(BlueprintType)
+struct FHitbox
+{
+	GENERATED_BODY()
+
+		UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dimensions")
+		FVector2D Position; //position of hitbox = character position + hitbox position
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dimensions")
+		FVector2D Size; //hurtbox size radiates out from above position
+
+	//attack properties
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		bool bNewHit = true;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		int32 PotentialActions; //denotes the actions that become available to the character upon the hitbox making contact using bit flags
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		int32 AttackProperties; // denotes the properties an attack has on normal hit using bit flags
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		int32 CounterAttackProperties; // denotes the properties an attack has on counter using bit flags
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		int32 BaseDamage = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		int32 DurabilityDamage = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		int32 ResolveDamage = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		int32 AttackLevel = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		int32 AttackHeight = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		uint8 BaseHitStun = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		uint8 BaseHitStop = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		uint8 BaseBlockStun = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		float InitProration = 1.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		float ForcedProration = 1.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		FVector2D PotentialKnockBack;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		FVector2D PotentialAirKnockBack;
+};
 
 USTRUCT(BlueprintType)
 struct FProjectileState

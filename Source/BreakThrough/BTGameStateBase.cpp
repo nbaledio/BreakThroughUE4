@@ -131,7 +131,6 @@ int32 ABTGameStateBase::GetLocalInputs(uint8 PlayerIndex)
     ABreakThroughPlayerController* Controller = Cast<ABreakThroughPlayerController>(UGameplayStatics::GetPlayerController(world, PlayerIndex));
     if (Controller)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Fetching inputs for Player %d"), PlayerIndex);
         return Controller->GetPlayerInput();
     }
     //UE_LOG(LogTemp, Warning, TEXT("No controller detected for Player %d"), PlayerIndex);
@@ -147,9 +146,11 @@ void ABTGameStateBase::SpawnCharacters()
         //spawn specific characters based on persistent info
         //place characters on stage and update character state variables based on whether they should start on the left or right
         //set stage lighting defaults
-        gs.Player[0] = GetWorld()->SpawnActor<ABTCharacterBase>(CharacterBlueprints[0], FVector(-100, 0, 0), FRotator(0), SpawnParams);
-        gs.Player[1] = GetWorld()->SpawnActor<ABTCharacterBase>(CharacterBlueprints[0], FVector(100, 0, 0), FRotator(0), SpawnParams);
+        gs.Player[0] = GetWorld()->SpawnActor<ABTCharacterBase>(CharacterBlueprints[0], FVector(0), FRotator(0), SpawnParams);
+        gs.Player[1] = GetWorld()->SpawnActor<ABTCharacterBase>(CharacterBlueprints[0], FVector(0), FRotator(0), SpawnParams);
         gs.Player[1]->CurrentState.bFacingRight = false;
+        gs.Player[0]->CurrentState.Position = FVector2D(-100, gs.Player[0]->GetActorLocation().Z);
+        gs.Player[1]->CurrentState.Position = FVector2D(100, gs.Player[1]->GetActorLocation().Z);
     }
 }
 

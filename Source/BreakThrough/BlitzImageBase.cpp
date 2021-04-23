@@ -1,7 +1,7 @@
 // Copyright 2020 ShatterPoint Games. All Rights Reserved.
 
-#include "BTCharacterBase.h"
 #include "BlitzImageBase.h"
+#include "BTCharacterBase.h"
 
 // Sets default values
 ABlitzImageBase::ABlitzImageBase()
@@ -67,23 +67,26 @@ void ABlitzImageBase::Update()
 				}
 			}
 
-			if (Owner->CurrentState.CurrentAnimation == &Owner->FocusBlitz || Owner->CurrentState.CurrentAnimation == &Owner->BreakerBlitz)
+			if (Owner->CurrentState.CurrentAnimation != nullptr)
 			{
-				CurrentState.Alpha = 0;
-				if (Owner->CurrentState.AnimFrameIndex > 0)
-					CurrentState.Pose = (*Owner->CurrentState.CurrentAnimation)[Owner->CurrentState.AnimFrameIndex - 1].Pose;
-				else
-					CurrentState.Pose = (*Owner->CurrentState.CurrentAnimation)[Owner->CurrentState.AnimFrameIndex].Pose;
+				if (Owner->CurrentState.CurrentAnimation == &Owner->FocusBlitz || Owner->CurrentState.CurrentAnimation == &Owner->BreakerBlitz)
+				{
+					CurrentState.Alpha = 0;
+					if (Owner->CurrentState.AnimFrameIndex > 0 && (*Owner->CurrentState.CurrentAnimation)[Owner->CurrentState.AnimFrameIndex - 1].Pose != nullptr)
+						CurrentState.Pose = (*Owner->CurrentState.CurrentAnimation)[Owner->CurrentState.AnimFrameIndex - 1].Pose;
+					else if ((*Owner->CurrentState.CurrentAnimation)[Owner->CurrentState.AnimFrameIndex].Pose != nullptr)
+						CurrentState.Pose = (*Owner->CurrentState.CurrentAnimation)[Owner->CurrentState.AnimFrameIndex].Pose;
 
-				float BaseMeshOffset;
-				if (CurrentState.bFacingRight)
-					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X - 100, 
-						FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 3 + CurrentState.FlashEffectFramePlayTime)/21));
-				else
-					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X + 100, 
-						FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 3 + CurrentState.FlashEffectFramePlayTime)/21));
+					float BaseMeshOffset;
+					if (CurrentState.bFacingRight)
+						BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X - 100,
+							FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 3 + CurrentState.FlashEffectFramePlayTime) / 21));
+					else
+						BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X + 100,
+							FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 3 + CurrentState.FlashEffectFramePlayTime) / 21));
 
-				BaseMesh->SetRelativeLocation(FVector(BaseMeshOffset, 0, 0));
+					BaseMesh->SetRelativeLocation(FVector(BaseMeshOffset, 0, 0));
+				}
 			}
 		}
 

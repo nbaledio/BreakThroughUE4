@@ -59,7 +59,7 @@ public:
 
     GGPOSession* ggpo = nullptr;
 
-    GameState gs;
+    BTGameState gs;
     NonGameState ngs;
     uint8 FrameDelay = 0;
 
