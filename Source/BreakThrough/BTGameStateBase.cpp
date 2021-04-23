@@ -5,11 +5,11 @@
 #include "BreakThroughPlayerController.h"
 #include "include/ggponet.h"
 #include "GGPOGameInstance.h"
-#include "Runtime/Engine/Classes/Kismet/GameplayStatics.h"
 
-#define ARRAYSIZE(a) sizeof(a) / sizeof(a[0])
-#define FRAME_RATE 60
-#define ONE_FRAME (1.0f / FRAME_RATE)
+ABTGameStateBase::ABTGameStateBase()
+{
+    PrimaryActorTick.bCanEverTick = true;
+}
 
 void ABTGameStateBase::BeginPlay()
 {
@@ -74,7 +74,7 @@ void ABTGameStateBase::BeginOnlineSession()
 
 void ABTGameStateBase::OnSessionStart()
 {
-
+    
 }
 
 TArray<FVector2D> ABTGameStateBase::GetNetworkGraphData(int32 Index, ENetworkGraphType Type, FVector2D GraphSize, int32 MinY, int32 MaxY) const
@@ -133,7 +133,25 @@ int32 ABTGameStateBase::GetLocalInputs(uint8 PlayerIndex)
     {
         return Controller->GetPlayerInput();
     }
+    //UE_LOG(LogTemp, Warning, TEXT("No controller detected for Player %d"), PlayerIndex);
     return 0;
+}
+
+void ABTGameStateBase::SpawnCharacters()
+{
+    if (CharacterBlueprints.Num() > 0)
+    {
+        FActorSpawnParameters SpawnParams;
+
+        //spawn specific characters based on persistent info
+        //place characters on stage and update character state variables based on whether they should start on the left or right
+        //set stage lighting defaults
+        gs.Player[0] = GetWorld()->SpawnActor<ABTCharacterBase>(CharacterBlueprints[0], FVector(0), FRotator(0), SpawnParams);
+        gs.Player[1] = GetWorld()->SpawnActor<ABTCharacterBase>(CharacterBlueprints[0], FVector(0), FRotator(0), SpawnParams);
+        gs.Player[1]->CurrentState.bFacingRight = false;
+        gs.Player[0]->CurrentState.Position = FVector2D(-100, gs.Player[0]->GetActorLocation().Z);
+        gs.Player[1]->CurrentState.Position = FVector2D(100, gs.Player[1]->GetActorLocation().Z);
+    }
 }
 
 void ABTGameStateBase::TickGameState()
@@ -184,8 +202,8 @@ void ABTGameStateBase::TickGameState()
 void ABTGameStateBase::RunFrame(int32 local_input)
 {
     GGPOErrorCode result = GGPO_OK;
-    int disconnect_flags;
-    int inputs[MAX_PLAYERS] = { 0 };
+    int32 disconnect_flags;
+    int32 inputs[MAX_PLAYERS] = { 0 };
 
     if (ngs.local_player_handle != GGPO_INVALID_HANDLE) 
     {
@@ -231,6 +249,11 @@ void ABTGameStateBase::AdvanceFrame(int32 inputs[], int32 disconnect_flags)
             handles[count++] = ngs.players[i].handle;
         }
     }*/
+}
+
+void ABTGameStateBase::DrawFrame()
+{
+    gs.DrawFrame();
 }
 
 void ABTGameStateBase::Idle(int32 time)
@@ -375,14 +398,15 @@ void ABTGameStateBase::InitOnlineGame(uint16 localport, int32 num_players, GGPOP
     // Initialize the game state
     gs.Init();
     ngs.num_players = num_players;
+    FrameDelay = 1;
 
     // Fill in a ggpo callbacks structure to pass to start_session.
     GGPOSessionCallbacks cb = CreateCallbacks();
 
 #if defined(SYNC_TEST)
-    result = GGPONet::ggpo_start_synctest(&ggpo, &cb, "vectorwar", num_players, sizeof(int), 1);
+    result = GGPONet::ggpo_start_synctest(&ggpo, &cb, "breakthrough", num_players, sizeof(int), 1);
 #else
-    result = GGPONet::ggpo_start_session(&ggpo, &cb, "vectorwar", num_players, sizeof(int), localport);
+    result = GGPONet::ggpo_start_session(&ggpo, &cb, "breakthrough", num_players, sizeof(int), localport);
 #endif
 
     // automatically disconnect clients after 3000 ms and start our count-down timer
@@ -422,7 +446,7 @@ void ABTGameStateBase::InitSpectator(uint16 localport, int32 num_players, char* 
     // Fill in a ggpo callbacks structure to pass to start_session.
     GGPOSessionCallbacks cb = CreateCallbacks();
 
-    result = GGPONet::ggpo_start_spectating(&ggpo, &cb, "vectorwar", num_players, sizeof(int), localport, host_ip, host_port);
+    result = GGPONet::ggpo_start_spectating(&ggpo, &cb, "breakthrough", num_players, sizeof(int), localport, host_ip, host_port);
 }
 
 GGPOSessionCallbacks ABTGameStateBase::CreateCallbacks()

@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "BreakThroughPlayerController.h"
 #include "BTProjectileBase.h"
 #include "Sigil.h"
 #include "BlitzImageBase.h"
+#include "BreakThroughPlayerController.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundCue.h"
 #include "BTCharacterBase.generated.h"
@@ -80,13 +80,15 @@ enum AttackProperties
 	ComboThrow = (1 << 12), //Throws with this flag can hit opponents even if they are in hitstun
 	AntiAir = (1 << 13),
 	DisableBurst = (1 << 14),
-	IsSpecial = (1 << 15),
-	IsSuper = (1 << 16),
-	IsSlash = (1 << 17),
-	IsVertical = (1 << 18),
-	IsHorizontal = (1 << 19),
-	LowerBodyHit = (1 << 20),
-	PlayHitEffect = (1 << 21),
+	ReflectProjectile = (1 << 15),
+	IsSpecial = (1 << 16),
+	IsSuper = (1 << 17),
+	IsSlash = (1 << 18),
+	IsVertical = (1 << 19),
+	IsHorizontal = (1 << 20),
+	IsHeavy = (1 << 21),
+	LowerBodyHit = (1 << 22),
+	PlayHitEffect = (1 << 23),
 };
 
 class ABTProjectileBase;
@@ -95,63 +97,7 @@ class ASigil;
 struct FSigilState;
 class ABlitzImageBase;
 struct FBlitzState;
-
-USTRUCT(BlueprintType)
-struct FHurtbox
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dimensions")
-		FVector2D Position; //position of hurtbox = character position + hurtbox position
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dimensions")
-		FVector2D Size; //hurtbox size radiates out from above position
-};
-
-USTRUCT(BlueprintType)
-struct FHitbox
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dimensions")
-		FVector2D Position; //position of hitbox = character position + hitbox position
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dimensions")
-		FVector2D Size; //hurtbox size radiates out from above position
-
-	//attack properties
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		bool bNewHit = true;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		int32 PotentialActions; //denotes the actions that become available to the character upon the hitbox making contact using bit flags
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		int32 AttackProperties; // denotes the properties an attack has on normal hit using bit flags
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		int32 CounterAttackProperties; // denotes the properties an attack has on counter using bit flags
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		int32 BaseDamage = 0;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		int32 DurabilityDamage = 0;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		int32 ResolveDamage = 0;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		int32 AttackLevel = 0;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		int32 AttackHeight = Mid;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		uint8 BaseHitStun = 0;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		uint8 BaseHitStop = 0;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		uint8 BaseBlockStun = 0;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		float InitProration = 1.f;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		float ForcedProration = 1.f;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		FVector2D PotentialKnockBack;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		FVector2D PotentialAirKnockBack;
-};
+class UAnimationFrame;
 
 USTRUCT(BlueprintType)
 struct FAnimationFrame
@@ -163,13 +109,13 @@ struct FAnimationFrame
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
 		uint8 PlayDuration;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
-		bool bDoesCycle;
+		bool bDoesCycle = false;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
-		bool bSuperFlash; //freezes Opposing character in place
+		bool bSuperFlash = false; //freezes Opposing character in place
 
 	//relinquish complete control of camera positioning to animation/character class, camera will snap to stored positions
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
-		bool bCinematic;
+		bool bCinematic = false;
 
 	//camera location relative to character's position, will snap to location if bCinematic is also on, otherwise will lerp to new positions, must be a non zero vector to use
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
@@ -234,20 +180,21 @@ struct FCharacterState
 {
 	GENERATED_BODY()
 
-	TArray<FAnimationFrame>* CurrentAnimation;
-	FAnimationFrame* CurrentAnimFrame;
-	TArray<FHitbox>* CurrentHitbox;
-	TArray<FHurtbox>* CurrentHurtbox;
+	TArray<FAnimationFrame> CurrentAnimation;
 	TArray<FProjectileState> CurrentProjectileStates;
 	TArray<FSigilState> CurrentSigilStates;
 	TArray<FBlitzState> CurrentBlitzState;
 
-	uint8 AnimFrameIndex;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
+	uint8 AnimFrameIndex = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
 	uint8 PosePlayTime = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
 	uint8 IdleCycle = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
 	bool bPlaySound = false;
 
-	UPROPERTY(EditAnywhere, Category = "Battle Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 		bool bFacingRight = true;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
@@ -262,10 +209,10 @@ struct FCharacterState
 		uint8 GravDefyTime = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 		uint8 ShatteredTime = 0;
-	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 		uint8 SlowMoTime = 0;
 
-	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 		uint8 JumpsUsed = 0;
 
 
@@ -282,20 +229,25 @@ struct FCharacterState
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 		int32 JustDefense = 5;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	TArray<int32> SpecialVariables; //Store any unique character variables here
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	int32 Seals = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	int32 SealTimer = 0;
 
 	//character's vitality, loses when it hits zero
 	UPROPERTY(VisibleAnywhere, Category = "Battle Stats")
-		int32 Health;
+		int32 Health = 1000;
 	//the resolve that must be broken through
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
 		uint8 Resolve = 4;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
 		int32 Durability = 100;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	uint8 ResolveRecoverTimer; //Resolve starts passive recovery after 3 seconds of not being used and while not shattered, does not increment while shattered
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	uint8 RecoverInterval; //dictates how quickly Resolve replenishes, recovers more quickly the lower the character's life, doubled while in slow mo
 
 	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
@@ -308,74 +260,125 @@ struct FCharacterState
 
 	//value that increasingly scales positive vertical knockback the longer a character is in a combo
 	//causes a character to not be launched as high the more hits there are in a combo
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	int ComboCount = 0; //keeps track of the number of hits in a combo performed by this character
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	int ComboTimer = 0; //keeps track of the amount of time this character has spent in hitstun in frames
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	bool bTrueCombo = true; //keeps track of whether or not a character could have escaped a combo at some point
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	float SpecialProration = 1;
 
 	// ints to denote active time on directional inputs
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Dir1 = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Dir2 = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Dir3 = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Dir4 = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Dir6 = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Dir7 = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Dir8 = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Dir9 = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 DoubleDir2 = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 DoubleDir6 = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 DoubleDir4 = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 AirJump = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool Resolute; // Set to true when no inputs are held down
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Charge2 = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Charge4 = 0;
 	//uint8 Charge5 = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Charge6 = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Charge8 = 0;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Charge2Life = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Charge4Life = 0;
 	//uint8 Charge5Life = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Charge6Life = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Charge8Life = 0;
 
 	// ints to denote active time on button inputs
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 LPressed = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 MPressed = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 HPressed = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 BPressed = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 LReleased = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 MReleased = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 HReleased = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 BReleased = 0;
 
 	//booleans to track if buttons are being held down
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bIsLDown;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bIsMDown;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bIsHDown;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bIsBDown;
 
 	//int using bit flags to track to actions available to the character
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	int32 AvailableActions;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	int32 MoveList;
 
 	//booleans to dictate the character's current state
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bIsRunning = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bForwardJump = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bBackwardJump = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bArmorActive = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bCounterHitState = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	int32 CharacterHitState = None; //determines if character can be bounced against/ stuck to surfaces, uses AttackProperties enum
 
 	//keeps track of whether an attack has already hit something
 	//attack effects are only applied based on the first overlap interaction with the attack (!bAttackMadeContact)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bAttackMadeContact = false;
 	//keeps track if an attack makes a hit, used for attacks that have a followup when they hit
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bHitSuccess = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bClash = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bBlitzing;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bWin = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bLose = false;
 
 	//Sets the corresponding parameters on character's materials
@@ -397,6 +400,7 @@ struct FCharacterState
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 	float LineThickness; //0-1 during cinematics, 2 during normal gameplay
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	int32 StatusTimer; //only mixes with status color as long as this is greater than zero
 };
 
@@ -416,6 +420,8 @@ public:
 
 	virtual void HitDetection();
 
+	void HitAnimation();
+
 	virtual void UpdateCharacter(int32 CurrentInputs, int32 FrameNumber);
 
 	void VelocitySolver(); //only called once by gamestate, do not call for each character
@@ -428,6 +434,12 @@ public:
 
 	virtual void SetColor(uint8 ColorID);
 
+	bool EnterNewAnimation(TArray<FAnimationFrame> Animation, int32 FrameNumber = 0);
+
+	bool IsCurrentAnimation(TArray<FAnimationFrame> Animation);
+
+	bool RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2D Size1, FVector2D Size2);
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
 		TSubclassOf<class ASigil> SigilBlueprint;
 
@@ -437,7 +449,7 @@ public:
 	ABTCharacterBase* Opponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "State")
-		FCharacterState CurrentState{0};
+	FCharacterState CurrentState;
 
 	TArray<ABTProjectileBase*> Projectiles;
 
@@ -446,6 +458,32 @@ public:
 	ABlitzImageBase* BlitzImage;
 
 	TArray<int32> InputHistory;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
+		int32 MaxHealth = 1000;
+
+	//values that represent a character's resilience as a battle rages on
+	//scales down damage received based on how low the character's health is
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
+		float Valor100;
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
+		float Valor50;
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
+		float Valor25;
+	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
+		float Valor10;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float StandingPushBoxHeight = 1;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float CrouchingPushBoxHeight = 1;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float PushboxWidth = 1;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float AirPushboxVerticalOffset = 0;
+
+	FVector StatusColor;
+	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
 
 	//Blitz Cancel
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
@@ -491,8 +529,6 @@ protected:
 		UTexture* BodyLines;
 
 	UMaterialInstanceDynamic* DynamicOutline;
-	FVector StatusColor;
-	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
 	float DepthOffset;
 
 	// Called when the game starts or when spawned
@@ -538,21 +574,9 @@ protected:
 
 	void RefreshMovelist();
 
-	bool EnterNewAnimation(TArray<FAnimationFrame> Animation, int32 FrameNumber = 0);
-	
-	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-		int32 MaxHealth = 1000;
+	void ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter);
 
-	//values that represent a character's resilience as a battle rages on
-	//scales down damage received based on how low the character's health is
-	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-		float Valor100;
-	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-		float Valor50;
-	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-		float Valor25;
-	UPROPERTY(EditDefaultsOnly, Category = "Battle Stats")
-		float Valor10;
+	void ContactThrow(FHitbox Hitbox, int32 ThrowType);
 
 	/* Affects how quickly the character falls to the ground (See below for values per weight class)
 		Featherweight = .95 
@@ -561,14 +585,6 @@ protected:
 		Heavyweight = 1.03  */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float Weight = 1;
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float StandingPushBoxHeight = 1;
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float CrouchingPushBoxHeight = 1;
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float PushboxWidth = 1;
-	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float AirPushboxVerticalOffset = 0;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		FVector2D AirDashForwardOffset;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
@@ -596,6 +612,7 @@ protected:
 	//number of frames that an input is active for
 		uint8 InputTime = 10;
 
+public:
 	//Idle Stance Animations
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle Anims")
 		TArray<FAnimationFrame> IdleStand;
@@ -804,17 +821,15 @@ private:
 
 	void InputCountdown();
 
-	bool RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2D Size1, FVector2D Size2);
-
-	void ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter);
-
-	void ContactThrow(FHitbox Hitbox, int32 ThrowType);
-
 	void AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter);
 
 	void SetSounds();
 
 	void SaveFXStates();
+
+	void ProcessBlitz();
+
+	void ClashDetection();
 };
 
 /* 

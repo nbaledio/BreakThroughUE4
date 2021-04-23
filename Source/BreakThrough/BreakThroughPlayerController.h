@@ -69,6 +69,22 @@ protected:
 		{ EKeys::Gamepad_Special_Left,      INPUT_SELECT },
 		{ EKeys::Gamepad_LeftThumbstick,    INPUT_LEFT_STICK_CLICK },
 		{ EKeys::Gamepad_RightThumbstick,   INPUT_RIGHT_STICK_CLICK },
+		{ EKeys::S,							INPUT_DOWN },
+		{ EKeys::SpaceBar,					INPUT_UP },
+		{ EKeys::A,							INPUT_LEFT },
+		{ EKeys::D,							INPUT_RIGHT },
+		{ EKeys::U,							INPUT_LIGHT },
+		{ EKeys::I,							INPUT_MEDIUM },
+		{ EKeys::K,							INPUT_HEAVY },
+		{ EKeys::J,							INPUT_BREAK },
+		{ EKeys::O,							INPUT_LM_COMBO },
+		{ EKeys::L,							INPUT_HB_COMBO },
+		{ EKeys::P,							INPUT_LB_COMBO },
+		{ EKeys::Semicolon,					INPUT_MH_COMBO },
+		{ EKeys::Escape,					INPUT_START },
+		{ EKeys::BackSpace,					INPUT_SELECT },
+		{ EKeys::Comma,						INPUT_LEFT_STICK_CLICK },
+		{ EKeys::Period,					INPUT_RIGHT_STICK_CLICK },
 	};
 
 	virtual void BeginPlay() override; //will be mainly used to switch out default settings with any custom input bindings

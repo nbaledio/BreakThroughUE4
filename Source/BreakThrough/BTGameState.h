@@ -7,7 +7,8 @@
 /**
  * 
  */
-struct GameState
+
+struct BTGameState
 {
 	void Init();
 	void Update(int inputs[], int disconnect_flags);
@@ -18,6 +19,6 @@ struct GameState
 public:
 	int FrameNumber;
 	ABTCharacterBase* Player[2];
-	TArray<FCharacterState> CharacterStates;
+	FCharacterState CharacterStates[2];
 	//RoundManagerState;
 };

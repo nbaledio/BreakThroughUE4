@@ -100,5 +100,4 @@ protected:
 	UMaterialInstanceDynamic* DynamicSpearMetallic;
 	UMaterialInstanceDynamic* DynamicSpearSpec;
 	UMaterialInstanceDynamic* DynamicSpearEdge;
-	
 };
