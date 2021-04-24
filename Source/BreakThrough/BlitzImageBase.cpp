@@ -44,24 +44,29 @@ void ABlitzImageBase::Activate(FVector2D Location, UAnimationAsset* NewPose, boo
 	CurrentState.Alpha = 0;
 	CurrentState.FlashEffectFrameIndex = 0;
 	CurrentState.FlashEffectFramePlayTime = 0;
-	CurrentState.WaveEffectFrameIndex = 0;
-	CurrentState.WaveEffectFramePlayTime = 0;
 	CurrentState.EffectColor = EffectColor;
 
 	BaseMesh->SetRelativeLocation(FVector(0));
+}
+
+void ABlitzImageBase::ActivateWave()
+{
+	CurrentState.bWaveIsActive = true;
+	CurrentState.WaveEffectFrameIndex = 0;
+	CurrentState.WaveEffectFramePlayTime = 0;
 }
 
 void ABlitzImageBase::Update()
 {
 	if (CurrentState.bIsActive)
 	{
-		CurrentState.Alpha = FMath::Min(1.f, CurrentState.Alpha + .03f);
+		CurrentState.Alpha = FMath::Min(1.f, CurrentState.Alpha + .02f);
 
 		if (Owner != nullptr)
 		{
 			if (Owner->Opponent != nullptr)
 			{
-				if (Owner->Opponent->CurrentState.SlowMoTime > 15)
+				if (Owner->Opponent->CurrentState.SlowMoTime > 30)
 				{
 					CurrentState.Alpha = 0;
 				}
@@ -77,11 +82,11 @@ void ABlitzImageBase::Update()
 
 				float BaseMeshOffset;
 				if (CurrentState.bFacingRight)
-					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X - 100,
-						FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 4 + CurrentState.FlashEffectFramePlayTime) / 28));
+					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X - 250,
+						FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 5) / 25));
 				else
-					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X + 100,
-						FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 4 + CurrentState.FlashEffectFramePlayTime) / 28));
+					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X + 250,
+						FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 5) / 25));
 
 				BaseMesh->SetRelativeLocation(FVector(BaseMeshOffset, 0, 0));
 			}
@@ -89,7 +94,7 @@ void ABlitzImageBase::Update()
 
 		if (CurrentState.FlashEffectFrameIndex < 7)
 		{
-			if (CurrentState.FlashEffectFramePlayTime >= 4)
+			if (CurrentState.FlashEffectFramePlayTime >= 5)
 			{
 				CurrentState.FlashEffectFrameIndex++;
 				CurrentState.FlashEffectFramePlayTime = 0;
@@ -98,6 +103,11 @@ void ABlitzImageBase::Update()
 		}
 		else if (CurrentState.Alpha >= 1)
 			CurrentState.bIsActive = false;
+
+		if (CurrentState.bWaveIsActive)
+		{
+
+		}
 	}
 }
 

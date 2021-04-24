@@ -71,8 +71,6 @@ void BTGameState::LoadGameState()
         if (Player[i] != nullptr)// && CharacterStates.Num() > i)
         {
             Player[i]->CurrentState = CharacterStates[i];
-            //UE_LOG(LogTemp, Warning, TEXT("OnCharacter: Player %d Position: (%f, %f)"), i, Player[i]->CurrentState.Position.X, Player[i]->CurrentState.Position.Y);
-            //UE_LOG(LogTemp, Warning, TEXT("SavedBTGameState: Player %d Position: (%f, %f)"), i, Player[i]->CurrentState.Position.X, Player[i]->CurrentState.Position.Y);
         }
     }
 

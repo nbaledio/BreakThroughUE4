@@ -390,6 +390,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicBodyMain->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
 		DynamicBodyMain->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicBodyMain->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+		DynamicBodyMain->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
 	}
 	if (DynamicBodyMetallic)
 	{
@@ -397,6 +398,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicBodyMetallic->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
 		DynamicBodyMetallic->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicBodyMetallic->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+		DynamicBodyMetallic->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
 	}
 		
 	if (DynamicBodySpec)
@@ -405,6 +407,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicBodySpec->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
 		DynamicBodySpec->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicBodySpec->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+		DynamicBodySpec->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
 	}
 	if (DynamicSeals)
 	{
@@ -412,6 +415,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicSeals->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
 		DynamicSeals->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicSeals->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+		DynamicSeals->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
 	}
 	if (DynamicRightEye)
 	{
@@ -419,6 +423,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicRightEye->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
 		DynamicRightEye->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicRightEye->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+		DynamicRightEye->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
 	}
 	if (DynamicSpearMetallic)
 	{
@@ -426,6 +431,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicSpearMetallic->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
 		DynamicSpearMetallic->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicSpearMetallic->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+		DynamicSpearMetallic->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
 	}
 	if (DynamicSpearSpec)
 	{
@@ -433,6 +439,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicSpearSpec->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
 		DynamicSpearSpec->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicSpearSpec->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+		DynamicSpearSpec->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
 	}
 	if (DynamicSpearEdge)
 	{
@@ -440,6 +447,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicSpearEdge->SetVectorParameterValue(FName("FillLightVector"), FillLightValue);
 		DynamicSpearEdge->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicSpearEdge->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
+		DynamicSpearEdge->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
 	}	
 }
 

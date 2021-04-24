@@ -57,10 +57,19 @@ void ABTCharacterBase::SuperFlashSolver() //Only play once from Player1
 		if (CurrentState.CurrentAnimFrame.bSuperFlash)
 		{
 			Opponent->CurrentState.HitStop++;
+			DepthOffset = 0;
+			Opponent->DepthOffset = 600;
 		}
 		else if (Opponent->CurrentState.CurrentAnimFrame.bSuperFlash)
 		{
 			CurrentState.HitStop++;
+			DepthOffset = 600;
+			Opponent->DepthOffset = 0;
+		}
+		else if (Opponent->CurrentState.CurrentAnimFrame.bCinematic || CurrentState.CurrentAnimFrame.bCinematic)
+		{
+			DepthOffset = 0;
+			Opponent->DepthOffset = 0;
 		}
 	}
 }
@@ -78,7 +87,6 @@ void ABTCharacterBase::HitDetection()
 		if (CurrentState.bBlitzing)
 		{
 			ProcessBlitz();
-			CurrentState.bBlitzing = false;
 		}
 		//only look for hits if there are hitboxes active, and the current hitbox has not hit anything previously
 		else if (CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0 && !CurrentState.bAttackMadeContact && CurrentState.HitStop == 0)
@@ -301,9 +309,13 @@ void ABTCharacterBase::VelocitySolver()
 				}
 			}
 			else if (CurrentState.bIsRunning) //opponent provides resistance when dashing against them
-				CurrentState.Velocity.X = .9f * CurrentState.Velocity.X;
+			{
+				//CurrentState.Velocity.X = .9f * CurrentState.Velocity.X;
+			}
 			else if (Opponent->CurrentState.bIsRunning) //provide resistance against dashing opponent
-				Opponent->CurrentState.Velocity.X = .9f * CurrentState.Velocity.X;
+			{
+				//Opponent->CurrentState.Velocity.X = .9f * CurrentState.Velocity.X;
+			}
 			else if ((CurrentState.bFacingRight && CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X < 0) || (!CurrentState.bFacingRight && CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X > 0) &&
 				CurrentState.AvailableActions & AcceptMove && Opponent->CurrentState.AvailableActions & AcceptMove) //both characters stop moving if walking against each other
 			{
@@ -337,10 +349,14 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 
 		if (!CurrentState.CurrentAnimFrame.bLockPosition)
 		{
+			uint8 DistanceScaler = 100;
+			if (CurrentState.bIsRunning && !Opponent->CurrentState.bIsRunning && CurrentState.bTouchingOpponent) //opponent provides resistance when dashing against them
+				DistanceScaler = 80;
+
 			if (CurrentState.SlowMoTime > 0)
-				CurrentState.Position += CurrentState.Velocity * 100 / 120.f;
+				CurrentState.Position += CurrentState.Velocity * DistanceScaler / 120.f;
 			else
-				CurrentState.Position += CurrentState.Velocity * 100 / 60.f;
+				CurrentState.Position += CurrentState.Velocity * DistanceScaler / 60.f;
 		}
 
 		if (CurrentState.Position.Y <= 0)
@@ -741,6 +757,7 @@ void ABTCharacterBase::DrawCharacter()
 	LightSettings();
 
 	DynamicOutline->SetScalarParameterValue(FName("LineThickness"), CurrentState.LineThickness);
+	DynamicOutline->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
 
 	if (CurrentState.CurrentAnimFrame.Pose != nullptr)
 		BaseMesh->PlayAnimation(CurrentState.CurrentAnimFrame.Pose, false);
@@ -780,7 +797,11 @@ void ABTCharacterBase::DrawCharacter()
 
 	//draw blitz image effects if active
 	if (BlitzImage != nullptr)
+	{
+		FVector MainLightValue = MainLight->GetComponentLocation() - GetActorLocation();
+		BlitzImage->LightVector = MainLightValue;
 		BlitzImage->DrawBlitz();
+	}
 
 	//if Hitbox View is on also loop through hitbox and hurtbox arrays and draw to screen
 }
@@ -1122,30 +1143,25 @@ void ABTCharacterBase::RunBraking()
 {
 	if (CurrentState.bIsRunning) //accelerate while running
 	{
+		float AccelScale = 1;
+		if (CurrentState.bIsRunning && !Opponent->CurrentState.bIsRunning && CurrentState.bTouchingOpponent) //opponent provides resistance when dashing against them
+			AccelScale *= .8f;
+		if (CurrentState.SlowMoTime > 0)
+			AccelScale *= .5f;
+
 		if (CurrentState.bFacingRight)
 		{
 			if (CurrentState.Velocity.X < InitRunSpeed)
 				CurrentState.Velocity.X = InitRunSpeed;
 			else
-			{
-				if (CurrentState.SlowMoTime > 0)
-					CurrentState.Velocity.X += .5f * RunAcceleration;
-				else
-					CurrentState.Velocity.X += RunAcceleration;
-			}
-
+				CurrentState.Velocity.X += AccelScale * RunAcceleration;
 		}
 		else
 		{
 			if (CurrentState.Velocity.X > -InitRunSpeed)
 				CurrentState.Velocity.X = -InitRunSpeed;
 			else
-			{
-				if (CurrentState.SlowMoTime > 0)
-					CurrentState.Velocity.X -= .5f * RunAcceleration;
-				else
-					CurrentState.Velocity.X -= RunAcceleration;
-			}
+				CurrentState.Velocity.X -= AccelScale * RunAcceleration;
 		}
 
 		//stop running if forward direction is no longer being held for run type characters and if animation has finished on dash type characters
@@ -1388,6 +1404,7 @@ void ABTCharacterBase::ChargeInputs(int32 Inputs)  //set the correct charges bas
 
 void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directional inputs based on the inputs read
 {
+	CurrentState.bIsGuarding = false;
 	if (Inputs & INPUT_DOWN)
 	{
 		if ((CurrentState.bFacingRight && Inputs & INPUT_RIGHT) || (!CurrentState.bFacingRight && Inputs & INPUT_LEFT))
@@ -1444,7 +1461,6 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 				CurrentState.DoubleDir4 = InputTime;
 			}
 			CurrentState.Dir4 = InputTime;
-			CurrentState.bIsGuarding = true;
 		}
 		else
 		{
@@ -1879,11 +1895,29 @@ bool ABTCharacterBase::ExitTimeTransitions()
 
 void ABTCharacterBase::AnimationEvents()
 {
-	if (IsCurrentAnimation(NeutralJump) || IsCurrentAnimation(ForwardJump) || IsCurrentAnimation(BackwardJump))
+	if (IsCurrentAnimation(FocusBlitz) || IsCurrentAnimation(BreakerBlitz))
+	{
+		if (CurrentState.CurrentBlitzState[0].EffectColor == 1) //Focus Blitz
+		{
+			//if (CurrentState.AnimFrameIndex == ?)
+			//BlitzImage->ActivateWave();
+			if (CurrentState.AnimFrameIndex == FocusBlitz.Num() - 1 && CurrentState.PosePlayTime == CurrentState.CurrentAnimFrame.PlayDuration - 1)
+			{
+				CurrentState.bBlitzing = true;
+				UE_LOG(LogTemp, Warning, TEXT("Blitzing"));
+			}
+		}
+		else
+		{
+			if (CurrentState.AnimFrameIndex == 4)
+				CurrentState.bBlitzing = true;
+		}
+	}
+	else if (IsCurrentAnimation(NeutralJump) || IsCurrentAnimation(ForwardJump) || IsCurrentAnimation(BackwardJump))
 	{
 		if (NeutralJump.Num() > 0 && ForwardJump.Num() > 0 && BackwardJump.Num() > 0)
 		{
-			if ((IsCurrentAnimation(NeutralJump) || IsCurrentAnimation(ForwardJump) || IsCurrentAnimation(BackwardJump)) && CurrentState.PosePlayTime == 0 && CurrentState.AnimFrameIndex == 0) //Jump animation event
+			if (CurrentState.PosePlayTime == 0 && CurrentState.AnimFrameIndex == 0) //Jump animation event
 			{
 				Jumping();
 			}
@@ -1973,6 +2007,11 @@ bool ABTCharacterBase::RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2
 void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 {
 	Opponent->TurnAroundCheck();
+	if (!CurrentState.CurrentAnimFrame.bCinematic)
+	{
+		DepthOffset = 0;
+		Opponent->DepthOffset = 600;
+	}
 	//If the opponent would be on the ground on the next frame, treat them as if they were hit while on the ground
 	if (Opponent->CurrentState.HitStun == 0 && Opponent->CurrentState.bIsAirborne && CurrentState.Position.Y + CurrentState.Velocity.Y * 100 / 60.f <= 0)
 	{
@@ -2422,6 +2461,7 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 			//play Resolute Counter UI graphic
 			Opponent->CurrentState.ResolveRecoverTimer = 180;
 			Opponent->CurrentState.Durability = 101;
+
 			if (ThrowType == AirThrow)
 			{
 				EnterNewAnimation(DeflectedAir);
@@ -2491,6 +2531,11 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 
 	if (!CurrentState.bClash)
 	{
+		if (!CurrentState.CurrentAnimFrame.bCinematic)
+		{
+			DepthOffset = 0;
+			Opponent->DepthOffset = 600;
+		}
 		CurrentState.bAttackMadeContact = true;
 		AttackCalculation(Hitbox, Opponent->CurrentState.Position);
 	}
@@ -2635,7 +2680,7 @@ bool ABTCharacterBase::BlitzCancel()
 			}
 			if (CurrentState.AvailableActions & AcceptMove) //focus blitz
 			{
-				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 2);
+				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 1);
 
 				return EnterNewAnimation(FocusBlitz);
 			}
@@ -2648,7 +2693,7 @@ bool ABTCharacterBase::BlitzCancel()
 		{
 			if (CurrentState.BlockStun > 0 && CurrentState.Resolve > 1) //breaker blitz
 			{
-				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 1);
+				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 2);
 
 				CurrentState.Resolve--;
 
@@ -2656,7 +2701,7 @@ bool ABTCharacterBase::BlitzCancel()
 			}
 			if (CurrentState.AvailableActions & AcceptMove) //focus blitz
 			{
-				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 2);
+				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 1);
 
 				return EnterNewAnimation(FocusBlitz);
 			}
@@ -2732,15 +2777,19 @@ void ABTCharacterBase::LightSettings()
 
 void ABTCharacterBase::ProcessBlitz()
 {
+	CurrentState.bBlitzing = false;
 	if (FMath::Sqrt(FMath::Square(CurrentState.Position.X - Opponent->CurrentState.Position.X) + FMath::Square(CurrentState.Position.Y - Opponent->CurrentState.Position.Y)) < 250)
 	{
 		if (Opponent->CurrentState.Resolute)
 		{
 			Opponent->CurrentState.Durability += 50;
 			//Play UI Resolute signal
+			UE_LOG(LogTemp, Warning, TEXT("RESOLUTE"));
 		}
-		else if (IsCurrentAnimation(BreakerBlitz))
+		else if (IsCurrentAnimation(BreakerBlitz) && BlitzImage->CurrentState.EffectColor == 2)
 		{
+			DepthOffset = 0;
+			Opponent->DepthOffset = 600;
 			//Similar to normal hit behavior based on whether the opponent is guarding or not
 			if (Opponent->CurrentState.bIsGuarding)
 			{
@@ -2835,6 +2884,7 @@ void ABTCharacterBase::ProcessBlitz()
 		}
 		else
 		{
+			UE_LOG(LogTemp, Warning, TEXT("Slowing Opponent"));
 			if (Opponent->CurrentState.ShatteredTime % 2 == 0)
 				Opponent->CurrentState.SlowMoTime = 60; //Slows opponent for one second
 			else

@@ -485,6 +485,7 @@ public:
 
 	FVector StatusColor;
 	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
+	float DepthOffset;
 
 	//Blitz Cancel
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
@@ -541,7 +542,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 		FVector DefaultRimLightColor = FVector(1);
 	UMaterialInstanceDynamic* DynamicOutline;
-	float DepthOffset;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay();
