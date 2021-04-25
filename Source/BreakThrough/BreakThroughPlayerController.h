@@ -71,6 +71,7 @@ protected:
 		{ EKeys::Gamepad_RightThumbstick,   INPUT_RIGHT_STICK_CLICK },
 		{ EKeys::S,							INPUT_DOWN },
 		{ EKeys::SpaceBar,					INPUT_UP },
+		{ EKeys::W,							INPUT_UP },
 		{ EKeys::A,							INPUT_LEFT },
 		{ EKeys::D,							INPUT_RIGHT },
 		{ EKeys::U,							INPUT_LIGHT },
