@@ -1305,26 +1305,26 @@ void ABTCharacterBase::UpdateResolve()
 		if (CurrentState.ShatteredTime == 0 && !CurrentState.CurrentAnimFrame.bCinematic && !CurrentState.CurrentAnimFrame.bSuperFlash &&
 			!Opponent->CurrentState.CurrentAnimFrame.bCinematic && !Opponent->CurrentState.CurrentAnimFrame.bSuperFlash && !CurrentState.bWin && !Opponent->CurrentState.bWin)
 		{
-			if (CurrentState.ResolveRecoverTimer >= 180) //Resolve starts passively regenerating after three seconds without being used or broken, resolve regen speeds up if the character is not inputting anything
+			if (CurrentState.ResolveRecoverTimer >= 180 && CurrentState.Durability <= 100) //Resolve starts passively regenerating after three seconds without being used or broken, resolve regen speeds up if the character is not inputting anything
 			{
 				if ((float)CurrentState.Health / (float)MaxHealth <= .1f && (CurrentState.SlowMoTime == 0 || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 2)))
 				{
 					CurrentState.Durability++;
-					if (CurrentState.Resolute)
+					if (CurrentState.Resolute || CurrentState.bIsRunning)
 						CurrentState.Durability++;
 					CurrentState.RecoverInterval = 0;
 				}
-				else if ((float)CurrentState.Health / (float)MaxHealth <= .25f && ((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 2) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 4) || (CurrentState.SlowMoTime == 0 && CurrentState.Resolute)))
+				else if ((float)CurrentState.Health / (float)MaxHealth <= .25f && ((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 2) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 4) || (CurrentState.SlowMoTime == 0 && (CurrentState.Resolute))))
 				{
 					CurrentState.Durability++;
 					CurrentState.RecoverInterval = 0;
 				}
-				else if ((float)CurrentState.Health / (float)MaxHealth <= .5f && ((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 3) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 6) || (CurrentState.SlowMoTime == 0 && CurrentState.Resolute && CurrentState.RecoverInterval >= 2)))
+				else if ((float)CurrentState.Health / (float)MaxHealth <= .5f && ((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 3) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 6) || (CurrentState.SlowMoTime == 0 && (CurrentState.Resolute) && CurrentState.RecoverInterval >= 2)))
 				{
 					CurrentState.Durability++;
 					CurrentState.RecoverInterval = 0;
 				}
-				else if (((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 4) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 8) || (CurrentState.SlowMoTime == 0 && CurrentState.Resolute && CurrentState.RecoverInterval >= 3)))
+				else if (((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 4) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 8) || (CurrentState.SlowMoTime == 0 && (CurrentState.Resolute) && CurrentState.RecoverInterval >= 3)))
 				{
 					CurrentState.Durability++;
 					CurrentState.RecoverInterval = 0;
@@ -1332,7 +1332,7 @@ void ABTCharacterBase::UpdateResolve()
 				else
 					CurrentState.RecoverInterval++;
 			}
-			else
+			else if (CurrentState.ResolveRecoverTimer < 180)
 				CurrentState.ResolveRecoverTimer++;
 		}
 	}
@@ -1350,7 +1350,7 @@ void ABTCharacterBase::UpdateResolve()
 			CurrentState.Durability = 100;
 		}
 	}
-	else if (CurrentState.Durability <= 0)
+	else if (CurrentState.Durability < 0)
 	{
 		if (CurrentState.Resolve > 0)
 		{
@@ -1369,37 +1369,39 @@ void ABTCharacterBase::ProcessInputs(int32 Inputs)
 
 void ABTCharacterBase::ChargeInputs(int32 Inputs)  //set the correct charges based on the inputs read
 {
-	if (Inputs & INPUT_DOWN)
-	{
-		CurrentState.Charge2++;
-		CurrentState.Charge2Life = InputTime;
-	}
-	else if (CurrentState.Charge2Life == 0)
-		CurrentState.Charge2 = 0;
-
-	if (Inputs & INPUT_UP)
+	if (Inputs & INPUT_UP) //up charge will override down charge
 	{
 		CurrentState.Charge8++;
 		CurrentState.Charge8Life = InputTime;
 	}
-	else if (CurrentState.Charge8Life == 0)
-		CurrentState.Charge8 = 0;
+	else if (Inputs & INPUT_DOWN)
+	{
+		CurrentState.Charge2++;
+		CurrentState.Charge2Life = InputTime;
+	}
 
 	if ((Inputs & INPUT_LEFT && !CurrentState.bFacingRight) || (Inputs & INPUT_RIGHT && CurrentState.bFacingRight))
 	{
 		CurrentState.Charge6++;
 		CurrentState.Charge6Life = InputTime;
 	}
-	else if (CurrentState.Charge6Life == 0)
-		CurrentState.Charge6 = 0;
-
-	if ((Inputs & INPUT_LEFT && CurrentState.bFacingRight) || (Inputs & INPUT_RIGHT && !CurrentState.bFacingRight))
+	else if ((Inputs & INPUT_LEFT && CurrentState.bFacingRight) || (Inputs & INPUT_RIGHT && !CurrentState.bFacingRight)) //prevent charging both directions at the same time
 	{
 		CurrentState.Charge4++;
 		CurrentState.Charge4Life = InputTime;
 	}
-	else if (CurrentState.Charge4Life == 0)
+	
+	if (CurrentState.Charge4Life == 0)
 		CurrentState.Charge4 = 0;
+
+	if (CurrentState.Charge6Life == 0)
+		CurrentState.Charge6 = 0;
+
+	if (CurrentState.Charge2Life == 0)
+		CurrentState.Charge2 = 0;
+
+	if (CurrentState.Charge8Life == 0)
+		CurrentState.Charge8 = 0;
 }
 
 void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directional inputs based on the inputs read
@@ -1413,7 +1415,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 			CurrentState.Dir1 = InputTime;
 		else
 		{
-			if (CurrentState.Dir2 < InputTime - 1 && CurrentState.Dir2 > 0 && CurrentState.DoubleDir2 == 0)
+			if (CurrentState.Dir2 < InputTime - 1 && CurrentState.Dir2 > 3 && CurrentState.DoubleDir2 == 0)
 			{
 				CurrentState.DoubleDir2 = InputTime;
 			}
@@ -1436,7 +1438,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 	{
 		if (CurrentState.bFacingRight)
 		{
-			if (CurrentState.Dir6 < InputTime - 1 && CurrentState.Dir6 > 0 && CurrentState.DoubleDir4 == 0)
+			if (CurrentState.Dir6 < InputTime - 1 && CurrentState.Dir6 > 3 && CurrentState.DoubleDir4 == 0)
 			{
 				CurrentState.DoubleDir6 = InputTime;
 			}
@@ -1444,7 +1446,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		}
 		else
 		{
-			if (CurrentState.Dir4 < InputTime - 1 && CurrentState.Dir4 > 0 && CurrentState.DoubleDir4 == 0)
+			if (CurrentState.Dir4 < InputTime - 1 && CurrentState.Dir4 > 3 && CurrentState.DoubleDir4 == 0)
 			{
 				CurrentState.DoubleDir4 = InputTime;
 			}
@@ -1456,7 +1458,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 	{
 		if (CurrentState.bFacingRight)
 		{
-			if (CurrentState.Dir4 < InputTime - 1 && CurrentState.Dir4 > 0 && CurrentState.DoubleDir4 == 0)
+			if (CurrentState.Dir4 < InputTime - 1 && CurrentState.Dir4 > 3 && CurrentState.DoubleDir4 == 0)
 			{
 				CurrentState.DoubleDir4 = InputTime;
 			}
@@ -1464,7 +1466,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		}
 		else
 		{
-			if (CurrentState.Dir6 < InputTime - 1 && CurrentState.Dir6 > 0 && CurrentState.DoubleDir4 == 0)
+			if (CurrentState.Dir6 < InputTime - 1 && CurrentState.Dir6 > 3 && CurrentState.DoubleDir4 == 0)
 			{
 				CurrentState.DoubleDir6 = InputTime;
 			}
@@ -1723,17 +1725,20 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			return EnterNewAnimation(BackDash);
 		}
 
-		if (CurrentState.Dir6 == InputTime && !IsCurrentAnimation(WalkForward))
-			return EnterNewAnimation(WalkForward);
-
-		if (CurrentState.Dir4 == InputTime && !IsCurrentAnimation(WalkBackward))
-			return EnterNewAnimation(WalkBackward);
+		if ((IsCurrentAnimation(WalkBackward) && CurrentState.Dir4 < InputTime) || (IsCurrentAnimation(WalkForward) && CurrentState.Dir6 < InputTime))
+			return EnterNewAnimation(IdleStand);
 
 		if (CurrentState.bIsCrouching && !IsCurrentAnimation(CrouchDown) && !IsCurrentAnimation(IdleCrouch) && !IsCurrentAnimation(IdleCrouchBlink) && !IsCurrentAnimation(CrouchIdleAction))
 			return EnterNewAnimation(CrouchDown);
 
 		if (!CurrentState.bIsCrouching && (IsCurrentAnimation(IdleCrouch) || IsCurrentAnimation(CrouchDown) || IsCurrentAnimation(IdleCrouchBlink) || IsCurrentAnimation(CrouchIdleAction)))
 			return EnterNewAnimation(StandUp);
+
+		if (CurrentState.Dir6 == InputTime && !IsCurrentAnimation(WalkForward))
+			return EnterNewAnimation(WalkForward);
+
+		if (CurrentState.Dir4 == InputTime && !IsCurrentAnimation(WalkBackward))
+			return EnterNewAnimation(WalkBackward);
 	}
 
 	return false;
@@ -1844,6 +1849,9 @@ bool ABTCharacterBase::ExitTimeTransitions()
 		return EnterNewAnimation(LaunchFallCycle);
 	}
 
+	if (IsCurrentAnimation(BackDash))
+		return EnterNewAnimation(IdleStand);
+
 	if (IsCurrentAnimation(StandUp) || IsCurrentAnimation(Brake) || IsCurrentAnimation(WakeUpFaceDown) || IsCurrentAnimation(WakeUpFaceUp) || IsCurrentAnimation(GuardHiOut) ||
 		IsCurrentAnimation(HitSLOut) || IsCurrentAnimation(HitSHOut) || IsCurrentAnimation(HitSLHeavyOut) || IsCurrentAnimation(HitSHHeavyOut) || IsCurrentAnimation(IdleStandBlink) ||
 		IsCurrentAnimation(StandIdleAction) || IsCurrentAnimation(Deflected) || IsCurrentAnimation(ThrowEscape) || IsCurrentAnimation(BlitzOutStanding))
@@ -1928,14 +1936,22 @@ void ABTCharacterBase::AnimationEvents()
 		CurrentState.Velocity = FVector2D(WalkSpeed, 0);
 
 		if (!CurrentState.bFacingRight)
-			CurrentState.Velocity *= -1;
+			CurrentState.Velocity.X *= -1;
+
 	}
 	else if (IsCurrentAnimation(WalkBackward))
 	{
 		CurrentState.Velocity = FVector2D(WalkBackSpeed, 0);
 
 		if (CurrentState.bFacingRight)
-			CurrentState.Velocity *= -1;
+			CurrentState.Velocity.X *= -1;
+	}
+	else if (IsCurrentAnimation(BackDash) && CurrentState.PosePlayTime == 0 && CurrentState.AnimFrameIndex == 0)
+	{
+		CurrentState.Velocity = BackDashForce;
+
+		if (CurrentState.bFacingRight)
+			CurrentState.Velocity.X *= -1;
 	}
 }
 
@@ -2778,7 +2794,7 @@ void ABTCharacterBase::LightSettings()
 void ABTCharacterBase::ProcessBlitz()
 {
 	CurrentState.bBlitzing = false;
-	if (FMath::Sqrt(FMath::Square(CurrentState.Position.X - Opponent->CurrentState.Position.X) + FMath::Square(CurrentState.Position.Y - Opponent->CurrentState.Position.Y)) < 250)
+	if (FMath::Sqrt(FMath::Square(CurrentState.Position.X - Opponent->CurrentState.Position.X) + FMath::Square(CurrentState.Position.Y - Opponent->CurrentState.Position.Y)) < 175)
 	{
 		if (Opponent->CurrentState.Resolute)
 		{
