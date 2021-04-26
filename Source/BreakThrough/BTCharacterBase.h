@@ -486,7 +486,7 @@ public:
 
 	FVector StatusColor;
 	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
-	float DepthOffset;
+	float DepthOffset = 300;
 
 	//Blitz Cancel
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
@@ -849,6 +849,12 @@ private:
 	void ProcessBlitz();
 
 	void ClashDetection();
+
+	void HitboxViewer();
+
+	void DrawHitbox(FHitbox Box);
+
+	void DrawHurtbox(FHurtbox Box);
 };
 
 /* 

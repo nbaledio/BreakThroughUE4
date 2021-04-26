@@ -57,19 +57,19 @@ void ABTCharacterBase::SuperFlashSolver() //Only play once from Player1
 		if (CurrentState.CurrentAnimFrame.bSuperFlash)
 		{
 			Opponent->CurrentState.HitStop++;
-			DepthOffset = 0;
+			DepthOffset = 300;
 			Opponent->DepthOffset = 600;
 		}
 		else if (Opponent->CurrentState.CurrentAnimFrame.bSuperFlash)
 		{
 			CurrentState.HitStop++;
 			DepthOffset = 600;
-			Opponent->DepthOffset = 0;
+			Opponent->DepthOffset = 300;
 		}
 		else if (Opponent->CurrentState.CurrentAnimFrame.bCinematic || CurrentState.CurrentAnimFrame.bCinematic)
 		{
-			DepthOffset = 0;
-			Opponent->DepthOffset = 0;
+			DepthOffset = 300;
+			Opponent->DepthOffset = 300;
 		}
 	}
 }
@@ -798,24 +798,7 @@ void ABTCharacterBase::DrawCharacter()
 	}
 
 	//if Hitbox View is on also loop through hitbox and hurtbox arrays and draw to screen
-	/*float PushboxBottom = GetActorLocation().Z;
-	float PushBoxHeight = StandingPushBoxHeight;
-	if (CurrentState.bIsCrouching || CurrentState.bIsAirborne)
-		PushBoxHeight = CrouchingPushBoxHeight;
-	if (CurrentState.bIsAirborne)
-		PushboxBottom += AirPushboxVerticalOffset;
-	//Left side
-	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
-		FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
-	//bottom side
-	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
-		FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom), FColor(255, 255, 0), false, 0, 0, .5f);
-	//right side
-	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
-		FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
-	//top side
-	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight),
-		FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);*/
+	HitboxViewer();
 }
 
 void ABTCharacterBase::ProcessAnimationFrame()
@@ -1208,7 +1191,7 @@ void ABTCharacterBase::Jumping()
 {
 	TurnAroundCheck();
 	RefreshMovelist();
-	DepthOffset = 0;
+	DepthOffset = 300;
 	Opponent->DepthOffset = 600;
 
 	if (CurrentState.bIsRunning) //extra horizontal velocity only if jumping with a running start
@@ -2132,7 +2115,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 	Opponent->TurnAroundCheck();
 	if (!CurrentState.CurrentAnimFrame.bCinematic)
 	{
-		DepthOffset = 0;
+		DepthOffset = 300;
 		Opponent->DepthOffset = 600;
 	}
 	//If the opponent would be on the ground on the next frame, treat them as if they were hit while on the ground
@@ -2656,7 +2639,7 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 	{
 		if (!CurrentState.CurrentAnimFrame.bCinematic)
 		{
-			DepthOffset = 0;
+			DepthOffset = 300;
 			Opponent->DepthOffset = 600;
 		}
 		CurrentState.bAttackMadeContact = true;
@@ -2920,7 +2903,7 @@ void ABTCharacterBase::ProcessBlitz()
 		}
 		else if (IsCurrentAnimation(BreakerBlitz) && BlitzImage->CurrentState.EffectColor == 2)
 		{
-			DepthOffset = 0;
+			DepthOffset = 300;
 			Opponent->DepthOffset = 600;
 			//Similar to normal hit behavior based on whether the opponent is guarding or not
 			if (Opponent->CurrentState.bIsGuarding)
@@ -3160,4 +3143,89 @@ void ABTCharacterBase::HitAnimation()
 
 		}
 	}
+}
+
+void ABTCharacterBase::HitboxViewer()
+{
+	//Pushbox
+	if (CurrentState.CurrentAnimFrame.Invincibility != Intangible)
+	{
+		float PushboxBottom = GetActorLocation().Z;
+		float PushBoxHeight = StandingPushBoxHeight;
+		if (CurrentState.bIsCrouching || CurrentState.bIsAirborne)
+			PushBoxHeight = CrouchingPushBoxHeight;
+		if (CurrentState.bIsAirborne)
+			PushboxBottom += AirPushboxVerticalOffset;
+		//Left side
+		DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
+			FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
+		//bottom side
+		DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
+			FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom), FColor(255, 255, 0), false, 0, 0, .5f);
+		//right side
+		DrawDebugLine(GetWorld(), FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
+			FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
+		//top side
+		DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight),
+			FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
+	}
+
+	if (CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0)
+	{
+		for (int32 i = 0; i < CurrentState.CurrentAnimFrame.Hitboxes.Num(); i++)
+		{
+			DrawHitbox(CurrentState.CurrentAnimFrame.Hitboxes[i]);
+		}
+	}
+
+	if (CurrentState.CurrentAnimFrame.Hurtboxes.Num() > 0)
+	{
+		for (int32 i = 0; i < CurrentState.CurrentAnimFrame.Hurtboxes.Num(); i++)
+		{
+			DrawHurtbox(CurrentState.CurrentAnimFrame.Hurtboxes[i]);
+		}
+	}
+}
+
+void ABTCharacterBase::DrawHitbox(FHitbox Box)
+{
+	FVector BoxCenter = FVector(GetActorLocation().X + Box.Position.X, GetActorLocation().Y, GetActorLocation().Z + Box.Position.Y);
+
+	if (!CurrentState.bFacingRight)
+	{
+		BoxCenter.X = GetActorLocation().X - Box.Position.X;
+	}
+	//Left side
+	DrawDebugLine(GetWorld(), FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y),
+		FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(255, 0, 0), false, 0, 0, .5f);
+	//Bottom side
+	DrawDebugLine(GetWorld(), FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y),
+		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(255, 0, 0), false, 0, 0, .5f);
+	//Right side
+	DrawDebugLine(GetWorld(), FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y),
+		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(255, 0, 0), false, 0, 0, .5f);
+	//Top side
+	DrawDebugLine(GetWorld(), FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y),
+		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y), FColor(255, 0, 0), false, 0, 0, .5f);
+}
+
+void ABTCharacterBase::DrawHurtbox(FHurtbox Box)
+{
+	FVector BoxCenter = FVector(GetActorLocation().X + Box.Position.X, GetActorLocation().Y, GetActorLocation().Z + Box.Position.Y);
+	if (!CurrentState.bFacingRight)
+	{
+		BoxCenter.X = GetActorLocation().X - Box.Position.X;
+	}
+	//Left side
+	DrawDebugLine(GetWorld(), FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y),
+		FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(0, 255, 0), false, 0, 0, .5f);
+	//Bottom side
+	DrawDebugLine(GetWorld(), FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y),
+		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(0, 255, 0), false, 0, 0, .5f);
+	//Right side
+	DrawDebugLine(GetWorld(), FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y),
+		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(0, 255, 0), false, 0, 0, .5f);
+	//Top side
+	DrawDebugLine(GetWorld(), FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y),
+		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y), FColor(0, 255, 0), false, 0, 0, .5f);
 }

@@ -67,7 +67,7 @@ void AHitboxTool::DrawPushbox()
 		FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
 }
 
-void AHitboxTool::DrawHitbox(FTestHurtbox Box)
+void AHitboxTool::DrawHitbox(FTestHitbox Box)
 {
 	FVector BoxCenter = FVector(GetActorLocation().X + Box.Position.X, GetActorLocation().Y + 34, GetActorLocation().Z + Box.Position.Y);
 	//Left side
