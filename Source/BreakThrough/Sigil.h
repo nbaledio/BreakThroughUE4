@@ -47,6 +47,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
 		FVector EchoColor;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
+		UTexture* SigilImage;
+
 	UMaterialInstanceDynamic* DynamicSigilMaterial;
 	UMaterialInstanceDynamic* DynamicEchoMaterial;
 
@@ -62,9 +65,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UStaticMeshComponent* Echo;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
-		UTexture* SigilImage;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
 	UMaterialInterface* BaseSigilMaterial;

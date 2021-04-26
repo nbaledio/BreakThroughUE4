@@ -202,21 +202,11 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 		RunBraking();
 
 		if (CurrentState.HitStun > 0)
-		{
 			CurrentState.AvailableActions = None;
-		}
 		else if (CurrentState.BlockStun > 0)
 			CurrentState.AvailableActions = AcceptGuard;
 		else
-		{
 			CurrentState.CharacterHitState = 0;
-		}
-
-		if (CurrentState.AvailableActions & AcceptMove)
-		{
-			if (!CurrentState.bIsAirborne)
-				TurnAroundCheck();
-		}
 			
 
 		//Checking PosePlayTime < PlayDuration, Changing Animations, and Anim Transitions based on read inputs
@@ -276,7 +266,6 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 	}
 
 	//first setting of light colors
-		
 
 	SetSounds();
 }
@@ -761,9 +750,6 @@ void ABTCharacterBase::DrawCharacter()
 	DynamicOutline->SetScalarParameterValue(FName("LineThickness"), CurrentState.LineThickness);
 	DynamicOutline->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
 
-	if (CurrentState.CurrentAnimFrame.Pose != nullptr)
-		BaseMesh->PlayAnimation(CurrentState.CurrentAnimFrame.Pose, false);
-
 	if (CurrentState.bFacingRight)
 	{
 		BaseMesh->SetRelativeScale3D(FVector(1, 1, 1));
@@ -812,6 +798,24 @@ void ABTCharacterBase::DrawCharacter()
 	}
 
 	//if Hitbox View is on also loop through hitbox and hurtbox arrays and draw to screen
+	/*float PushboxBottom = GetActorLocation().Z;
+	float PushBoxHeight = StandingPushBoxHeight;
+	if (CurrentState.bIsCrouching || CurrentState.bIsAirborne)
+		PushBoxHeight = CrouchingPushBoxHeight;
+	if (CurrentState.bIsAirborne)
+		PushboxBottom += AirPushboxVerticalOffset;
+	//Left side
+	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
+		FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
+	//bottom side
+	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
+		FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom), FColor(255, 255, 0), false, 0, 0, .5f);
+	//right side
+	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
+		FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
+	//top side
+	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight),
+		FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);*/
 }
 
 void ABTCharacterBase::ProcessAnimationFrame()
@@ -872,6 +876,9 @@ void ABTCharacterBase::ProcessAnimationFrame()
 		}
 		if (CurrentState.bIsAirborne && CurrentState.CurrentAnimFrame.LandingLag > 0)
 			CurrentState.LandingLag = CurrentState.CurrentAnimFrame.LandingLag + 4;
+
+		if (CurrentState.CurrentAnimFrame.Pose != nullptr)
+			BaseMesh->PlayAnimation(CurrentState.CurrentAnimFrame.Pose, false);
 	}
 	AnimationEvents(); // perform certain actions based on the current frame of animation
 }
@@ -907,7 +914,7 @@ bool ABTCharacterBase::IsCurrentAnimation(TArray<FAnimationFrame> Animation)
 	return true;
 }
 
-void ABTCharacterBase::TurnAroundCheck()
+bool ABTCharacterBase::TurnAroundCheck()
 {
 	if (Opponent != nullptr)
 	{
@@ -916,31 +923,33 @@ void ABTCharacterBase::TurnAroundCheck()
 			if (Opponent->CurrentState.Position.X < CurrentState.Position.X && CurrentState.bFacingRight)
 			{
 				CurrentState.bFacingRight = false;
-				TriggerTurnAround();
+				return TriggerTurnAround();
 			}
 			else if (Opponent->CurrentState.Position.X > CurrentState.Position.X && !CurrentState.bFacingRight)
 			{
 				CurrentState.bFacingRight = true;
-				TriggerTurnAround();
+				return TriggerTurnAround();
 			}
 		}
 	}
+	return false;
 }
 
-void ABTCharacterBase::TriggerTurnAround()
+bool ABTCharacterBase::TriggerTurnAround()
 {
 	//Trigger turnaround animation if in idle stand or crouch;
-	if (CurrentState.AvailableActions & AcceptMove && !CurrentState.bIsAirborne && CurrentState.Velocity.X == 0)
+	if (CurrentState.AvailableActions & AcceptMove && !CurrentState.bIsAirborne)
 	{
 		if (CurrentState.bIsCrouching)
 		{
-			EnterNewAnimation(TurnAroundCrouch);
+			return EnterNewAnimation(TurnAroundCrouch);
 		}
-		else if (TurnAroundStand.Num() > 0)
+		else
 		{
-			EnterNewAnimation(TurnAroundStand);
+			return EnterNewAnimation(TurnAroundStand);
 		}
 	}
+	return false;
 }
 
 bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when a character touches a surface with certain conditions
@@ -1200,6 +1209,7 @@ void ABTCharacterBase::Jumping()
 	TurnAroundCheck();
 	RefreshMovelist();
 	DepthOffset = 0;
+	Opponent->DepthOffset = 600;
 
 	if (CurrentState.bIsRunning) //extra horizontal velocity only if jumping with a running start
 	{
@@ -1218,20 +1228,25 @@ void ABTCharacterBase::Jumping()
 
 	if (CurrentState.bIsAirborne)
 	{
-		CurrentState.Velocity.Y *= .95f;
+		//CurrentState.Velocity.Y *= .95f;
 
 		if (Sigils.Num() > 0)
 		{
+			FVector2D SigilLocation = FVector2D(CurrentState.Position.X, CurrentState.Position.Y + 25);
 			FRotator SigilRotation = FRotator(0, 0, 20);
 			if ((CurrentState.bFacingRight && CurrentState.bForwardJump) || (!CurrentState.bFacingRight && CurrentState.bBackwardJump))
 			{
+				SigilLocation.X -= 15;
+				SigilLocation.Y += 10;
 				SigilRotation.Pitch = -15;
 			}
 			else if ((!CurrentState.bFacingRight && CurrentState.bForwardJump) || (CurrentState.bFacingRight && CurrentState.bBackwardJump))
 			{
+				SigilLocation.X += 15;
+				SigilLocation.Y += 10;
 				SigilRotation.Pitch = 15;
 			}
-			Sigils[0]->Activate(FVector2D(CurrentState.Position.X, CurrentState.Position.Y + 30), SigilRotation);
+			Sigils[0]->Activate(SigilLocation, SigilRotation);
 		}
 	}
 
@@ -1261,7 +1276,7 @@ void ABTCharacterBase::GravityCalculation()
 {
 	if (CurrentState.bIsAirborne && CurrentState.GravDefyTime == 0 && !CurrentState.CurrentAnimFrame.bLockPosition) //apply gravity while character is airborne and not defying gravity
 	{
-		float GravCalc = Weight * -11.f / 60.f;
+		float GravCalc = Weight * -12.f / 60.f;
 
 		if (IsCurrentAnimation(WallStick))
 			GravCalc *= .75f;
@@ -1456,12 +1471,10 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		}
 		else if ((CurrentState.Position.X > Opponent->CurrentState.Position.X && Inputs & INPUT_RIGHT) || (CurrentState.Position.X < Opponent->CurrentState.Position.X && Inputs & INPUT_LEFT))
 		{
-
 			CurrentState.Dir7 = InputTime;
 		}
 		else
 		{
-
 			CurrentState.Dir8 = InputTime;
 		}
 	}
@@ -1471,7 +1484,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		{
 			if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
 			{
-				if (((CurrentState.Dir6 < InputTime - 1 && CurrentState.Dir6 > 3) || (CurrentState.Dir9 < InputTime - 1 && CurrentState.Dir9 > 3)) && CurrentState.DoubleDir4 == 0)
+				if (((CurrentState.Dir6 < InputTime - 1 && CurrentState.Dir6 > 0) || (CurrentState.Dir9 < InputTime - 1 && CurrentState.Dir9 > 0)) && CurrentState.DoubleDir4 == 0)
 				{
 					CurrentState.DoubleDir6 = InputTime;
 				}
@@ -1479,7 +1492,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 			}
 			else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
 			{
-				if (((CurrentState.Dir4 < InputTime - 1 && CurrentState.Dir4 > 3) || (CurrentState.Dir7 < InputTime - 1 && CurrentState.Dir7 > 3)) && CurrentState.DoubleDir4 == 0)
+				if (((CurrentState.Dir4 < InputTime - 1 && CurrentState.Dir4 > 0) || (CurrentState.Dir7 < InputTime - 1 && CurrentState.Dir7 > 0)) && CurrentState.DoubleDir4 == 0)
 				{
 					CurrentState.DoubleDir4 = InputTime;
 				}
@@ -1498,7 +1511,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		{
 			if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
 			{
-				if (((CurrentState.Dir4 < InputTime - 1 && CurrentState.Dir4 > 3) || (CurrentState.Dir7 < InputTime - 1 && CurrentState.Dir7 > 3)) && CurrentState.DoubleDir4 == 0)
+				if (((CurrentState.Dir4 < InputTime - 1 && CurrentState.Dir4 > 0) || (CurrentState.Dir7 < InputTime - 1 && CurrentState.Dir7 > 0)) && CurrentState.DoubleDir4 == 0)
 				{
 					CurrentState.DoubleDir4 = InputTime;
 				}
@@ -1506,7 +1519,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 			}
 			else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
 			{
-				if (((CurrentState.Dir6 < InputTime - 1 && CurrentState.Dir6 > 3) || (CurrentState.Dir9 < InputTime - 1 && CurrentState.Dir9 > 3)) && CurrentState.DoubleDir4 == 0)
+				if (((CurrentState.Dir6 < InputTime - 1 && CurrentState.Dir6 > 0) || (CurrentState.Dir9 < InputTime - 1 && CurrentState.Dir9 > 0)) && CurrentState.DoubleDir4 == 0)
 				{
 					CurrentState.DoubleDir6 = InputTime;
 				}
@@ -1770,7 +1783,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		if ((IsCurrentAnimation(WalkBackward) && CurrentState.Dir4 < InputTime) || (IsCurrentAnimation(WalkForward) && CurrentState.Dir6 < InputTime))
 			return EnterNewAnimation(IdleStand);
 
-		if (CurrentState.bIsCrouching && !IsCurrentAnimation(CrouchDown) && !IsCurrentAnimation(IdleCrouch) && !IsCurrentAnimation(IdleCrouchBlink) && !IsCurrentAnimation(CrouchIdleAction))
+		if (CurrentState.bIsCrouching && !IsCurrentAnimation(TurnAroundCrouch) && !IsCurrentAnimation(CrouchDown) && !IsCurrentAnimation(IdleCrouch) && !IsCurrentAnimation(IdleCrouchBlink) && !IsCurrentAnimation(CrouchIdleAction))
 			return EnterNewAnimation(CrouchDown);
 
 		if (!CurrentState.bIsCrouching && (IsCurrentAnimation(IdleCrouch) || IsCurrentAnimation(CrouchDown) || IsCurrentAnimation(IdleCrouchBlink) || IsCurrentAnimation(CrouchIdleAction)))
@@ -1788,7 +1801,14 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 
 bool ABTCharacterBase::ConditionalTransitions()
 {
-	if ((IsCurrentAnimation(MidJump) && CurrentState.Velocity.Y < 0) || ((IsCurrentAnimation(AirDashBackward) || IsCurrentAnimation(AirDashForward)) && CurrentState.GravDefyTime == 0))
+	if (CurrentState.AvailableActions & AcceptMove && !CurrentState.bIsAirborne)
+		if (TurnAroundCheck())
+			return true;
+	if (IsCurrentAnimation(AirDashForward) && CurrentState.GravDefyTime == 0)
+		return EnterNewAnimation(AirDashForwardOut);
+	if (IsCurrentAnimation(AirDashBackward) && CurrentState.GravDefyTime == 0)
+		return EnterNewAnimation(AirDashBackwardOut);
+	if (IsCurrentAnimation(MidJump) && CurrentState.Velocity.Y < 1.5f)
 		return EnterNewAnimation(JumpTransition);
 	if (IsCurrentAnimation(LaunchCycle) && CurrentState.Velocity.Y < 0)
 		return EnterNewAnimation(LaunchTransition);
@@ -1881,6 +1901,9 @@ bool ABTCharacterBase::ExitTimeTransitions()
 		return EnterNewAnimation(MidJump);
 	}
 
+	if (IsCurrentAnimation(AirDashBackwardOut) || IsCurrentAnimation(AirDashForwardOut))
+		return EnterNewAnimation(JumpTransition);
+
 	if (IsCurrentAnimation(JumpTransition))
 	{
 		return EnterNewAnimation(JumpDescent);
@@ -1891,16 +1914,14 @@ bool ABTCharacterBase::ExitTimeTransitions()
 		return EnterNewAnimation(LaunchFallCycle);
 	}
 
-	if (IsCurrentAnimation(BackDash))
-		return EnterNewAnimation(IdleStand);
-
 	if (IsCurrentAnimation(StandUp) || IsCurrentAnimation(Brake) || IsCurrentAnimation(WakeUpFaceDown) || IsCurrentAnimation(WakeUpFaceUp) || IsCurrentAnimation(GuardHiOut) ||
 		IsCurrentAnimation(HitSLOut) || IsCurrentAnimation(HitSHOut) || IsCurrentAnimation(HitSLHeavyOut) || IsCurrentAnimation(HitSHHeavyOut) || IsCurrentAnimation(IdleStandBlink) ||
-		IsCurrentAnimation(StandIdleAction) || IsCurrentAnimation(Deflected) || IsCurrentAnimation(ThrowEscape) || IsCurrentAnimation(BlitzOutStanding))
+		IsCurrentAnimation(StandIdleAction) || IsCurrentAnimation(Deflected) || IsCurrentAnimation(ThrowEscape) || IsCurrentAnimation(BlitzOutStanding) || IsCurrentAnimation(BackDash) ||
+		IsCurrentAnimation(TurnAroundStand))
 		return EnterNewAnimation(IdleStand);
 
 	if (IsCurrentAnimation(CrouchDown) || IsCurrentAnimation(GuardLoOut) || IsCurrentAnimation(IdleCrouchBlink) || IsCurrentAnimation(CrouchIdleAction) ||
-		IsCurrentAnimation(HitCOut) || IsCurrentAnimation(HitCHeavyOut))
+		IsCurrentAnimation(HitCOut) || IsCurrentAnimation(HitCHeavyOut) || IsCurrentAnimation(TurnAroundCrouch))
 		return EnterNewAnimation(IdleCrouch);
 
 	if ((IsCurrentAnimation(KnockDownFaceDown) || IsCurrentAnimation(Crumple)) && (CurrentState.Health != 0))
@@ -2693,7 +2714,6 @@ bool ABTCharacterBase::BlitzCancel()
 	if ((CurrentState.AvailableActions & AcceptBlitz || (CurrentState.BlockStun > 0 && !CurrentState.bIsAirborne)) && CurrentState.SlowMoTime == 0 && CurrentState.Resolve > 0 &&
 		CurrentState.MPressed > 0 && CurrentState.HPressed > 0 && FMath::Abs(CurrentState.MPressed - CurrentState.HPressed) <= 3) //Blitz cancel is performed by hitting M and H at the same time
 	{
-		TurnAroundCheck();
 		CurrentState.Resolve--;
 		CurrentState.Durability = 80;
 		CurrentState.MPressed = 0;
@@ -2706,6 +2726,7 @@ bool ABTCharacterBase::BlitzCancel()
 			if (CurrentState.Dir6 == InputTime) //blitz air dash forward
 			{
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
+				TurnAroundCheck();
 				CurrentState.Velocity = FVector2D(BlitzDashForce, 0);
 				CurrentState.GravDefyTime = 24;
 				if (!CurrentState.bFacingRight)
@@ -2740,6 +2761,7 @@ bool ABTCharacterBase::BlitzCancel()
 			if (CurrentState.Dir4 == InputTime) //blitz air dash backward
 			{
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
+				TurnAroundCheck();
 				CurrentState.Velocity = FVector2D(-.85f * BlitzDashForce, 0);
 				CurrentState.GravDefyTime = 24;
 				if (!CurrentState.bFacingRight)
@@ -2774,6 +2796,7 @@ bool ABTCharacterBase::BlitzCancel()
 			if (CurrentState.Dir2 == InputTime) //blitz downward
 			{
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
+				TurnAroundCheck();
 				CurrentState.Velocity = FVector2D(0, -BlitzDashForce);
 				CurrentState.GravDefyTime = 0;
 
@@ -2783,6 +2806,7 @@ bool ABTCharacterBase::BlitzCancel()
 			}
 			if (CurrentState.AvailableActions & AcceptMove) //focus blitz
 			{
+				TurnAroundCheck();
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 1);
 
 				return EnterNewAnimation(FocusBlitz);
@@ -2796,6 +2820,7 @@ bool ABTCharacterBase::BlitzCancel()
 		{
 			if (CurrentState.BlockStun > 0 && CurrentState.Resolve > 1) //breaker blitz
 			{
+				TurnAroundCheck();
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 2);
 
 				CurrentState.Resolve--;
@@ -2804,12 +2829,14 @@ bool ABTCharacterBase::BlitzCancel()
 			}
 			if (CurrentState.AvailableActions & AcceptMove) //focus blitz
 			{
+				TurnAroundCheck();
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 1);
 
 				return EnterNewAnimation(FocusBlitz);
 			}
 
 			BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
+			TurnAroundCheck();
 			CurrentState.bBlitzing = true;
 			return EnterNewAnimation(IdleStand);
 		}
@@ -2835,6 +2862,8 @@ void ABTCharacterBase::SpawnPBS() //spawn projectiles, blitz image, and sigils
 			{
 				Sigils.Add(GetWorld()->SpawnActor<ASigil>(SigilBlueprint, GetActorLocation(), FRotator(0), SpawnParams)); //create a sigil
 				CurrentState.CurrentSigilStates.Add(Sigils[i]->CurrentState); //add its state to the serializable characterstate struct
+				if (SigilTexture)
+					Sigils[0]->SigilImage = SigilTexture;
 			}
 		}
 

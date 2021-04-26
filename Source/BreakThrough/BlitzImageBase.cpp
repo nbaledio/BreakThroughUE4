@@ -82,11 +82,11 @@ void ABlitzImageBase::Update()
 
 				float BaseMeshOffset;
 				if (CurrentState.bFacingRight)
-					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X - 250,
-						FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 5) / 25));
+					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X - 300,
+						FMath::Min(1.f, (float)((CurrentState.FlashEffectFrameIndex * 5) + CurrentState.FlashEffectFramePlayTime) / 10));
 				else
-					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X + 250,
-						FMath::Min(1.f, (float)(CurrentState.FlashEffectFrameIndex * 5) / 25));
+					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X + 300,
+						FMath::Min(1.f, (float)((CurrentState.FlashEffectFrameIndex * 5) + CurrentState.FlashEffectFramePlayTime) / 10));
 
 				BaseMesh->SetRelativeLocation(FVector(BaseMeshOffset, 0, 0));
 			}
@@ -108,6 +108,10 @@ void ABlitzImageBase::Update()
 		{
 
 		}
+
+		if (BaseMesh != nullptr)
+			if (CurrentState.Pose != nullptr)
+				BaseMesh->PlayAnimation(CurrentState.Pose, false);
 	}
 }
 
@@ -123,10 +127,6 @@ void ABlitzImageBase::DrawBlitz()
 
 		Transform->SetWorldLocation(FVector(CurrentState.Position.X, 0, CurrentState.Position.Y));
 		BaseMesh->SetRelativeScale3D(Scale);
-
-		if (BaseMesh != nullptr)
-			if (CurrentState.Pose != nullptr)
-				BaseMesh->PlayAnimation(CurrentState.Pose, true);
 
 		DynamicLineMaterial->SetVectorParameterValue(FName("DissolveColor"), LineDissolveColor);
 		DynamicLineMaterial->SetScalarParameterValue(FName("Alpha"), CurrentState.Alpha);

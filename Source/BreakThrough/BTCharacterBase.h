@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "DrawDebugHelpers.h"
 #include "BTProjectileBase.h"
 #include "Sigil.h"
 #include "BlitzImageBase.h"
@@ -522,6 +523,8 @@ protected:
 		UMaterialInterface* Outline;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* SigilTexture;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* BodyBC;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* BodySSS;
@@ -679,6 +682,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> AirDashBackward;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
+		TArray<FAnimationFrame> AirDashForwardOut;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
+		TArray<FAnimationFrame> AirDashBackwardOut;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> AirRecovery;
 
 	//Guard Animations
@@ -801,9 +808,9 @@ private:
 	//Take in information from CurrentAnimFrame
 	void ProcessAnimationFrame();
 
-	void TurnAroundCheck();
+	bool TurnAroundCheck();
 
-	void TriggerTurnAround();
+	bool TriggerTurnAround();
 
 	bool SurfaceContact();
 
