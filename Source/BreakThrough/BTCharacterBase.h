@@ -68,28 +68,29 @@ enum AttackProperties
 {
 	Piercing = (1 << 0), //Attack ignores armor
 	Shatter = (1 << 1), //Attack destroys armor
-	CanGroundBounce = (1 << 2), //can be bounced against the ground
-	CanWallBounce = (1 << 3), //can be bounced off of walls
-	CanWallStick = (1 << 4), //can be stuck against walls, wall stick transitions into crumple if hits the ground before wallsticktime is up
-	CanSweep = (1 << 5), //sweep: no special properties
-	CanLaunch = (1 << 6), //launch: no special properties, purely aesthetic
-	CanStagger = (1 << 7), //stagger: can still be thrown despite being a hitstun state, need to hold button to recover back to standing position once hitstun ends
-	CanCrumple = (1 << 8), //crumple: long hitstun state with preset duration, ends in facedown knockdown, can still be thrown despite being a hitstun state
-	CanKnockAway = (1 << 9), //knock away: no special properties, purely aesthetic
-	CanDeflect = (1 << 10), //deflect: non-deflect attacks are deflected by a hitbox with this property, character enters a hitstun state with preset duration, can still be thrown, two deflective attacks will clash normally
-	CanTumble = (1 << 11), //tumbling: an airborne hitstun state that cannot be air recovered from
-	ComboThrow = (1 << 12), //Throws with this flag can hit opponents even if they are in hitstun
-	AntiAir = (1 << 13),
-	DisableBurst = (1 << 14),
-	ReflectProjectile = (1 << 15),
-	IsSpecial = (1 << 16),
-	IsSuper = (1 << 17),
-	IsSlash = (1 << 18),
-	IsVertical = (1 << 19),
-	IsHorizontal = (1 << 20),
-	IsHeavy = (1 << 21),
-	LowerBodyHit = (1 << 22),
-	PlayHitEffect = (1 << 23),
+	CanAirGroundBounce = (1 << 2),
+	CanGroundBounce = (1 << 3), //can be bounced against the ground
+	CanWallBounce = (1 << 4), //can be bounced off of walls
+	CanWallStick = (1 << 5), //can be stuck against walls, wall stick transitions into crumple if hits the ground before wallsticktime is up
+	CanSweep = (1 << 6), //sweep: no special properties
+	CanLaunch = (1 << 7), //launch: no special properties, purely aesthetic
+	CanStagger = (1 << 8), //stagger: can still be thrown despite being a hitstun state, need to hold button to recover back to standing position once hitstun ends
+	CanCrumple = (1 << 9), //crumple: long hitstun state with preset duration, ends in facedown knockdown, can still be thrown despite being a hitstun state
+	CanKnockAway = (1 << 10), //knock away: no special properties, purely aesthetic
+	CanDeflect = (1 << 11), //deflect: non-deflect attacks are deflected by a hitbox with this property, character enters a hitstun state with preset duration, can still be thrown, two deflective attacks will clash normally
+	CanTumble = (1 << 12), //tumbling: an airborne hitstun state that cannot be air recovered from
+	ComboThrow = (1 << 13), //Throws with this flag can hit opponents even if they are in hitstun
+	AntiAir = (1 << 14),
+	DisableBurst = (1 << 15),
+	ReflectProjectile = (1 << 16),
+	IsSpecial = (1 << 17),
+	IsSuper = (1 << 18),
+	IsSlash = (1 << 19),
+	IsVertical = (1 << 20),
+	IsHorizontal = (1 << 21),
+	IsHeavy = (1 << 22),
+	LowerBodyHit = (1 << 23),
+	PlayHitEffect = (1 << 24),
 };
 
 class ABTProjectileBase;

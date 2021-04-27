@@ -943,10 +943,14 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 		CurrentState.bIsAirborne = false;
 
 		//logic for setting character's state when they hit the ground (land on feet, knockdown, groundbounce)
-		if (CurrentState.CharacterHitState & CanGroundBounce)
+		if (CurrentState.CharacterHitState & CanGroundBounce || (CurrentState.CharacterHitState & CanAirGroundBounce && CurrentState.bIsAirborne))
 		{
 			//cause ground bounce and ground bounce animation
-			CurrentState.CharacterHitState -= CanGroundBounce;
+			if (CurrentState.CharacterHitState & CanGroundBounce)
+				CurrentState.CharacterHitState -= CanGroundBounce;
+			if (CurrentState.CharacterHitState & CanAirGroundBounce)
+				CurrentState.CharacterHitState -= CanAirGroundBounce;
+
 			CurrentState.Velocity.Y *= -1;
 			if (CurrentState.Velocity.Y < 3)
 				CurrentState.Velocity.Y = 3;
