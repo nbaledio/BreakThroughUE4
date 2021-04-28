@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "DrawDebugHelpers.h"
 #include "BTProjectileBase.h"
 #include "Sigil.h"
 #include "BlitzImageBase.h"
@@ -65,30 +66,31 @@ enum CharacterActions
 
 enum AttackProperties
 {
-	Piercing = (1 << 0), //Attack ignores armor
-	Shatter = (1 << 1), //Attack destroys armor
-	CanGroundBounce = (1 << 2), //can be bounced against the ground
-	CanWallBounce = (1 << 3), //can be bounced off of walls
-	CanWallStick = (1 << 4), //can be stuck against walls, wall stick transitions into crumple if hits the ground before wallsticktime is up
-	CanSweep = (1 << 5), //sweep: no special properties
-	CanLaunch = (1 << 6), //launch: no special properties, purely aesthetic
-	CanStagger = (1 << 7), //stagger: can still be thrown despite being a hitstun state, need to hold button to recover back to standing position once hitstun ends
-	CanCrumple = (1 << 8), //crumple: long hitstun state with preset duration, ends in facedown knockdown, can still be thrown despite being a hitstun state
-	CanKnockAway = (1 << 9), //knock away: no special properties, purely aesthetic
-	CanDeflect = (1 << 10), //deflect: non-deflect attacks are deflected by a hitbox with this property, character enters a hitstun state with preset duration, can still be thrown, two deflective attacks will clash normally
-	CanTumble = (1 << 11), //tumbling: an airborne hitstun state that cannot be air recovered from
-	ComboThrow = (1 << 12), //Throws with this flag can hit opponents even if they are in hitstun
-	AntiAir = (1 << 13),
-	DisableBurst = (1 << 14),
-	ReflectProjectile = (1 << 15),
-	IsSpecial = (1 << 16),
-	IsSuper = (1 << 17),
-	IsSlash = (1 << 18),
-	IsVertical = (1 << 19),
-	IsHorizontal = (1 << 20),
-	IsHeavy = (1 << 21),
-	LowerBodyHit = (1 << 22),
-	PlayHitEffect = (1 << 23),
+	PlayHitEffect = (1 << 0),
+	Piercing = (1 << 1), //Attack ignores armor
+	Shatter = (1 << 2), //Attack destroys armor
+	CanAirGroundBounce = (1 << 3),
+	CanGroundBounce = (1 << 4), //can be bounced against the ground
+	CanWallBounce = (1 << 5), //can be bounced off of walls
+	CanWallStick = (1 << 6), //can be stuck against walls, wall stick transitions into crumple if hits the ground before wallsticktime is up
+	CanSweep = (1 << 7), //sweep: no special properties
+	CanLaunch = (1 << 8), //launch: no special properties, purely aesthetic
+	CanStagger = (1 << 9), //stagger: can still be thrown despite being a hitstun state, need to hold button to recover back to standing position once hitstun ends
+	CanCrumple = (1 << 10), //crumple: long hitstun state with preset duration, ends in facedown knockdown, can still be thrown despite being a hitstun state
+	CanKnockAway = (1 << 11), //knock away: no special properties, purely aesthetic
+	CanDeflect = (1 << 12), //deflect: non-deflect attacks are deflected by a hitbox with this property, character enters a hitstun state with preset duration, can still be thrown, two deflective attacks will clash normally
+	CanTumble = (1 << 13), //tumbling: an airborne hitstun state that cannot be air recovered from
+	ComboThrow = (1 << 14), //Throws with this flag can hit opponents even if they are in hitstun
+	AntiAir = (1 << 15),
+	DisableBurst = (1 << 16),
+	ReflectProjectile = (1 << 17),
+	IsSpecial = (1 << 18),
+	IsSuper = (1 << 19),
+	IsSlash = (1 << 20),
+	IsVertical = (1 << 21),
+	IsHorizontal = (1 << 22),
+	IsHeavy = (1 << 23),
+	LowerBodyHit = (1 << 24),
 };
 
 class ABTProjectileBase;
@@ -181,6 +183,7 @@ struct FCharacterState
 	GENERATED_BODY()
 
 	TArray<FAnimationFrame> CurrentAnimation;
+	FAnimationFrame CurrentAnimFrame;
 	TArray<FProjectileState> CurrentProjectileStates;
 	TArray<FSigilState> CurrentSigilStates;
 	TArray<FBlitzState> CurrentBlitzState;
@@ -484,6 +487,7 @@ public:
 
 	FVector StatusColor;
 	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
+	float DepthOffset = 300;
 
 	//Blitz Cancel
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
@@ -520,6 +524,8 @@ protected:
 		UMaterialInterface* Outline;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* SigilTexture;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* BodyBC;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* BodySSS;
@@ -528,8 +534,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* BodyLines;
 
+	//Sets the corresponding parameters on character's materials
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+		FRotator DefaultMainLightRotation;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+		FRotator DefaultFillLightRotation;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+		FVector DefaultMainLightColor = FVector(1);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+		FVector DefaultFillLightColor;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+		FVector DefaultRimLightColor = FVector(1);
 	UMaterialInstanceDynamic* DynamicOutline;
-	float DepthOffset;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay();
@@ -667,6 +683,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> AirDashBackward;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
+		TArray<FAnimationFrame> AirDashForwardOut;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
+		TArray<FAnimationFrame> AirDashBackwardOut;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> AirRecovery;
 
 	//Guard Animations
@@ -789,9 +809,9 @@ private:
 	//Take in information from CurrentAnimFrame
 	void ProcessAnimationFrame();
 
-	void TurnAroundCheck();
+	bool TurnAroundCheck();
 
-	void TriggerTurnAround();
+	bool TriggerTurnAround();
 
 	bool SurfaceContact();
 
@@ -830,6 +850,12 @@ private:
 	void ProcessBlitz();
 
 	void ClashDetection();
+
+	void HitboxViewer();
+
+	void DrawHitbox(FHitbox Box);
+
+	void DrawHurtbox(FHurtbox Box);
 };
 
 /* 

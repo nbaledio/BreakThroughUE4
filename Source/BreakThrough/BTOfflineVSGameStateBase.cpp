@@ -19,7 +19,7 @@ void ABTOfflineVSGameStateBase::BeginPlay()
 void ABTOfflineVSGameStateBase::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
-
+    DrawFrame();
     ElapsedTime += DeltaSeconds;
 
     int32 Inputs[2] = { 0, 0 };
@@ -32,5 +32,4 @@ void ABTOfflineVSGameStateBase::Tick(float DeltaSeconds)
 
         ElapsedTime -= ONE_FRAME;
     }
-    DrawFrame();
 }

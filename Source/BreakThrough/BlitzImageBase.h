@@ -15,6 +15,7 @@ struct FBlitzState
 	GENERATED_BODY()
 
 	bool bIsActive;
+	bool bWaveIsActive;
 	bool bFacingRight;
 
 	FVector2D Position;
@@ -47,6 +48,8 @@ public:
 
 	void Activate(FVector2D Location, UAnimationAsset* NewPose, bool FacingRight, uint8 EffectColor);
 
+	void ActivateWave();
+
 	void Update();
 
 	virtual void DrawBlitz();
@@ -62,6 +65,8 @@ public:
 
 	UMaterialInstanceDynamic* DynamicFlashMaterial;
 	UMaterialInstanceDynamic* DynamicLineMaterial;
+
+	FVector LightVector;
 
 protected:
 	// Called when the game starts or when spawned

@@ -149,8 +149,9 @@ void ABTGameStateBase::SpawnCharacters()
         gs.Player[0] = GetWorld()->SpawnActor<ABTCharacterBase>(CharacterBlueprints[0], FVector(0), FRotator(0), SpawnParams);
         gs.Player[1] = GetWorld()->SpawnActor<ABTCharacterBase>(CharacterBlueprints[0], FVector(0), FRotator(0), SpawnParams);
         gs.Player[1]->CurrentState.bFacingRight = false;
-        gs.Player[0]->CurrentState.Position = FVector2D(-100, gs.Player[0]->GetActorLocation().Z);
-        gs.Player[1]->CurrentState.Position = FVector2D(100, gs.Player[1]->GetActorLocation().Z);
+        gs.Player[0]->CurrentState.Position = FVector2D(-75, gs.Player[0]->GetActorLocation().Z);
+        gs.Player[1]->CurrentState.Position = FVector2D(75, gs.Player[1]->GetActorLocation().Z);
+        gs.Player[1]->DepthOffset = 600;
     }
 }
 

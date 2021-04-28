@@ -68,5 +68,9 @@ void ABlitzImageACH::DrawBlitz()
         DynamicBodyMaterial->SetVectorParameterValue(FName("GlowColor"), BlitzColor);
         DynamicSpearMaterial->SetVectorParameterValue(FName("GlowColor"), BlitzColor);
         DynamicSealMaterial->SetVectorParameterValue(FName("GlowColor"), BlitzColor);
+
+        DynamicBodyMaterial->SetVectorParameterValue(FName("MainLightVector"), LightVector);
+        DynamicSpearMaterial->SetVectorParameterValue(FName("MainLightVector"), LightVector);
+        DynamicSealMaterial->SetVectorParameterValue(FName("MainLightVector"), LightVector);
     }
 }
