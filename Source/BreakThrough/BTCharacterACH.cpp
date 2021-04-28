@@ -21,6 +21,16 @@ void ABTCharacterACH::UpdatePosition()
 void ABTCharacterACH::DrawCharacter()
 {
 	ABTCharacterBase::DrawCharacter();
+
+	if (CurrentState.StatusTimer > 0)
+	{
+		DynamicBodyMain->SetVectorParameterValue("StatusColor", StatusColor);
+		DynamicBodyMain->SetScalarParameterValue("StatusMix", StatusMix);
+	}
+	else
+	{
+		DynamicBodyMain->SetScalarParameterValue("StatusMix", 0);
+	}
 }
 
 bool ABTCharacterACH::NonKnockdownLanding()
@@ -35,6 +45,19 @@ bool ABTCharacterACH::ActiveTransitions()
 	//Break Triggers/Supers
 	//Special Attacks
 	//Normal Attacks
+	if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
+	{
+		if (!CurrentState.bIsAirborne)
+		{
+			if ((CurrentState.MoveList & n5M) == 0)
+			{
+				CurrentState.MPressed = 0;
+				CurrentState.MoveList |= n5M;
+				return EnterNewAnimation(Normal5M);
+			}
+		}
+
+	}
 
 	return ABTCharacterBase::ActiveTransitions();
 }
@@ -51,6 +74,9 @@ bool ABTCharacterACH::PassiveTransitions()
 
 bool ABTCharacterACH::ExitTimeTransitions()
 {
+	if (IsCurrentAnimation(Normal5M))
+		return EnterNewAnimation(IdleStand);
+
 	return ABTCharacterBase::ExitTimeTransitions();
 }
 

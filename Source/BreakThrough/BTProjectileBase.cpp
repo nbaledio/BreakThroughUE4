@@ -587,64 +587,6 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 		Owner->Opponent->CurrentState.KnockBack = Hitbox.PotentialKnockBack;
 	}
 
-	//update opponent's animation
-	if (Hitbox.AttackProperties & CanTumble)
-	{
-		Owner->Opponent->EnterNewAnimation(Owner->Opponent->Tumble);
-	}
-	else if (Hitbox.AttackProperties & CanSweep)
-	{
-		if (Owner->Opponent->CurrentState.KnockBack.Y < 0)
-			Owner->Opponent->EnterNewAnimation(Owner->Opponent->FallingForward);
-		else
-			Owner->Opponent->EnterNewAnimation(Owner->Opponent->Sweep);
-	}
-	else if (Hitbox.AttackProperties & CanLaunch)
-	{
-		if (Owner->Opponent->CurrentState.KnockBack.Y < 0)
-			Owner->Opponent->EnterNewAnimation(Owner->Opponent->LaunchFallCycle);
-		else
-			Owner->Opponent->EnterNewAnimation(Owner->Opponent->LaunchCycle);
-	}
-	else if (Owner->Opponent->CurrentState.bIsAirborne || Owner->Opponent->CurrentState.KnockBack.Y > 0)
-	{
-		if (Hitbox.AttackProperties & CanKnockAway)
-			Owner->Opponent->EnterNewAnimation(Owner->Opponent->KnockAway);
-		else
-			Owner->Opponent->EnterNewAnimation(Owner->Opponent->HitstunAir);
-	}
-	else if (!Owner->Opponent->CurrentState.bIsAirborne) //ground only hit states
-	{
-		if (Hitbox.AttackProperties & CanCrumple || Owner->Opponent->CurrentState.Health == 0)
-			Owner->Opponent->EnterNewAnimation(Owner->Opponent->Crumple);
-		else if (Hitbox.AttackProperties & CanStagger)
-			Owner->Opponent->EnterNewAnimation(Owner->Opponent->Stagger);
-		else if (Owner->Opponent->CurrentState.bIsCrouching || Owner->Opponent->IsCurrentAnimation(Owner->Opponent->GuardLo) || Owner->Opponent->IsCurrentAnimation(Owner->Opponent->GuardLoHeavy))
-		{
-			if (Hitbox.AttackLevel > 2)
-				Owner->Opponent->EnterNewAnimation(Owner->Opponent->HitCHeavyIn);
-			else
-				Owner->Opponent->EnterNewAnimation(Owner->Opponent->HitCIn);
-		}
-		else
-		{
-			if (Hitbox.AttackProperties & LowerBodyHit)
-			{
-				if (Hitbox.AttackLevel > 2)
-					Owner->Opponent->EnterNewAnimation(Owner->Opponent->HitSLHeavyIn);
-				else
-					Owner->Opponent->EnterNewAnimation(Owner->Opponent->HitSLIn);
-			}
-			else
-			{
-				if (Hitbox.AttackLevel > 2)
-					Owner->Opponent->EnterNewAnimation(Owner->Opponent->HitSHHeavyIn);
-				else
-					Owner->Opponent->EnterNewAnimation(Owner->Opponent->HitSHIn);
-			}
-		}
-	}
-
 	//place and play hit effect
 	//place at midpoint between hitbox center and hurtbox center
 	if (Hitbox.AttackProperties & PlayHitEffect)
@@ -814,7 +756,7 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		{
 			if (Owner->Opponent->CurrentState.bIsCrouching)
 			{
-				if (Hitbox.AttackLevel > 1)
+				if (Hitbox.AttackProperties & IsHeavy)
 					Owner->Opponent->EnterNewAnimation(Owner->Opponent->GuardLoHeavy);
 				else
 					Owner->Opponent->EnterNewAnimation(Owner->Opponent->GuardLo);
@@ -823,7 +765,7 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			{
 				if (Hitbox.AttackProperties & IsVertical)
 					Owner->Opponent->EnterNewAnimation(Owner->Opponent->GuardHiVertical);
-				else if (Hitbox.AttackLevel > 1)
+				else if (Hitbox.AttackProperties & IsHeavy)
 					Owner->Opponent->EnterNewAnimation(Owner->Opponent->GuardHiHeavy);
 				else
 					Owner->Opponent->EnterNewAnimation(Owner->Opponent->GuardHi);

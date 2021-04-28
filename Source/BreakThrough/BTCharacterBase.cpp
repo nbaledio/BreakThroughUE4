@@ -207,7 +207,6 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 			CurrentState.AvailableActions = AcceptGuard;
 		else
 			CurrentState.CharacterHitState = 0;
-			
 
 		//Checking PosePlayTime < PlayDuration, Changing Animations, and Anim Transitions based on read inputs
 		AnimationStateMachine();
@@ -220,7 +219,12 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 
 		if (CurrentState.AvailableActions & AcceptMove && CurrentInputs == 0) //Character is not inputting anything while in neutral
 			CurrentState.Resolute = true; //Character with Resolute state will gain meter instead of being hit by a Blitz wave and will automatically counter normal throws
+		else
+			CurrentState.Resolute = false;
 	}
+
+	if (CurrentState.CurrentAnimFrame.Pose != nullptr)
+		BaseMesh->PlayAnimation(CurrentState.CurrentAnimFrame.Pose, false);
 
 	if (Opponent != nullptr)
 	{
@@ -264,6 +268,9 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 	{
 		CurrentState.FillLightRotation = FMath::Lerp(CurrentState.FillLightRotation, DefaultFillLightRotation, .5f);
 	}
+
+	if (CurrentState.StatusTimer > 0)
+		CurrentState.StatusTimer--;
 
 	//first setting of light colors
 
@@ -365,7 +372,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 		if (CurrentState.GravDefyTime > 0)
 		{
 			if (CurrentState.GravDefyTime == 1)
-				CurrentState.Velocity.X *= .75f;
+				CurrentState.Velocity.X *= .5f;
 			CurrentState.GravDefyTime--;
 		}
 	}
@@ -829,7 +836,11 @@ void ABTCharacterBase::ProcessAnimationFrame()
 		}
 		else
 		{
-			if (CurrentState.bAttackMadeContact && CurrentState.AnimFrameIndex > 0)
+			if (CurrentState.HitStun > 0)
+				CurrentState.AvailableActions = None;
+			else if (CurrentState.BlockStun > 0)
+				CurrentState.AvailableActions = AcceptGuard;
+			else if (CurrentState.bAttackMadeContact && CurrentState.AnimFrameIndex > 0)
 				CurrentState.AvailableActions |= CurrentState.CurrentAnimFrame.AvailableActions;
 			else
 				CurrentState.AvailableActions = CurrentState.CurrentAnimFrame.AvailableActions;
@@ -860,8 +871,6 @@ void ABTCharacterBase::ProcessAnimationFrame()
 		if (CurrentState.bIsAirborne && CurrentState.CurrentAnimFrame.LandingLag > 0)
 			CurrentState.LandingLag = CurrentState.CurrentAnimFrame.LandingLag + 4;
 
-		if (CurrentState.CurrentAnimFrame.Pose != nullptr)
-			BaseMesh->PlayAnimation(CurrentState.CurrentAnimFrame.Pose, false);
 	}
 	AnimationEvents(); // perform certain actions based on the current frame of animation
 }
@@ -1272,7 +1281,7 @@ void ABTCharacterBase::GravityCalculation()
 
 		CurrentState.Velocity.Y += GravCalc;
 	}
-	if (!CurrentState.bIsAirborne && CurrentState.Velocity.Y > 0)
+	if (!CurrentState.bIsAirborne && CurrentState.Position.Y > 0)
 		CurrentState.bIsAirborne = true;
 	
 }
@@ -1446,6 +1455,18 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 			}
 			CurrentState.Dir2 = InputTime;
 		}
+
+		if (Opponent != nullptr)
+		{
+			if (Opponent->CurrentState.Position.X < CurrentState.Position.X && Inputs & INPUT_RIGHT && !(Inputs & INPUT_LEFT))
+				CurrentState.bIsGuarding = true;
+			else if (!CurrentState.bFacingRight && Inputs & INPUT_RIGHT && !(Inputs & INPUT_LEFT))
+				CurrentState.bIsGuarding = true;
+			if (Opponent->CurrentState.Position.X > CurrentState.Position.X && Inputs & INPUT_LEFT && !(Inputs & INPUT_RIGHT))
+				CurrentState.bIsGuarding = true;
+			else if (CurrentState.bFacingRight && Inputs & INPUT_LEFT && !(Inputs & INPUT_RIGHT))
+				CurrentState.bIsGuarding = true;
+		}
 	}
 	else if (Inputs & INPUT_UP)
 	{
@@ -1515,9 +1536,9 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 
 			if (Opponent != nullptr)
 			{
-				if (Opponent->CurrentState.Position.X > CurrentState.Position.X)
+				if (Opponent->CurrentState.Position.X > CurrentState.Position.X && Inputs & INPUT_LEFT)
 					CurrentState.bIsGuarding = true;
-				else if (CurrentState.bFacingRight)
+				else if (CurrentState.bFacingRight && Inputs & INPUT_LEFT)
 					CurrentState.bIsGuarding = true;
 			}
 		}
@@ -1542,7 +1563,7 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 		CurrentState.MPressed = InputTime;
 		CurrentState.bIsMDown = true;
 	}
-	else if (!(Inputs & INPUT_LIGHT) && CurrentState.bIsMDown)
+	else if (!(Inputs & INPUT_MEDIUM) && CurrentState.bIsMDown)
 	{
 		CurrentState.MReleased = InputTime;
 		CurrentState.bIsMDown = false;
@@ -1682,10 +1703,10 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			}
 			CurrentState.Velocity.Y = .5f;
 			//make flash white and play chime
-			StatusMix = 3;
-			StatusColor = FVector(1, 1, 1);
+			StatusMix = .8f;
+			StatusColor = FVector(.9, .9, .9);
 			CurrentState.SlowMoTime = 0;
-			CurrentState.StatusTimer = 5;
+			CurrentState.StatusTimer = 6;
 			CurrentState.JumpsUsed = 0;
 			return EnterNewAnimation(AirRecovery);
 		}
@@ -1696,9 +1717,9 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		if (CurrentState.LPressed > 0 || CurrentState.MPressed > 0 || CurrentState.HPressed > 0 || CurrentState.BPressed > 0) //press any attack button once hitstun has ended to recover from stagger
 		{
 			//make flash white and play chime
-			StatusMix = 3;
-			StatusColor = FVector(1, 1, 1);
-			CurrentState.StatusTimer = 5;
+			StatusMix = .8f;
+			StatusColor = FVector(.9, .9, .9);
+			CurrentState.StatusTimer = 6;
 			CurrentState.LPressed = 0;
 			CurrentState.MPressed = 0;
 			CurrentState.HPressed = 0;
@@ -1709,12 +1730,12 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 
 	if (Opponent)
 	{
-		if (CurrentState.bIsGuarding && !CurrentState.bIsAirborne && FMath::Abs(CurrentState.Position.X - Opponent->CurrentState.Position.X) <= Opponent->CurrentState.CurrentAnimFrame.AutoGuardProximity && CurrentState.BlockStun == 0)
+		if ((CurrentState.AvailableActions & AcceptGuard) && CurrentState.bIsGuarding && !CurrentState.bIsAirborne && FMath::Abs(CurrentState.Position.X - Opponent->CurrentState.Position.X) <= Opponent->CurrentState.CurrentAnimFrame.AutoGuardProximity 
+			&& CurrentState.BlockStun == 0 && CurrentState.HitStun == 0)
 		{
-			CurrentState.Velocity.X = 0;
-			if (CurrentState.bIsCrouching)
+			if (CurrentState.bIsCrouching && !IsCurrentAnimation(GuardLoIn) && !IsCurrentAnimation(GuardLo))
 				return EnterNewAnimation(GuardLoIn);
-			else
+			else if (!CurrentState.bIsCrouching && !IsCurrentAnimation(GuardHiIn) && !IsCurrentAnimation(GuardHi))
 				return EnterNewAnimation(GuardHiIn);
 		}
 	}
@@ -1761,16 +1782,11 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 				return EnterNewAnimation(RunCycle);
 		}
 
-		if (CurrentState.DoubleDir4 > 0)
-		{
-			CurrentState.DoubleDir4 = 0;
-			return EnterNewAnimation(BackDash);
-		}
-
 		if ((IsCurrentAnimation(WalkBackward) && CurrentState.Dir4 < InputTime) || (IsCurrentAnimation(WalkForward) && CurrentState.Dir6 < InputTime))
 			return EnterNewAnimation(IdleStand);
 
-		if (CurrentState.bIsCrouching && !IsCurrentAnimation(TurnAroundCrouch) && !IsCurrentAnimation(CrouchDown) && !IsCurrentAnimation(IdleCrouch) && !IsCurrentAnimation(IdleCrouchBlink) && !IsCurrentAnimation(CrouchIdleAction))
+		if (CurrentState.bIsCrouching && !IsCurrentAnimation(TurnAroundCrouch) && !IsCurrentAnimation(CrouchDown) && !IsCurrentAnimation(IdleCrouch) && !IsCurrentAnimation(IdleCrouchBlink) && !IsCurrentAnimation(CrouchIdleAction)
+			&& !IsCurrentAnimation(GuardLoIn) && !IsCurrentAnimation(GuardLo) && !IsCurrentAnimation(GuardLoOut) && !IsCurrentAnimation(HitCOut) && !IsCurrentAnimation(HitCHeavyOut))
 			return EnterNewAnimation(CrouchDown);
 
 		if (!CurrentState.bIsCrouching && (IsCurrentAnimation(IdleCrouch) || IsCurrentAnimation(CrouchDown) || IsCurrentAnimation(IdleCrouchBlink) || IsCurrentAnimation(CrouchIdleAction)))
@@ -1783,14 +1799,25 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			return EnterNewAnimation(WalkBackward);
 	}
 
+	if (CurrentState.DoubleDir4 > 0 && (CurrentState.AvailableActions & AcceptMove && CurrentState.BlockStun == 0))
+	{
+		CurrentState.DoubleDir4 = 0;
+		return EnterNewAnimation(BackDash);
+	}
+
 	return false;
 }
 
 bool ABTCharacterBase::ConditionalTransitions()
 {
 	if (CurrentState.AvailableActions & AcceptMove && !CurrentState.bIsAirborne)
+	{
+		CurrentState.JumpsUsed = 0;
+		RefreshMovelist();
 		if (TurnAroundCheck())
 			return true;
+	}
+
 	if (IsCurrentAnimation(AirDashForward) && CurrentState.GravDefyTime == 0)
 		return EnterNewAnimation(AirDashForwardOut);
 	if (IsCurrentAnimation(AirDashBackward) && CurrentState.GravDefyTime == 0)
@@ -1814,13 +1841,13 @@ bool ABTCharacterBase::ConditionalTransitions()
 		return EnterNewAnimation(HitSLOut);
 	if (IsCurrentAnimation(HitSLHeavyIn) && CurrentState.HitStun == 0)
 		return EnterNewAnimation(HitSLHeavyOut);
-	if (IsCurrentAnimation(HitSHIn) && CurrentState.HitStun == 0)
+	if (IsCurrentAnimation(HitSHIn) && CurrentState.HitStun <= 4)
 		return EnterNewAnimation(HitSHOut);
-	if (IsCurrentAnimation(HitSHHeavyIn) && CurrentState.HitStun == 0)
+	if (IsCurrentAnimation(HitSHHeavyIn) && CurrentState.HitStun <= 6)
 		return EnterNewAnimation(HitSHHeavyOut);
-	if (IsCurrentAnimation(HitCIn) && CurrentState.HitStun == 0)
+	if (IsCurrentAnimation(HitCIn) && CurrentState.HitStun <= 4)
 		return EnterNewAnimation(HitCOut);
-	if (IsCurrentAnimation(HitCHeavyIn) && CurrentState.HitStun == 0)
+	if (IsCurrentAnimation(HitCHeavyIn) && CurrentState.HitStun <= 6)
 		return EnterNewAnimation(HitCHeavyOut);
 
 	return false;
@@ -2014,7 +2041,7 @@ void ABTCharacterBase::AnimationEvents()
 		}
 		else
 		{
-			if (CurrentState.AnimFrameIndex == 4)
+			if (CurrentState.AnimFrameIndex == 5 && CurrentState.PosePlayTime == 0)
 				CurrentState.bBlitzing = true;
 		}
 	}
@@ -2136,7 +2163,8 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 
 
 	//Opponent successfully guarded the attack
-	if (((Opponent->CurrentState.bIsGuarding && Opponent->CurrentState.bIsAirborne) || (Opponent->CurrentState.bIsGuarding && Hitbox.AttackHeight <= High) || (Opponent->CurrentState.bIsGuarding && !Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.bIsCrouching && Hitbox.AttackHeight == Low) ||
+	if (((Opponent->CurrentState.bIsGuarding && Opponent->CurrentState.bIsAirborne && !(Hitbox.AttackProperties & AntiAir)) || (Opponent->CurrentState.bIsGuarding && Opponent->CurrentState.bIsAirborne && (Hitbox.AttackProperties & AntiAir) && Opponent->CurrentState.JustDefense >= 0) || 
+		(Opponent->CurrentState.bIsGuarding && Hitbox.AttackHeight <= High) || (Opponent->CurrentState.bIsGuarding && !Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.bIsCrouching && Hitbox.AttackHeight == Low) ||
 		(Opponent->CurrentState.bIsGuarding && !Opponent->CurrentState.bIsAirborne && !Opponent->CurrentState.bIsCrouching && Hitbox.AttackHeight == Overhead)) && Hitbox.AttackHeight != Unblockable)
 	{
 		int32 BlockstunToApply;
@@ -2149,16 +2177,16 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		if (Opponent->CurrentState.bIsAirborne)
 		{
 			if (FMath::Abs(Hitbox.PotentialAirKnockBack.X) > FMath::Abs(Hitbox.PotentialAirKnockBack.Y))
-				KnockbackToApply = FVector2D(Hitbox.PotentialAirKnockBack.X, .3f);
+				KnockbackToApply = FVector2D(Hitbox.PotentialAirKnockBack.X, .5f);
 			else
-				KnockbackToApply = FVector2D(.5f * (Hitbox.PotentialAirKnockBack.X + FMath::Abs(Hitbox.PotentialAirKnockBack.Y)), .3f);
+				KnockbackToApply = FVector2D(.5f * (Hitbox.PotentialAirKnockBack.X + FMath::Abs(Hitbox.PotentialAirKnockBack.Y)), .5f);
 		}
 		else
 		{
 			if (FMath::Abs(Hitbox.PotentialKnockBack.X) > FMath::Abs(Hitbox.PotentialKnockBack.Y))
-				KnockbackToApply = FVector2D(Hitbox.PotentialKnockBack.X, .3f);
+				KnockbackToApply = FVector2D(Hitbox.PotentialKnockBack.X, 0);
 			else
-				KnockbackToApply = FVector2D(.5f * (Hitbox.PotentialKnockBack.X + FMath::Abs(Hitbox.PotentialKnockBack.Y)), .3f);
+				KnockbackToApply = FVector2D(.5f * (Hitbox.PotentialKnockBack.X + FMath::Abs(Hitbox.PotentialKnockBack.Y)), 0);
 		}
 
 		BlockstunToApply = FMath::Min(BlockstunToApply, 30);
@@ -2174,10 +2202,11 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			BlockstunToApply = FMath::Max(1, BlockstunToApply);
 			KnockbackToApply *= 0;
 			Opponent->CurrentState.Durability += 35; //reward opponent for blocking with exceptional timing
+			Opponent->CurrentState.JustDefense = 0;
 			//make opponent flash white
-			Opponent->StatusMix = 3;
-			Opponent->CurrentState.StatusTimer = 5;
-			Opponent->StatusColor = FVector(1, 1, 1);
+			Opponent->StatusMix = .8f;
+			Opponent->CurrentState.StatusTimer = 6;
+			Opponent->StatusColor = FVector(.9, .9, .9);
 			UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
 		}
 		else
@@ -2254,8 +2283,8 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		}
 
 		//apply hitstop
-		Opponent->CurrentState.HitStop = Hitbox.BaseHitStop - 2;
-		CurrentState.HitStop = Hitbox.BaseHitStop - 2;
+		Opponent->CurrentState.HitStop = FMath::Max(Hitbox.BaseHitStop - 2, 5);
+		CurrentState.HitStop = FMath::Max(Hitbox.BaseHitStop - 2, 5);
 
 		if (Opponent->CurrentState.bTouchingWall && KnockbackToApply.X >= 0)
 		{
@@ -2287,7 +2316,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		{
 			if (Opponent->CurrentState.bIsCrouching)
 			{
-				if (Hitbox.AttackLevel > 1)
+				if (Hitbox.AttackProperties & IsHeavy)
 					Opponent->EnterNewAnimation(Opponent->GuardLoHeavy);
 				else
 					Opponent->EnterNewAnimation(Opponent->GuardLo);
@@ -2296,7 +2325,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			{
 				if (Hitbox.AttackProperties & IsVertical)
 					Opponent->EnterNewAnimation(Opponent->GuardHiVertical);
-				else if (Hitbox.AttackLevel > 1)
+				else if (Hitbox.AttackProperties & IsHeavy)
 					Opponent->EnterNewAnimation(Opponent->GuardHiHeavy);
 				else
 					Opponent->EnterNewAnimation(Opponent->GuardHi);
@@ -2316,7 +2345,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		Opponent->CurrentState.HitStop = CurrentState.HitStop;
 		//make opponent flash red
 		Opponent->StatusMix = .8f;
-		Opponent->CurrentState.StatusTimer = 5;
+		Opponent->CurrentState.StatusTimer = 6;
 		Opponent->StatusColor = FVector(1, 0, 0);
 
 		//available actions are more limited when hitting an opponent's armor
@@ -2340,6 +2369,11 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 
 void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter)
 {
+	if (CurrentState.ComboCount == 0)
+	{
+		CurrentState.SpecialProration = 1;
+	}
+
 	if (Hitbox.AttackHeight < Throw)
 		CurrentState.ComboCount++;
 	Opponent->CurrentState.BlockStun = 0;
@@ -2534,9 +2568,9 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		}
 
 		if (WallPushBack > PushBack)
-			CurrentState.KnockBack.X = -WallPushBack;
+			CurrentState.KnockBack.X = WallPushBack;
 		else
-			CurrentState.KnockBack.X = -PushBack;
+			CurrentState.KnockBack.X = PushBack;
 	}
 }
 
@@ -2805,7 +2839,7 @@ bool ABTCharacterBase::BlitzCancel()
 		}
 		else
 		{
-			if (CurrentState.BlockStun > 0 && CurrentState.Resolve > 1) //breaker blitz
+			if (CurrentState.BlockStun > 0 && CurrentState.Resolve > 0) //breaker blitz
 			{
 				TurnAroundCheck();
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 2);
@@ -2897,7 +2931,8 @@ void ABTCharacterBase::LightSettings()
 void ABTCharacterBase::ProcessBlitz()
 {
 	CurrentState.bBlitzing = false;
-	if (FMath::Sqrt(FMath::Square(CurrentState.CurrentBlitzState[0].Position.X - Opponent->CurrentState.Position.X) + FMath::Square(CurrentState.CurrentBlitzState[0].Position.Y - Opponent->CurrentState.Position.Y)) < 175)
+	if (FMath::Sqrt(FMath::Square(CurrentState.CurrentBlitzState[0].Position.X - Opponent->CurrentState.Position.X) + FMath::Square(CurrentState.CurrentBlitzState[0].Position.Y - Opponent->CurrentState.Position.Y)) < 175
+		&& Opponent->CurrentState.CurrentAnimFrame.Invincibility != FullInvincible && Opponent->CurrentState.CurrentAnimFrame.Invincibility != OTG)
 	{
 		if (Opponent->CurrentState.Resolute)
 		{
@@ -2905,7 +2940,15 @@ void ABTCharacterBase::ProcessBlitz()
 			//Play UI Resolute signal
 			UE_LOG(LogTemp, Warning, TEXT("RESOLUTE"));
 		}
-		else if (IsCurrentAnimation(BreakerBlitz) && BlitzImage->CurrentState.EffectColor == 2)
+		else if (IsCurrentAnimation(FocusBlitz))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Focus Blitz Slow"));
+			if (Opponent->CurrentState.ShatteredTime % 2 == 0)
+				Opponent->CurrentState.SlowMoTime = 76; //Extra 15 frames of slowdown for Focus Blitz Cancel
+			else
+				Opponent->CurrentState.SlowMoTime = 75;
+		}
+		else if (IsCurrentAnimation(BreakerBlitz))
 		{
 			DepthOffset = 300;
 			Opponent->DepthOffset = 600;
@@ -2945,9 +2988,9 @@ void ABTCharacterBase::ProcessBlitz()
 					KnockbackToApply *= 0;
 					Opponent->CurrentState.Durability += 35; //reward opponent for blocking with exceptional timing
 					//make opponent flash white
-					Opponent->StatusMix = 3;
-					Opponent->CurrentState.StatusTimer = 5;
-					Opponent->StatusColor = FVector(1, 1, 1);
+					Opponent->StatusMix = .8f;
+					Opponent->CurrentState.StatusTimer = 6;
+					Opponent->StatusColor = FVector(.9, .9, .9);
 					UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
 				}
 
@@ -2990,11 +3033,11 @@ void ABTCharacterBase::ProcessBlitz()
 			}
 			else
 			{
-				Opponent->CurrentState.KnockBack = FVector2D(2, 0);
+				Opponent->CurrentState.KnockBack = FVector2D(5, 0);
 				Opponent->CurrentState.SlowMoTime = 30; //Slows opponent for .5 seconds
 				if (Opponent->CurrentState.bIsAirborne)
 				{
-					Opponent->CurrentState.KnockBack.Y = .5f;
+					Opponent->CurrentState.KnockBack.Y = 1.5f;
 					Opponent->EnterNewAnimation(Opponent->DeflectedAir);
 				}
 				else
@@ -3085,57 +3128,57 @@ void ABTCharacterBase::HitAnimation()
 		//update opponent's animation
 		if (CurrentState.CharacterHitState & CanTumble)
 		{
-			Opponent->EnterNewAnimation(Opponent->Tumble);
+			EnterNewAnimation(Tumble);
 		}
 		else if (CurrentState.CharacterHitState & CanSweep)
 		{
-			if (Opponent->CurrentState.KnockBack.Y < 0)
-				Opponent->EnterNewAnimation(Opponent->FallingForward);
+			if (CurrentState.KnockBack.Y < 0)
+				EnterNewAnimation(FallingForward);
 			else
-				Opponent->EnterNewAnimation(Opponent->Sweep);
+				EnterNewAnimation(Sweep);
 		}
 		else if (CurrentState.CharacterHitState & CanLaunch)
 		{
-			if (Opponent->CurrentState.KnockBack.Y < 0)
-				Opponent->EnterNewAnimation(Opponent->LaunchFallCycle);
+			if (CurrentState.KnockBack.Y < 0)
+				EnterNewAnimation(LaunchFallCycle);
 			else
-				Opponent->EnterNewAnimation(Opponent->LaunchCycle);
+				EnterNewAnimation(LaunchCycle);
 		}
-		else if (Opponent->CurrentState.bIsAirborne || Opponent->CurrentState.KnockBack.Y > 0)
+		else if (CurrentState.bIsAirborne || CurrentState.KnockBack.Y > 0)
 		{
 			if (CurrentState.CharacterHitState & CanKnockAway)
-				Opponent->EnterNewAnimation(Opponent->KnockAway);
+				EnterNewAnimation(KnockAway);
 			else
-				Opponent->EnterNewAnimation(Opponent->HitstunAir);
+				EnterNewAnimation(HitstunAir);
 		}
-		else if (!Opponent->CurrentState.bIsAirborne) //ground only hit states
+		else if (!CurrentState.bIsAirborne) //ground only hit states
 		{
-			if (CurrentState.CharacterHitState & CanCrumple || Opponent->CurrentState.Health == 0)
-				Opponent->EnterNewAnimation(Opponent->Crumple);
+			if (CurrentState.CharacterHitState & CanCrumple || CurrentState.Health == 0)
+				EnterNewAnimation(Crumple);
 			else if (CurrentState.CharacterHitState & CanStagger)
-				Opponent->EnterNewAnimation(Opponent->Stagger);
-			else if (Opponent->CurrentState.bIsCrouching)// || Opponent->IsCurrentAnimation(Opponent->GuardLo || Opponent->IsCurrentAnimation(Opponent->GuardLoHeavy)
+				EnterNewAnimation(Stagger);
+			else if (CurrentState.bIsCrouching)// || IsCurrentAnimation(GuardLo || IsCurrentAnimation(GuardLoHeavy)
 			{
 				if (CurrentState.CharacterHitState & IsHeavy)
-					Opponent->EnterNewAnimation(Opponent->HitCHeavyIn);
+					EnterNewAnimation(HitCHeavyIn);
 				else
-					Opponent->EnterNewAnimation(Opponent->HitCIn);
+					EnterNewAnimation(HitCIn);
 			}
 			else
 			{
 				if (CurrentState.CharacterHitState & LowerBodyHit)
 				{
 					if (CurrentState.CharacterHitState & IsHeavy)
-						Opponent->EnterNewAnimation(Opponent->HitSLHeavyIn);
+						EnterNewAnimation(HitSLHeavyIn);
 					else
-						Opponent->EnterNewAnimation(Opponent->HitSLIn);
+						EnterNewAnimation(HitSLIn);
 				}
 				else
 				{
 					if (CurrentState.CharacterHitState & IsHeavy)
-						Opponent->EnterNewAnimation(Opponent->HitSHHeavyIn);
+						EnterNewAnimation(HitSHHeavyIn);
 					else
-						Opponent->EnterNewAnimation(Opponent->HitSHIn);
+						EnterNewAnimation(HitSHIn);
 				}
 			}
 		}
@@ -3162,16 +3205,16 @@ void ABTCharacterBase::HitboxViewer()
 			PushboxBottom += AirPushboxVerticalOffset;
 		//Left side
 		DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
-			FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
+			FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .75f);
 		//bottom side
 		DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
 			FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom), FColor(255, 255, 0), false, 0, 0, .5f);
 		//right side
 		DrawDebugLine(GetWorld(), FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
-			FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
+			FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .75f);
 		//top side
 		DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight),
-			FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
+			FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .75f);
 	}
 
 	if (CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0)
@@ -3201,16 +3244,16 @@ void ABTCharacterBase::DrawHitbox(FHitbox Box)
 	}
 	//Left side
 	DrawDebugLine(GetWorld(), FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y),
-		FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(255, 0, 0), false, 0, 0, .5f);
+		FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(255, 0, 0), false, 0, 0, .75f);
 	//Bottom side
 	DrawDebugLine(GetWorld(), FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y),
-		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(255, 0, 0), false, 0, 0, .5f);
+		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(255, 0, 0), false, 0, 0, .75f);
 	//Right side
 	DrawDebugLine(GetWorld(), FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y),
-		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(255, 0, 0), false, 0, 0, .5f);
+		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(255, 0, 0), false, 0, 0, .75f);
 	//Top side
 	DrawDebugLine(GetWorld(), FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y),
-		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y), FColor(255, 0, 0), false, 0, 0, .5f);
+		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y), FColor(255, 0, 0), false, 0, 0, .75f);
 }
 
 void ABTCharacterBase::DrawHurtbox(FHurtbox Box)
@@ -3222,14 +3265,14 @@ void ABTCharacterBase::DrawHurtbox(FHurtbox Box)
 	}
 	//Left side
 	DrawDebugLine(GetWorld(), FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y),
-		FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(0, 255, 0), false, 0, 0, .5f);
+		FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(0, 255, 0), false, 0, 0, .75f);
 	//Bottom side
 	DrawDebugLine(GetWorld(), FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y),
-		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(0, 255, 0), false, 0, 0, .5f);
+		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(0, 255, 0), false, 0, 0, .75f);
 	//Right side
 	DrawDebugLine(GetWorld(), FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y),
-		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(0, 255, 0), false, 0, 0, .5f);
+		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z - .5f * Box.Size.Y), FColor(0, 255, 0), false, 0, 0, .75f);
 	//Top side
 	DrawDebugLine(GetWorld(), FVector(BoxCenter.X - .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y),
-		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y), FColor(0, 255, 0), false, 0, 0, .5f);
+		FVector(BoxCenter.X + .5f * Box.Size.X, BoxCenter.Y, BoxCenter.Z + .5f * Box.Size.Y), FColor(0, 255, 0), false, 0, 0, .75f);
 }

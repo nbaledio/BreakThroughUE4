@@ -100,4 +100,7 @@ protected:
 	UMaterialInstanceDynamic* DynamicSpearMetallic;
 	UMaterialInstanceDynamic* DynamicSpearSpec;
 	UMaterialInstanceDynamic* DynamicSpearEdge;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> Normal5M;
 };

@@ -58,7 +58,7 @@ void ABlitzImageBase::ActivateWave()
 
 void ABlitzImageBase::Update()
 {
-	if (CurrentState.bIsActive)
+	if (CurrentState.bIsActive && Owner->CurrentState.HitStop == 0)
 	{
 		CurrentState.Alpha = FMath::Min(1.f, CurrentState.Alpha + .02f);
 

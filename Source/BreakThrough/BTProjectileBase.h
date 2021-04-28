@@ -49,8 +49,6 @@ struct FHitbox
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		int32 ResolveDamage = 0;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		int32 AttackLevel = 0;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		int32 AttackHeight = 0;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		uint8 BaseHitStun = 0;
