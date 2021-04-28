@@ -1799,7 +1799,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			return EnterNewAnimation(WalkBackward);
 	}
 
-	if (CurrentState.DoubleDir4 > 0 && (CurrentState.AvailableActions & AcceptMove && CurrentState.BlockStun == 0))
+	if (CurrentState.DoubleDir4 > 0 && (CurrentState.AvailableActions & AcceptGuard && CurrentState.BlockStun == 0))
 	{
 		CurrentState.DoubleDir4 = 0;
 		return EnterNewAnimation(BackDash);
@@ -2551,17 +2551,17 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 				WallPushBack = .25f * (FMath::Abs(Hitbox.PotentialKnockBack.X) + FMath::Abs(Hitbox.PotentialKnockBack.Y));
 		}
 
-		if (Opponent->CurrentState.ComboTimer > 3) //will not experience pushback during first three seconds of a combo
+		if (Opponent->CurrentState.ComboTimer > 180) //will not experience pushback during first three seconds of a combo
 		{
-			if (Opponent->CurrentState.ComboTimer < 5)
+			if (Opponent->CurrentState.ComboTimer < 300)
 				PushBack = .75f;
-			else if (Opponent->CurrentState.ComboTimer < 7)
+			else if (Opponent->CurrentState.ComboTimer < 420)
 				PushBack = 1.f;
-			else if (Opponent->CurrentState.ComboTimer < 9)
+			else if (Opponent->CurrentState.ComboTimer < 540)
 				PushBack = 1.25f;
-			else if (Opponent->CurrentState.ComboTimer < 12)
+			else if (Opponent->CurrentState.ComboTimer < 720)
 				PushBack = 1.5f;
-			else if (Opponent->CurrentState.ComboTimer < 15)
+			else if (Opponent->CurrentState.ComboTimer < 900)
 				PushBack = 1.75f;
 			else
 				PushBack = 2.f;
