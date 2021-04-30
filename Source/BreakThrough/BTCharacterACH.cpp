@@ -26,10 +26,31 @@ void ABTCharacterACH::DrawCharacter()
 	{
 		DynamicBodyMain->SetVectorParameterValue("StatusColor", StatusColor);
 		DynamicBodyMain->SetScalarParameterValue("StatusMix", StatusMix);
+		DynamicBodyMetallic->SetVectorParameterValue("StatusColor", StatusColor);
+		DynamicBodyMetallic->SetScalarParameterValue("StatusMix", StatusMix);
+		DynamicBodySpec->SetVectorParameterValue("StatusColor", StatusColor);
+		DynamicBodySpec->SetScalarParameterValue("StatusMix", StatusMix);
+		DynamicSeals->SetVectorParameterValue("StatusColor", StatusColor);
+		DynamicSeals->SetScalarParameterValue("StatusMix", StatusMix);
+		DynamicRightEye->SetVectorParameterValue("StatusColor", StatusColor);
+		DynamicRightEye->SetScalarParameterValue("StatusMix", StatusMix);
+		DynamicSpearEdge->SetVectorParameterValue("StatusColor", StatusColor);
+		DynamicSpearEdge->SetScalarParameterValue("StatusMix", StatusMix);
+		DynamicSpearMetallic->SetVectorParameterValue("StatusColor", StatusColor);
+		DynamicSpearMetallic->SetScalarParameterValue("StatusMix", StatusMix);
+		DynamicSpearSpec->SetVectorParameterValue("StatusColor", StatusColor);
+		DynamicSpearSpec->SetScalarParameterValue("StatusMix", StatusMix);
 	}
 	else
 	{
 		DynamicBodyMain->SetScalarParameterValue("StatusMix", 0);
+		DynamicBodyMetallic->SetScalarParameterValue("StatusMix", 0);
+		DynamicBodySpec->SetScalarParameterValue("StatusMix", 0);
+		DynamicSpearEdge->SetScalarParameterValue("StatusMix", 0);
+		DynamicSpearSpec->SetScalarParameterValue("StatusMix", 0);
+		DynamicSpearMetallic->SetScalarParameterValue("StatusMix", 0);
+		DynamicRightEye->SetScalarParameterValue("StatusMix", 0);
+		DynamicSeals->SetScalarParameterValue("StatusMix", 0);
 	}
 }
 
