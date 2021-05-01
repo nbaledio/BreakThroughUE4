@@ -66,7 +66,7 @@ void ABlitzImageBase::Update()
 		{
 			if (Owner->Opponent != nullptr)
 			{
-				if (Owner->Opponent->CurrentState.SlowMoTime > 30)
+				if (Owner->Opponent->CurrentState.SlowMoTime > 20)
 				{
 					CurrentState.Alpha = 0;
 				}

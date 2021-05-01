@@ -404,7 +404,7 @@ struct FCharacterState
 	float LineThickness; //0-1 during cinematics, 2 during normal gameplay
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
-	int32 StatusTimer; //only mixes with status color as long as this is greater than zero
+	uint8 StatusTimer = 0; //only mixes with status color as long as this is greater than zero
 };
 
 UCLASS()
@@ -522,6 +522,8 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
 		UMaterialInterface* Outline;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
+		UMaterialInterface* EyeShine;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* SigilTexture;
@@ -546,6 +548,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 		FVector DefaultRimLightColor = FVector(1);
 	UMaterialInstanceDynamic* DynamicOutline;
+	UMaterialInstanceDynamic* DynamicEyeShine;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay();

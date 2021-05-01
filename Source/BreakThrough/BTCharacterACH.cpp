@@ -184,8 +184,10 @@ void ABTCharacterACH::CreateMaterials()
 	{
 		BaseMesh->SetMaterial(4, DynamicSeals);
 
+		if (BodyBC != nullptr)
+			DynamicSeals->SetTextureParameterValue(FName("BaseColor"), BodyBC);
 		if (SealsBC != nullptr)
-			DynamicSeals->SetTextureParameterValue(FName("BaseColor"), SealsBC);
+			DynamicSeals->SetTextureParameterValue(FName("SealBaseColor"), SealsBC);
 		if (BodyILM != nullptr)
 			DynamicSeals->SetTextureParameterValue(FName("ILM"), BodyILM);
 		if (BodyLines != nullptr)
@@ -251,6 +253,9 @@ void ABTCharacterACH::CreateMaterials()
 		if (SpearSSS != nullptr)
 			DynamicSpearEdge->SetTextureParameterValue(FName("SSS"), SpearSSS);
 	}
+
+	if (DynamicEyeShine)
+		BaseMesh->SetMaterial(6, DynamicEyeShine);
 
 }
 
@@ -335,8 +340,10 @@ void ABTCharacterACH::SetColor(uint8 ColorID)
 
 	if (DynamicSeals != nullptr)
 	{
+		if (BodyBC != nullptr)
+			DynamicSeals->SetTextureParameterValue(FName("BaseColor"), BodyBC);
 		if (SealsBC != nullptr)
-			DynamicSeals->SetTextureParameterValue(FName("BaseColor"), SealsBC);
+			DynamicSeals->SetTextureParameterValue(FName("SealBaseColor"), SealsBC);
 		if (BodySSS != nullptr)
 			DynamicSeals->SetTextureParameterValue(FName("SSS"), BodySSS);
 	}
@@ -412,7 +419,9 @@ void ABTCharacterACH::SetColor(uint8 ColorID)
 			if (ACHBlitz->DynamicSealMaterial)
 			{
 				if (SealsBC != nullptr)
-					ACHBlitz->DynamicSealMaterial->SetTextureParameterValue(FName("BaseColor"), SealsBC);
+					ACHBlitz->DynamicSealMaterial->SetTextureParameterValue(FName("SealBaseColor"), SealsBC);
+				if (BodyBC != nullptr)
+					ACHBlitz->DynamicSealMaterial->SetTextureParameterValue(FName("BaseColor"), BodyBC);
 				if (BodyILM != nullptr)
 					ACHBlitz->DynamicSealMaterial->SetTextureParameterValue(FName("ILM"), BodyILM);
 				if (BodyLines != nullptr)
