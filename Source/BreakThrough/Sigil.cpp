@@ -74,7 +74,6 @@ void ASigil::BeginPlay()
 	SigilMid->SetVisibility(false);
 	SigilFront->SetVisibility(false);
 	Echo->SetVisibility(false);
-	//Activate(FVector2D(0), FRotator(-15, 0, 20));
 }
 
 void ASigil::Tick(float DeltaTime)
@@ -137,7 +136,7 @@ void ASigil::DrawSigil()
 
 		FVector EchoLocation = FVector(0, 0, FMath::Lerp(0.f, -50.f, FMath::Min(1.f, CurrentState.EchoScaleAlpha)));
 		FVector MidLocation = FVector(0, 0, FMath::Lerp(0.f, 20.f, FMath::Min(1.f, CurrentState.MainScaleAlpha - .5f)));
-		FVector FrontLocation = FVector(0, 0, FMath::Lerp(MidLocation.Z, 50.f, FMath::Min(1.f, CurrentState.MainScaleAlpha - .5f)));
+		FVector FrontLocation = FVector(0, 0, FMath::Lerp(MidLocation.Z, 40.f, FMath::Min(1.f, CurrentState.MainScaleAlpha - .5f)));
 		Echo->SetRelativeLocation(EchoLocation);
 		SigilMid->SetRelativeLocation(MidLocation);
 		SigilFront->SetRelativeLocation(FrontLocation);

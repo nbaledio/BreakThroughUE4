@@ -1732,7 +1732,7 @@ void ABTCharacterBase::AnimationStateMachine()
 bool ABTCharacterBase::NonKnockdownLanding()
 {
 	if (IsCurrentAnimation(WallStick))
-		return EnterNewAnimation(Crumple);
+		return EnterNewAnimation(Crumple, 2);
 
 	CurrentState.LandingLag = 4;
 	CurrentState.AvailableActions = AcceptAll - (AcceptMove + AcceptJump);
