@@ -73,6 +73,8 @@ struct FProjectileAnimFrame
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hitboxes")
 		TArray<FHitbox> Hitboxes;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hitboxes")
+		bool bCanHit;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
 		UAnimationAsset* Pose;
 

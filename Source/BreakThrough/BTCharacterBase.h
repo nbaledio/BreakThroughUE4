@@ -66,31 +66,32 @@ enum CharacterActions
 
 enum AttackProperties
 {
-	PlayHitEffect = (1 << 0),
+	NoHitEffect = (1 << 0),
 	Piercing = (1 << 1), //Attack ignores armor
 	Shatter = (1 << 2), //Attack destroys armor
 	CanAirGroundBounce = (1 << 3),
 	CanGroundBounce = (1 << 4), //can be bounced against the ground
 	CanWallBounce = (1 << 5), //can be bounced off of walls
-	CanWallStick = (1 << 6), //can be stuck against walls, wall stick transitions into crumple if hits the ground before wallsticktime is up
-	CanSweep = (1 << 7), //sweep: no special properties
-	CanLaunch = (1 << 8), //launch: no special properties, purely aesthetic
-	CanStagger = (1 << 9), //stagger: can still be thrown despite being a hitstun state, need to hold button to recover back to standing position once hitstun ends
-	CanCrumple = (1 << 10), //crumple: long hitstun state with preset duration, ends in facedown knockdown, can still be thrown despite being a hitstun state
-	CanKnockAway = (1 << 11), //knock away: no special properties, purely aesthetic
-	CanDeflect = (1 << 12), //deflect: non-deflect attacks are deflected by a hitbox with this property, character enters a hitstun state with preset duration, can still be thrown, two deflective attacks will clash normally
-	CanTumble = (1 << 13), //tumbling: an airborne hitstun state that cannot be air recovered from
-	ComboThrow = (1 << 14), //Throws with this flag can hit opponents even if they are in hitstun
-	AntiAir = (1 << 15),
-	DisableBurst = (1 << 16),
-	ReflectProjectile = (1 << 17),
-	IsSpecial = (1 << 18),
-	IsSuper = (1 << 19),
-	IsSlash = (1 << 20),
-	IsVertical = (1 << 21),
-	IsHorizontal = (1 << 22),
-	IsHeavy = (1 << 23),
-	LowerBodyHit = (1 << 24),
+	CanMidScreenWallBounce = (1 << 6), //can be bounced back after a certain number of frames
+	CanWallStick = (1 << 7), //can be stuck against walls, wall stick transitions into crumple if hits the ground before wallsticktime is up
+	CanSweep = (1 << 8), //sweep: no special properties
+	CanLaunch = (1 << 9), //launch: no special properties, purely aesthetic
+	CanStagger = (1 << 10), //stagger: can still be thrown despite being a hitstun state, need to hold button to recover back to standing position once hitstun ends
+	CanCrumple = (1 << 11), //crumple: long hitstun state with preset duration, ends in facedown knockdown, can still be thrown despite being a hitstun state
+	CanKnockAway = (1 << 12), //knock away: no special properties, purely aesthetic
+	CanDeflect = (1 << 13), //deflect: non-deflect attacks are deflected by a hitbox with this property, character enters a hitstun state with preset duration, can still be thrown, two deflective attacks will clash normally
+	CanTumble = (1 << 14), //tumbling: an airborne hitstun state that cannot be air recovered from
+	ComboThrow = (1 << 15), //Throws with this flag can hit opponents even if they are in hitstun
+	AntiAir = (1 << 16),
+	DisableBurst = (1 << 17),
+	ReflectProjectile = (1 << 18),
+	IsSpecial = (1 << 19),
+	IsSuper = (1 << 20),
+	IsSlash = (1 << 21),
+	IsVertical = (1 << 22),
+	IsHorizontal = (1 << 23),
+	IsHeavy = (1 << 24),
+	LowerBodyHit = (1 << 25),
 };
 
 class ABTProjectileBase;
@@ -214,6 +215,8 @@ struct FCharacterState
 		uint8 ShatteredTime = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 		uint8 SlowMoTime = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		uint8 WallBounceTime = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 		uint8 JumpsUsed = 0;

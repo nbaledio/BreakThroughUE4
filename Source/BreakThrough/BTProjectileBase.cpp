@@ -198,7 +198,7 @@ void ABTProjectileBase::HitDetection()
 									}
 								}
 								//loop through opponent's active hurtboxes and see if any current hitboxes overlap them
-								if (Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility != StrikeInvincible && Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility != FullInvincible &&
+								if (CurrentState.CurrentAnimFrame.bCanHit && Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility != StrikeInvincible && Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility != FullInvincible &&
 									!(CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == High && Owner->Opponent->CurrentState.bIsCrouching) && !CurrentState.bAttackMadeContact)
 								{
 									if (Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Hurtboxes.Num() > 0)
@@ -239,7 +239,7 @@ void ABTProjectileBase::HitDetection()
 							}
 						}
 						//logic to follow for throws
-						else if ((((CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == CommandThrow || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == Throw) && !Owner->Opponent->CurrentState.bIsAirborne) ||
+						else if (CurrentState.CurrentAnimFrame.bCanHit && (((CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == CommandThrow || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == Throw) && !Owner->Opponent->CurrentState.bIsAirborne) ||
 							((CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == AirCommandThrow || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == AirThrow) && Owner->Opponent->CurrentState.bIsAirborne)) &&
 							((Owner->Opponent->CurrentState.HitStun == 0) || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackProperties & ComboThrow || Owner->Opponent->IsCurrentAnimation(Owner->Opponent->Stagger) ||
 								Owner->Opponent->IsCurrentAnimation(Owner->Opponent->Crumple)) && Owner->Opponent->CurrentState.BlockStun == 0 && Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility != ThrowInvincible &&
@@ -459,6 +459,23 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 
 	int32 DamageToApply = OpponentValor * Owner->CurrentState.SpecialProration * Hitbox.BaseDamage;
 	uint8 HitStunToApply = Hitbox.BaseHitStun;
+	FVector2D KnockBackToApply;
+
+	if (Owner->Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)
+	{
+		KnockBackToApply = FVector2D(1.1f * FMath::Abs(Hitbox.PotentialKnockBack.X), 3);
+	}
+	else if (Owner->Opponent->CurrentState.bIsAirborne)
+	{
+		if (Hitbox.PotentialAirKnockBack == FVector2D(0, 0) && Hitbox.PotentialKnockBack.Y == 0)
+			KnockBackToApply = FVector2D(Hitbox.PotentialKnockBack.X, 2.25f);
+		else
+			KnockBackToApply = Hitbox.PotentialAirKnockBack;
+	}
+	else
+	{
+		KnockBackToApply = Hitbox.PotentialKnockBack;
+	}
 
 	Owner->CurrentState.AvailableActions = Hitbox.PotentialActions;
 	Owner->Opponent->CurrentState.CharacterHitState = Hitbox.AttackProperties;
@@ -477,6 +494,8 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 		else if ((Owner->Opponent->CurrentState.bArmorActive || Owner->Opponent->CurrentState.bCounterHitState) && !(Hitbox.AttackProperties & Piercing && Owner->Opponent->CurrentState.bArmorActive && Owner->Opponent->CurrentState.Resolve > 0))
 		{
 			HitStunToApply *= 1.2f;
+			if (KnockBackToApply.Y > 0)
+				KnockBackToApply.Y *= 1.2f;
 			Owner->Opponent->CurrentState.CharacterHitState |= Hitbox.CounterAttackProperties;
 			//set counter hit ui effect to play
 		}
@@ -485,6 +504,11 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 			//set piercing ui effect to play
 		}
 	}
+
+	if (Owner->Opponent->CurrentState.CharacterHitState & CanMidScreenWallBounce)
+		Owner->Opponent->CurrentState.WallBounceTime = 24;
+	else
+		Owner->Opponent->CurrentState.WallBounceTime = 0;
 
 	if (Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility == OTG)
 	{
@@ -571,25 +595,11 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 	Owner->CurrentState.AvailableActions = Hitbox.PotentialActions;
 
 	//Apply knockback to opponent
-	if (Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility == OTG)
-	{
-		Owner->Opponent->CurrentState.KnockBack = FVector2D(1.1f * FMath::Abs(Hitbox.PotentialKnockBack.X), 1.f);
-	}
-	else if (Owner->Opponent->CurrentState.bIsAirborne)
-	{
-		if (Hitbox.PotentialAirKnockBack == FVector2D(0, 0) && Hitbox.PotentialKnockBack.Y == 0)
-			Owner->Opponent->CurrentState.KnockBack = FVector2D(Hitbox.PotentialKnockBack.X, .5f);
-		else
-			Owner->Opponent->CurrentState.KnockBack = Hitbox.PotentialAirKnockBack;
-	}
-	else
-	{
-		Owner->Opponent->CurrentState.KnockBack = Hitbox.PotentialKnockBack;
-	}
+	Owner->Opponent->CurrentState.KnockBack = KnockBackToApply;
 
 	//place and play hit effect
 	//place at midpoint between hitbox center and hurtbox center
-	if (Hitbox.AttackProperties & PlayHitEffect)
+	if (!(Hitbox.AttackProperties & NoHitEffect))
 	{
 
 	}
