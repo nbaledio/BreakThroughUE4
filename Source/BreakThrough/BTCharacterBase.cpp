@@ -337,14 +337,18 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 	{
 		if (CurrentState.SlowMoTime % 2 == 0) //animation speed is halved and stun values decrease at half speed while in slow motion
 		{
-			if (CurrentState.ShatteredTime % 2 == 0 && CurrentState.PosePlayTime < CurrentState.CurrentAnimFrame.PlayDuration)
-			{
-				CurrentState.PosePlayTime++;
-			}
 			if (CurrentState.HitStun > 0 && !IsCurrentAnimation(Sweep) && !IsCurrentAnimation(WallBounce) && !IsCurrentAnimation(Crumple) && !IsCurrentAnimation(GroundBounce) && !IsCurrentAnimation(Tumble))
 				CurrentState.HitStun--;
 			if (CurrentState.BlockStun > 0)
 				CurrentState.BlockStun--;
+		}
+
+		if (CurrentState.PosePlayTime < CurrentState.CurrentAnimFrame.PlayDuration)
+		{
+			if (CurrentState.SlowMoTime > 0)
+				CurrentState.PosePlayTime += .5f;
+			else
+				CurrentState.PosePlayTime++;
 		}
 
 		if (!CurrentState.CurrentAnimFrame.bLockPosition)
@@ -388,7 +392,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 
 	if ((CurrentState.HitStun > 0 || CurrentState.CurrentAnimFrame.Invincibility == FaceDown || CurrentState.CurrentAnimFrame.Invincibility == FaceUp) && CurrentState.ShatteredTime == 0)
 	{
-		if (CurrentState.SlowMoTime % 2 == 0)
+		if (CurrentState.SlowMoTime % 2 == 0 && !Opponent->CurrentState.CurrentAnimFrame.bSuperFlash)
 			CurrentState.ComboTimer++;
 	}
 	else
@@ -512,7 +516,8 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 					CurrentState.bTouchingOpponent = true;
 					Opponent->CurrentState.bTouchingOpponent = true;
 				}
-				else if (!CurrentState.bIsAirborne && Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.Velocity.Y < 0)
+				else if (!CurrentState.bIsAirborne && !IsCurrentAnimation(KnockDownFaceDown) && !IsCurrentAnimation(KnockDownFaceUp) 
+					&& Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.Velocity.Y < 0)
 				{
 					if ((CurrentState.bIsCrouching && CrouchingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset) ||
 						(!CurrentState.bIsCrouching && StandingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset)) //check if pushboxes intersect
@@ -597,7 +602,8 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 						Opponent->CurrentState.bTouchingOpponent = true;
 					}
 				}
-				else if (CurrentState.bIsAirborne && !Opponent->CurrentState.bIsAirborne && CurrentState.Velocity.Y < 0)
+				else if (CurrentState.bIsAirborne && !Opponent->CurrentState.bIsAirborne && CurrentState.Velocity.Y < 0
+						&& !Opponent->IsCurrentAnimation(KnockDownFaceDown) && !Opponent->IsCurrentAnimation(KnockDownFaceUp))
 				{
 					if ((Opponent->CurrentState.bIsCrouching && Opponent->CrouchingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset) ||
 						(!Opponent->CurrentState.bIsCrouching && Opponent->StandingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset)) //check if pushboxes intersect
@@ -1899,7 +1905,7 @@ bool ABTCharacterBase::ConditionalTransitions()
 bool ABTCharacterBase::PassiveTransitions()
 {
 	//Animation transitions triggered by having finished the current animation
-	if (CurrentState.AnimFrameIndex == CurrentState.CurrentAnimation.Num() - 1 && CurrentState.PosePlayTime == CurrentState.CurrentAnimFrame.PlayDuration) // When hitting the end of an animation
+	if (CurrentState.AnimFrameIndex == CurrentState.CurrentAnimation.Num() - 1 && CurrentState.PosePlayTime >= CurrentState.CurrentAnimFrame.PlayDuration) // When hitting the end of an animation
 	{
 		if (ExitTimeTransitions()) //certain animations need to transition to other animations upon finishing
 			return true;
@@ -1927,7 +1933,7 @@ bool ABTCharacterBase::PassiveTransitions()
 			return EnterNewAnimation(CurrentState.CurrentAnimation);
 		}
 	}
-	else if (CurrentState.PosePlayTime == CurrentState.CurrentAnimFrame.PlayDuration && CurrentState.AnimFrameIndex < CurrentState.CurrentAnimation.Num() - 1) //Move to next frame of current animation
+	else if (CurrentState.PosePlayTime >= CurrentState.CurrentAnimFrame.PlayDuration && CurrentState.AnimFrameIndex < CurrentState.CurrentAnimation.Num() - 1) //Move to next frame of current animation
 	{
 		CurrentState.CurrentAnimFrame = CurrentState.CurrentAnimation[++CurrentState.AnimFrameIndex];
 		CurrentState.PosePlayTime = 0;
@@ -2422,6 +2428,8 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	if (CurrentState.ComboCount == 0)
 	{
 		CurrentState.SpecialProration = 1;
+		Opponent->CurrentState.GravDefyTime = 0;
+		CurrentState.SlowMoTime = 0;
 	}
 
 	if (Hitbox.AttackHeight < Throw)

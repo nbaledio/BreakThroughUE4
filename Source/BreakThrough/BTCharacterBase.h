@@ -191,7 +191,7 @@ struct FCharacterState
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
 	uint8 AnimFrameIndex = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
-	uint8 PosePlayTime = 0;
+	float PosePlayTime = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
 	uint8 IdleCycle = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
