@@ -631,7 +631,7 @@ protected:
 		FVector2D JumpForce;
 
 	//number of frames that an input is active for
-		uint8 InputTime = 10;
+		uint8 InputTime = 8;
 
 public:
 	//Idle Stance Animations

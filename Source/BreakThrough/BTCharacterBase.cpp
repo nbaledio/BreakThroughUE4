@@ -348,7 +348,9 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 		if (CurrentState.GravDefyTime > 0)
 		{
 			if (CurrentState.GravDefyTime == 1)
+			{
 				CurrentState.Velocity.X *= .5f;
+			}
 			CurrentState.GravDefyTime--;
 		}
 	}
@@ -1263,6 +1265,7 @@ void ABTCharacterBase::Jumping()
 
 	if (CurrentState.bIsAirborne)
 	{
+		TurnAroundCheck();
 		//CurrentState.Velocity.Y *= .95f;
 
 		if (Sigils.Num() > 0)
@@ -1671,6 +1674,8 @@ void ABTCharacterBase::InputCountdown() //decrement input values
 		CurrentState.Dir8--;
 	if (CurrentState.Dir9 > 0)
 		CurrentState.Dir9--;
+	if (CurrentState.AirJump > 0)
+		CurrentState.AirJump--;
 
 	if (CurrentState.DoubleDir2 > 0)
 		CurrentState.DoubleDir2--;
@@ -1982,7 +1987,10 @@ bool ABTCharacterBase::ExitTimeTransitions()
 	}
 
 	if (IsCurrentAnimation(AirDashBackwardOut) || IsCurrentAnimation(AirDashForwardOut))
+	{
+		TurnAroundCheck();
 		return EnterNewAnimation(JumpTransition);
+	}
 
 	if (IsCurrentAnimation(JumpTransition))
 	{
