@@ -81,17 +81,18 @@ enum AttackProperties
 	CanKnockAway = (1 << 12), //knock away: no special properties, purely aesthetic
 	CanDeflect = (1 << 13), //deflect: non-deflect attacks are deflected by a hitbox with this property, character enters a hitstun state with preset duration, can still be thrown, two deflective attacks will clash normally
 	CanTumble = (1 << 14), //tumbling: an airborne hitstun state that cannot be air recovered from
-	ComboThrow = (1 << 15), //Throws with this flag can hit opponents even if they are in hitstun
-	AntiAir = (1 << 16),
-	DisableBurst = (1 << 17),
-	ReflectProjectile = (1 << 18),
-	IsSpecial = (1 << 19),
-	IsSuper = (1 << 20),
-	IsSlash = (1 << 21),
-	IsVertical = (1 << 22),
-	IsHorizontal = (1 << 23),
-	IsHeavy = (1 << 24),
-	LowerBodyHit = (1 << 25),
+	ForceCrouch = (1 << 15),
+	ComboThrow = (1 << 16), //Throws with this flag can hit opponents even if they are in hitstun
+	AntiAir = (1 << 17),
+	DisableBurst = (1 << 18),
+	ReflectProjectile = (1 << 19),
+	IsSpecial = (1 << 20),
+	IsSuper = (1 << 21),
+	IsSlash = (1 << 22),
+	IsVertical = (1 << 23),
+	IsHorizontal = (1 << 24),
+	IsHeavy = (1 << 25),
+	LowerBodyHit = (1 << 26),
 };
 
 class ABTProjectileBase;

@@ -286,7 +286,7 @@ void ABTCharacterACH::SetColor(uint8 ColorID)
 		TexPaths.AltBodyBaseColor = TEXT("Texture'/Game/CharacterAssets/ACH/Textures/Color01/T_ACH_WC_01_BC.T_ACH_WC_01_BC'");
 		Sigils[0]->SigilColor = FVector(1, .25f, .85f); //Change sigil colors based on color id
 		Sigils[1]->SigilColor = Sigils[0]->SigilColor;
-		Sigils[0]->EchoColor = FVector(1, .2f, 1);
+		Sigils[0]->EchoColor = FVector(1, .1f, 1);
 		Sigils[1]->EchoColor = Sigils[0]->EchoColor;
 		//BlitzImage->BlitzColor = FVector(.9f, .2f, .75f);
 		break;
