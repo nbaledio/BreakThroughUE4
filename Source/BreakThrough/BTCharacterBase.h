@@ -620,6 +620,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float InitRunSpeed = 2; //set InitRunSpeed to zero to disable run/dash
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float MaxRunSpeed = 5; //Caps Velocity upon hitting an opponent with an attack
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float BlitzDashForce = 2;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		uint8 MaxJumps = 2;

@@ -69,7 +69,7 @@ void ABlitzImageBase::Update()
 		{
 			if (Owner->Opponent != nullptr)
 			{
-				if (Owner->Opponent->CurrentState.SlowMoTime > 20)
+				if (Owner->Opponent->CurrentState.SlowMoTime > 15)
 				{
 					CurrentState.Alpha = 0;
 				}
@@ -85,11 +85,11 @@ void ABlitzImageBase::Update()
 
 				float BaseMeshOffset;
 				if (CurrentState.bFacingRight)
-					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X - 300,
-						FMath::Min(1.f, (float)((CurrentState.FlashEffectFrameIndex * 5) + CurrentState.FlashEffectFramePlayTime) / 10));
+					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X - 350,
+						FMath::Min(1.f, (float)((CurrentState.FlashEffectFrameIndex * 2) + CurrentState.FlashEffectFramePlayTime) / 8));
 				else
-					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X + 300,
-						FMath::Min(1.f, (float)((CurrentState.FlashEffectFrameIndex * 5) + CurrentState.FlashEffectFramePlayTime) / 10));
+					BaseMeshOffset = FMath::Lerp(Owner->CurrentState.Position.X, Owner->CurrentState.Position.X + 350,
+						FMath::Min(1.f, (float)((CurrentState.FlashEffectFrameIndex * 2) + CurrentState.FlashEffectFramePlayTime) / 8));
 
 				BaseMesh->SetRelativeLocation(FVector(BaseMeshOffset, 0, 0));
 			}
@@ -174,8 +174,8 @@ void ABlitzImageBase::DrawBlitz()
 		DynamicWaveMaterial->SetScalarParameterValue(FName("Alpha"), CurrentState.WaveAlpha);
 
 		if (CurrentState.EffectColor == 1) //Focus BCs are blue
-			DynamicWaveMaterial->SetVectorParameterValue(FName("Color"), FVector(0, .15f, .65f));
-		else if (CurrentState.EffectColor == 2) // Breaker BCs are Pink
+			DynamicWaveMaterial->SetVectorParameterValue(FName("Color"), FVector(0, .1f, .65f));
+		else // Breaker BCs are Pink
 			DynamicWaveMaterial->SetVectorParameterValue(FName("Color"), FVector(.65f, 0, .65f));
 	}
 	else

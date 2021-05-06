@@ -9,22 +9,21 @@
 
 enum Moves  //keeps track of what moves have already been used in a string using bit flags, may not have to include supers since they cant cancel into anything
 {
-	n5L = (1 << 0), //used for both air and ground normals
-	n5M = (1 << 1), 
-	n5H = (1 << 2),
-	n5B = (1 << 3),
-	n2L = (1 << 4),
-	n2M = (1 << 5),
-	n2H = (1 << 6),
-	n2B = (1 << 7),
-	n6L = (1 << 8),
-	n6M = (1 << 9),
-	n6B = (1 << 10), 
-	TowerLeap = (1 << 11), //need to keep track of which Specials Achealis has used since she can enter a state where she can cancel specials into each other
-	LevelHell = (1 << 12), 
-	HeavenClimber= (1 << 13),
-	GenesisEdge = (1 << 14),
-	Starfall = (1 << 15),
+	n5M = (1 << 0), //used for both air and ground normals, light attacks not listed since they can be used whenever available
+	n5H = (1 << 1),
+	n5B = (1 << 2),
+	n2L = (1 << 3),
+	n2M = (1 << 4),
+	n2H = (1 << 5),
+	n2B = (1 << 6),
+	n6L = (1 << 7),
+	n6M = (1 << 8),
+	n6B = (1 << 9), 
+	TowerLeap = (1 << 10), //need to keep track of which Specials Achealis has used since she can enter a state where she can cancel specials into each other
+	LevelHell = (1 << 11), 
+	HeavenClimber= (1 << 12),
+	GenesisEdge = (1 << 13),
+	Starfall = (1 << 14),
 	/*IsSlash = (1 << 16),
 	IsVertical = (1 << 17),
 	IsHorizontal = (1 << 18),
@@ -101,6 +100,8 @@ protected:
 	UMaterialInstanceDynamic* DynamicSpearSpec;
 	UMaterialInstanceDynamic* DynamicSpearEdge;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> Normal5L;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
 		TArray<FAnimationFrame> Normal5M;
 };

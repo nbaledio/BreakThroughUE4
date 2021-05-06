@@ -63,21 +63,44 @@ bool ABTCharacterACH::ActiveTransitions()
 {
 	if (BlitzCancel())
 		return true;
+
 	//Break Triggers/Supers
 	//Special Attacks
 	//Normal Attacks
-	if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
+	if (CurrentState.Dir1 == InputTime || CurrentState.Dir2 == InputTime || CurrentState.Dir3 == InputTime) // holding the down direction
 	{
-		if (!CurrentState.bIsAirborne)
+		
+	}
+	else //otherwise
+	{
+		if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
 		{
-			if ((CurrentState.MoveList & n5M) == 0)
+			if (!CurrentState.bIsAirborne)
 			{
-				CurrentState.MPressed = 0;
-				CurrentState.MoveList |= n5M;
-				return EnterNewAnimation(Normal5M);
+				if ((CurrentState.MoveList & n5M) == 0)
+				{
+					CurrentState.MPressed = 0;
+					CurrentState.MoveList |= n5M;
+					return EnterNewAnimation(Normal5M);
+				}
+			}
+			else
+			{
+
 			}
 		}
+		if (CurrentState.LPressed > 0 && (CurrentState.AvailableActions & AcceptLight))
+		{
+			if (!CurrentState.bIsAirborne)
+			{
+				CurrentState.LPressed = 0;
+				return EnterNewAnimation(Normal5L);
+			}
+			else
+			{
 
+			}
+		}
 	}
 
 	return ABTCharacterBase::ActiveTransitions();
@@ -95,7 +118,7 @@ bool ABTCharacterACH::PassiveTransitions()
 
 bool ABTCharacterACH::ExitTimeTransitions()
 {
-	if (IsCurrentAnimation(Normal5M))
+	if (IsCurrentAnimation(Normal5M) || IsCurrentAnimation(Normal5L))
 		return EnterNewAnimation(IdleStand);
 
 	return ABTCharacterBase::ExitTimeTransitions();
