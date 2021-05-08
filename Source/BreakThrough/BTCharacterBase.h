@@ -142,6 +142,8 @@ struct FAnimationFrame
 	//overrides color of fill light
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 		FVector FillLightColor;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+		float LightIntensity;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hitboxes")
 		TArray<FHitbox> Hitboxes;
@@ -402,10 +404,6 @@ struct FCharacterState
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 	float LightIntensity;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
-	float OverallBrightness;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
-	float LineThickness; //0-1 during cinematics, 2 during normal gameplay
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 StatusTimer = 0; //only mixes with status color as long as this is greater than zero
@@ -491,7 +489,8 @@ public:
 
 	FVector StatusColor;
 	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
-	float DepthOffset = 300;
+	float DepthOffset;
+	float LineThickness; //0-1 during cinematics, 3 during normal gameplay or Lerp from (0,1) to 3 based on camera's distance from character
 
 	//Blitz Cancel
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
@@ -549,6 +548,9 @@ protected:
 		FVector DefaultFillLightColor;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 		FVector DefaultRimLightColor = FVector(1);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+		float DefaultLightIntensity = 0;
+
 	UMaterialInstanceDynamic* DynamicOutline;
 	UMaterialInstanceDynamic* DynamicEyeShine;
 

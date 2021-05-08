@@ -64,6 +64,8 @@ struct FHitbox
 		FVector2D PotentialKnockBack;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		FVector2D PotentialAirKnockBack;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		FVector2D PotentialCounterKnockBack;
 };
 
 USTRUCT(BlueprintType)
@@ -153,7 +155,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		bool bHasHits = true;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
-		bool bCanTouchSurfaces; //projectile will stop upon touching walls of the floor
+		bool bCanTouchSurfaces; //projectile will stop upon touching walls or the floor
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		bool bAttackOwner = true; //hurt the owner of the projectile if the projectile is hit by an opponent's attack
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")

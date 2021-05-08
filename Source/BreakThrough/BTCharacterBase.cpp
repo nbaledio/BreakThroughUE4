@@ -36,7 +36,7 @@ ABTCharacterBase::ABTCharacterBase()
 void ABTCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
-	CurrentState.LineThickness = 3.f;
+	LineThickness = 3.f;
 	CreateMaterials();
 	SpawnPBS();
 	SetColor(1);
@@ -748,7 +748,7 @@ void ABTCharacterBase::DrawCharacter()
 {
 	LightSettings();
 
-	DynamicOutline->SetScalarParameterValue(FName("LineThickness"), CurrentState.LineThickness);
+	DynamicOutline->SetScalarParameterValue(FName("LineThickness"), LineThickness);
 	DynamicOutline->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
 
 	DynamicEyeShine->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
@@ -1107,11 +1107,16 @@ bool ABTCharacterBase::HitWall()
 		CurrentState.Velocity = FVector2D(0, 0);
 		return EnterNewAnimation(WallStick);
 	}
-	else if (CurrentState.CharacterHitState & CanWallBounce && CurrentState.bIsAirborne)
+	else if ((CurrentState.CharacterHitState & CanMidScreenWallBounce  || CurrentState.CharacterHitState & CanWallBounce) && CurrentState.bIsAirborne)
 	{
 		//cause wall bounce and wall bounce animation
 		
-		CurrentState.CharacterHitState -= CanWallBounce;
+		if (CurrentState.CharacterHitState & CanWallBounce)
+			CurrentState.CharacterHitState -= CanWallBounce;
+
+		if (CurrentState.CharacterHitState & CanMidScreenWallBounce)
+			CurrentState.CharacterHitState -= CanMidScreenWallBounce;
+
 		DepthOffset = 0;
 		Opponent->DepthOffset = 300;
 		CurrentState.WallBounceTime = 0;
@@ -2560,6 +2565,8 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			Opponent->CurrentState.ResolveRecoverTimer = 0;
 			Opponent->CurrentState.RecoverInterval = 0;
 			HitStunToApply *= 1.2f;
+			if (Hitbox.PotentialCounterKnockBack != FVector2D(0))
+				KnockBackToApply = Hitbox.PotentialCounterKnockBack;
 			Opponent->CurrentState.CharacterHitState |= Hitbox.CounterAttackProperties;
 			//set shatter UI effect to play
 		}
@@ -2568,7 +2575,9 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		{
 			//increase hitstun and vertical knockback on counterhit
 			HitStunToApply += HitStunToApply/2;
-			if (KnockBackToApply.Y > 0)
+			if (Hitbox.PotentialCounterKnockBack != FVector2D(0))
+				KnockBackToApply = Hitbox.PotentialCounterKnockBack;
+			else if (KnockBackToApply.Y > 0)
 				KnockBackToApply.Y *= 1.2f;
 			HitStopToApply += HitStopToApply / 2;
 			Opponent->CurrentState.CharacterHitState |= Hitbox.CounterAttackProperties;
@@ -3049,17 +3058,22 @@ void ABTCharacterBase::LightSettings()
 	if (CurrentState.CurrentAnimFrame.MainLightColor != FVector(0))
 		CurrentState.MainLightColor = CurrentState.CurrentAnimFrame.MainLightColor;
 	else
-		CurrentState.MainLightColor = DefaultMainLightColor;
+		CurrentState.MainLightColor = FMath::Lerp(CurrentState.MainLightColor, DefaultMainLightColor, .35f);
 
 	if (CurrentState.CurrentAnimFrame.RimLightColor != FVector(0))
 		CurrentState.RimLightColor = CurrentState.CurrentAnimFrame.RimLightColor;
 	else
-		CurrentState.RimLightColor = DefaultRimLightColor;
+		CurrentState.RimLightColor = FMath::Lerp(CurrentState.RimLightColor, DefaultRimLightColor, .35f);
 
 	if (CurrentState.CurrentAnimFrame.FillLightColor != FVector(0))
-		CurrentState.FillLightColor = FMath::Lerp(CurrentState.FillLightColor, CurrentState.CurrentAnimFrame.FillLightColor, .5f);
+		CurrentState.FillLightColor = CurrentState.CurrentAnimFrame.FillLightColor;
 	else
-		CurrentState.FillLightColor = FMath::Lerp(CurrentState.FillLightColor, DefaultFillLightColor, .5f);
+		CurrentState.FillLightColor = FMath::Lerp(CurrentState.FillLightColor, DefaultFillLightColor, .35f);
+
+	if (CurrentState.CurrentAnimFrame.LightIntensity != 0)
+		CurrentState.LightIntensity = CurrentState.CurrentAnimFrame.LightIntensity;
+	else
+		CurrentState.LightIntensity = FMath::Lerp(CurrentState.LightIntensity, DefaultLightIntensity, .35f);
 }
 
 void ABTCharacterBase::ProcessBlitz()
@@ -3083,7 +3097,9 @@ void ABTCharacterBase::ProcessBlitz()
 				CurrentState.SlowMoTime = 0;
 			}
 			else
-				Opponent->CurrentState.SlowMoTime = 75;
+			{
+				Opponent->CurrentState.SlowMoTime = 85; 
+			}
 		}
 		else if (IsCurrentAnimation(BreakerBlitz))
 		{
