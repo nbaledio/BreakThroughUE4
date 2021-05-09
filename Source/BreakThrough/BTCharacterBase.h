@@ -252,12 +252,12 @@ struct FCharacterState
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
 		uint8 Resolve = 4;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
-		int32 Durability = 100;
+		int32 Durability = 1000;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	uint8 ResolveRecoverTimer; //Resolve starts passive recovery after 3 seconds of not being used and while not shattered, does not increment while shattered
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-	uint8 RecoverInterval; //dictates how quickly Resolve replenishes, recovers more quickly the lower the character's life, doubled while in slow mo
+		float ResolvePulse; //dictates how quickly Resolve replenishes based on player actions, recovers more quickly the lower the character's life
 
 	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
 		FVector2D Position; // Y = 0 is considered the ground, X = (-/+)10 are the left and right walls respectively

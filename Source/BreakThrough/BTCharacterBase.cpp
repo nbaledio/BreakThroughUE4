@@ -1393,39 +1393,64 @@ void ABTCharacterBase::UpdateResolve()
 		if (CurrentState.ShatteredTime == 0 && !CurrentState.CurrentAnimFrame.bCinematic && !CurrentState.CurrentAnimFrame.bSuperFlash &&
 			!Opponent->CurrentState.CurrentAnimFrame.bCinematic && !Opponent->CurrentState.CurrentAnimFrame.bSuperFlash && !CurrentState.bWin && !Opponent->CurrentState.bWin)
 		{
-			if (CurrentState.ResolveRecoverTimer >= 180 && CurrentState.Durability <= 100) //Resolve starts passively regenerating after three seconds without being used or broken, resolve regen speeds up if the character is not inputting anything
+			if (CurrentState.ResolveRecoverTimer == 240 && CurrentState.SlowMoTime == 0 && CurrentState.HitStun == 0 && CurrentState.BlockStun == 0 && CurrentState.ResolvePulse < 8)
+				CurrentState.ResolvePulse = 8;
+
+			if (CurrentState.Resolute) //being resolute increases ResolvePulse
+				CurrentState.ResolvePulse += .02f;
+			else if (CurrentState.bIsRunning && ((CurrentState.bFacingRight && CurrentState.Position.X < Opponent->CurrentState.Position.X) || 
+				(!CurrentState.bFacingRight && CurrentState.Position.X > Opponent->CurrentState.Position.X)))
+				CurrentState.ResolvePulse += .01f;
+
+			if (CurrentState.ResolvePulse > 25)//Resolve pulse is min 1 and max 25
+				CurrentState.ResolvePulse = 25;
+			if (CurrentState.ResolvePulse < 1)
+				CurrentState.ResolvePulse = 1;
+
+			if (CurrentState.ResolveRecoverTimer >= 180 && CurrentState.Durability <= 1000) //Resolve starts passively regenerating after three seconds without being used or broken, resolve regen speeds up if the character is not inputting anything
 			{
-				if ((float)CurrentState.Health / (float)MaxHealth <= .1f && (CurrentState.SlowMoTime == 0 || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 2)))
+				if ((float)CurrentState.Health / (float)MaxHealth <= .1f && CurrentState.SlowMoTime == 0)
 				{
-					CurrentState.Durability++;
-					if (CurrentState.Resolute || CurrentState.bIsRunning)
-						CurrentState.Durability++;
-					CurrentState.RecoverInterval = 0;
+					if (CurrentState.ResolveRecoverTimer == 240)
+						CurrentState.Durability += FMath::Max(2, FMath::FloorToInt(CurrentState.ResolvePulse));
+					else
+						CurrentState.Durability += FMath::Max(1, FMath::CeilToInt(CurrentState.ResolvePulse * .5f));
 				}
-				else if ((float)CurrentState.Health / (float)MaxHealth <= .25f && ((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 2) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 4) || (CurrentState.SlowMoTime == 0 && (CurrentState.Resolute))))
+				else if ((float)CurrentState.Health / (float)MaxHealth <= .25f && CurrentState.SlowMoTime == 0)
 				{
-					CurrentState.Durability++;
-					CurrentState.RecoverInterval = 0;
+					if (CurrentState.ResolveRecoverTimer == 240)
+						CurrentState.Durability += FMath::Max(2, FMath::CeilToInt(CurrentState.ResolvePulse * .33f));
+					else
+						CurrentState.Durability += FMath::Max(1, FMath::CeilToInt(CurrentState.ResolvePulse * .17f));
 				}
-				else if ((float)CurrentState.Health / (float)MaxHealth <= .5f && ((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 3) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 6) || (CurrentState.SlowMoTime == 0 && (CurrentState.Resolute) && CurrentState.RecoverInterval >= 2)))
+				else if ((float)CurrentState.Health / (float)MaxHealth <= .5f && CurrentState.SlowMoTime == 0)
 				{
-					CurrentState.Durability++;
-					CurrentState.RecoverInterval = 0;
-				}
-				else if (((CurrentState.SlowMoTime == 0 && CurrentState.RecoverInterval >= 4) || (CurrentState.SlowMoTime > 0 && CurrentState.RecoverInterval >= 8) || (CurrentState.SlowMoTime == 0 && (CurrentState.Resolute) && CurrentState.RecoverInterval >= 3)))
-				{
-					CurrentState.Durability++;
-					CurrentState.RecoverInterval = 0;
+					if (CurrentState.ResolveRecoverTimer == 240)
+						CurrentState.Durability += FMath::Max(2, FMath::CeilToInt(CurrentState.ResolvePulse * .25f));
+					else
+						CurrentState.Durability += FMath::Max(1, FMath::CeilToInt(CurrentState.ResolvePulse * .125f));
 				}
 				else
-					CurrentState.RecoverInterval++;
+				{
+					if (CurrentState.ResolveRecoverTimer == 240)
+						CurrentState.Durability += FMath::Max(2, FMath::CeilToInt(CurrentState.ResolvePulse * .2f));
+					else
+						CurrentState.Durability += FMath::Max(1, FMath::CeilToInt(CurrentState.ResolvePulse * .1f));
+				}
 			}
-			else if (CurrentState.ResolveRecoverTimer < 180)
-				CurrentState.ResolveRecoverTimer++;
+			else if (CurrentState.ResolveRecoverTimer < 240)
+			{
+				if (CurrentState.ResolveRecoverTimer < 180 || CurrentState.HitStun == 0) //can only reach stage two ResolveRecovery while not in hitstun
+					CurrentState.ResolveRecoverTimer++;
+
+				if ((CurrentState.Resolute || (CurrentState.bIsRunning && ((CurrentState.bFacingRight && CurrentState.Position.X < Opponent->CurrentState.Position.X) || 
+					(!CurrentState.bFacingRight && CurrentState.Position.X > Opponent->CurrentState.Position.X))))) //being resolute or running toward opponent only aids up to the first stage Resolve Recovery
+					CurrentState.ResolveRecoverTimer++;
+			}
 		}
 	}
 
-	if (CurrentState.Durability > 100)
+	if (CurrentState.Durability > 1000)
 	{
 		if (CurrentState.Resolve < 4)
 		{
@@ -1435,7 +1460,7 @@ void ABTCharacterBase::UpdateResolve()
 		else
 		{
 			CurrentState.Resolve = 4;
-			CurrentState.Durability = 100;
+			CurrentState.Durability = 1000;
 		}
 	}
 	else if (CurrentState.Durability < 0)
@@ -1443,7 +1468,7 @@ void ABTCharacterBase::UpdateResolve()
 		if (CurrentState.Resolve > 0)
 		{
 			CurrentState.Resolve--;
-			CurrentState.Durability = 100;
+			CurrentState.Durability = 1000;
 		}
 	}
 }
@@ -1884,6 +1909,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 	if (CurrentState.DoubleDir4 > 0 && (!CurrentState.bIsAirborne && CurrentState.AvailableActions & AcceptGuard && CurrentState.BlockStun == 0))
 	{
 		CurrentState.DoubleDir4 = 0;
+		CurrentState.ResolvePulse *= .8f;
 		return EnterNewAnimation(BackDash);
 	}
 
@@ -2156,6 +2182,7 @@ void ABTCharacterBase::AnimationEvents()
 	else if (IsCurrentAnimation(WalkForward))
 	{
 		CurrentState.Velocity = FVector2D(WalkSpeed, 0);
+		CurrentState.ResolvePulse += .0075f;
 
 		if (!CurrentState.bFacingRight)
 			CurrentState.Velocity.X *= -1;
@@ -2164,6 +2191,7 @@ void ABTCharacterBase::AnimationEvents()
 	else if (IsCurrentAnimation(WalkBackward))
 	{
 		CurrentState.Velocity = FVector2D(WalkBackSpeed, 0);
+		CurrentState.ResolvePulse -= .008f;
 
 		if (CurrentState.bFacingRight)
 			CurrentState.Velocity.X *= -1;
@@ -2317,8 +2345,11 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			else
 				KnockbackToApply *= 0;
 
-			Opponent->CurrentState.Durability += 35; //reward opponent for blocking with exceptional timing
+			//reward opponent for blocking with exceptional timing
+			Opponent->CurrentState.Durability += 250;
+			Opponent->CurrentState.ResolvePulse += 3;
 			Opponent->CurrentState.JustDefense = 0;
+
 			//make opponent flash white
 			Opponent->StatusMix = .5f;
 			Opponent->CurrentState.StatusTimer = 8;
@@ -2327,8 +2358,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		}
 		else
 		{
-			Opponent->CurrentState.ResolveRecoverTimer = 0;
-			Opponent->CurrentState.RecoverInterval = 0;
+			Opponent->CurrentState.ResolveRecoverTimer = FMath::Max(0, (int32)Opponent->CurrentState.ResolveRecoverTimer - 24);
 
 			//blocked hits chip away at durability
 			if (Opponent->CurrentState.Resolve > 0)
@@ -2337,26 +2367,26 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 				{
 					if (Hitbox.AttackProperties & AntiAir) //attacks with the anti air property must be Instant Blocked
 					{
-						Opponent->CurrentState.Durability = -1;
+						Opponent->CurrentState.ResolvePulse *= .9f;
 						AttackCalculation(Hitbox, HurtboxCenter);
 						return;
 					}
 
 					if (Hitbox.AttackProperties & IsSuper)
-						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .35f);
+						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 10);
 					else if (Hitbox.AttackProperties & IsSpecial)
-						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .25f);
+						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 8);
 					else
-						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .2f);
+						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 6);
 				}
 				else
 				{
 					if (Hitbox.AttackProperties & IsSuper)
-						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .25f);
+						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 7);
 					else if (Hitbox.AttackProperties & IsSpecial)
-						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .15f);
+						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 5);
 					else
-						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .1f);
+						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 3);
 				}
 
 			}
@@ -2415,6 +2445,9 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 				Opponent->CurrentState.KnockBack = KnockbackToApply;
 		}
 
+		//increase ResolvePulse
+		CurrentState.ResolvePulse += (float)Hitbox.BaseDamage * .001f;
+
 		//Made contact so can cancel into other actions
 		CurrentState.AvailableActions = Hitbox.PotentialActions;
 		CurrentState.AvailableActions &= AcceptAll - AcceptJump - AcceptBlitz;
@@ -2453,8 +2486,9 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 	}
 	else if (Opponent->CurrentState.SlowMoTime == 0 && Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve > 0 && !(Hitbox.AttackProperties & Piercing) && !(Hitbox.AttackProperties & Shatter))
 	{
-		Opponent->CurrentState.ResolveRecoverTimer = 0;
-		Opponent->CurrentState.RecoverInterval = 0;
+		//armor hit
+		Opponent->CurrentState.ResolveRecoverTimer = FMath::Max(0, (int32)Opponent->CurrentState.ResolveRecoverTimer - 60);
+		Opponent->CurrentState.ResolvePulse /= 2;
 		Opponent->CurrentState.Durability -= Hitbox.DurabilityDamage;
 		Opponent->CurrentState.Resolve -= Hitbox.ResolveDamage;
 		CurrentState.HitStop = Hitbox.BaseHitStop;
@@ -2563,7 +2597,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		{
 			Opponent->CurrentState.ShatteredTime = 120;
 			Opponent->CurrentState.ResolveRecoverTimer = 0;
-			Opponent->CurrentState.RecoverInterval = 0;
+			Opponent->CurrentState.ResolvePulse /= 2;
 			HitStunToApply *= 1.2f;
 			if (Hitbox.PotentialCounterKnockBack != FVector2D(0))
 				KnockBackToApply = Hitbox.PotentialCounterKnockBack;
@@ -2670,10 +2704,16 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 	//meter gain for each character
 	if (Opponent->CurrentState.ShatteredTime == 0)
-		Opponent->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * .2f), 1);
+		Opponent->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * 5), 1);
 
-	if (CurrentState.ResolveRecoverTimer == 180)
-		CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * .1f), 1);
+	if (CurrentState.ResolveRecoverTimer >= 180)
+		CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * 3), 1);
+
+	//increase ResolvePulse
+	if (!(Hitbox.AttackProperties & IsSuper))
+	{
+		CurrentState.ResolvePulse += (float)Hitbox.BaseDamage * .005f;
+	}
 
 	//Make certain actions available for hitting with an attack
 	CurrentState.AvailableActions = Hitbox.PotentialActions;
@@ -2748,8 +2788,11 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 		else if (Opponent->CurrentState.Resolute)
 		{
 			//play Resolute Counter UI graphic
-			Opponent->CurrentState.ResolveRecoverTimer = 180;
-			Opponent->CurrentState.Durability = 101;
+			if (Opponent->CurrentState.ResolveRecoverTimer < 180)
+				Opponent->CurrentState.ResolveRecoverTimer = 180;
+			else
+				Opponent->CurrentState.ResolveRecoverTimer = 240;
+			Opponent->CurrentState.ResolvePulse += 5;
 
 			if (ThrowType == AirThrow)
 			{
@@ -2885,7 +2928,7 @@ bool ABTCharacterBase::BlitzCancel()
 		CurrentState.MPressed = 0;
 		CurrentState.HPressed = 0;
 		CurrentState.ResolveRecoverTimer = 0;
-		CurrentState.RecoverInterval = 0;
+		CurrentState.ResolvePulse -= CurrentState.ResolvePulse/5;
 
 		if (CurrentState.bIsAirborne && CurrentState.BlockStun == 0)
 		{
@@ -3085,6 +3128,8 @@ void ABTCharacterBase::ProcessBlitz()
 		if (Opponent->CurrentState.Resolute)
 		{
 			Opponent->CurrentState.Durability += 50;
+			Opponent->CurrentState.ResolvePulse += 2;
+
 			//Play UI Resolute signal
 			UE_LOG(LogTemp, Warning, TEXT("RESOLUTE"));
 		}
@@ -3138,7 +3183,12 @@ void ABTCharacterBase::ProcessBlitz()
 
 					BlockstunToApply = FMath::Max(1, BlockstunToApply);
 					KnockbackToApply *= 0;
-					Opponent->CurrentState.Durability += 35; //reward opponent for blocking with exceptional timing
+					
+					//reward opponent for blocking with exceptional timing
+					Opponent->CurrentState.Durability += 250;
+					Opponent->CurrentState.ResolvePulse += 3;
+					Opponent->CurrentState.JustDefense = 0;
+
 					//make opponent flash white
 					Opponent->StatusMix = .5f;
 					Opponent->CurrentState.StatusTimer = 8;

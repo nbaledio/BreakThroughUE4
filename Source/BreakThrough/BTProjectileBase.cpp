@@ -486,7 +486,7 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 		{
 			Owner->Opponent->CurrentState.ShatteredTime = 120;
 			Owner->Opponent->CurrentState.ResolveRecoverTimer = 0;
-			Owner->Opponent->CurrentState.RecoverInterval = 0;
+			Owner->Opponent->CurrentState.ResolvePulse /= 2;
 			HitStunToApply *= 1.2f;
 			Owner->Opponent->CurrentState.CharacterHitState |= Hitbox.CounterAttackProperties;
 			//set shatter UI effect to play
@@ -658,17 +658,24 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 
 			BlockstunToApply = FMath::Max(1, BlockstunToApply);
 			KnockbackToApply *= 0;
-			Owner->Opponent->CurrentState.Durability += 35; //reward opponent for blocking with exceptional timing
+			
+			//reward opponent for blocking with exceptional timing
+			Owner->Opponent->CurrentState.Durability += 250;
+			Owner->Opponent->CurrentState.ResolvePulse += 3;
+			Owner->Opponent->CurrentState.JustDefense = 0;
+
 			//make opponent flash white
 			Owner->Opponent->StatusMix = 3;
 			Owner->Opponent->CurrentState.StatusTimer = 5;
-			Owner->Opponent->StatusColor = FVector(1, 1, 1);
+			Owner->Opponent->StatusColor = FVector(.9f, .9f, .9f);
 			UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
 		}
 		else
 		{
-			Owner->Opponent->CurrentState.ResolveRecoverTimer = 0;
-			Owner->Opponent->CurrentState.RecoverInterval = 0;
+			if (Owner->Opponent->CurrentState.ResolveRecoverTimer == 0 && Owner->Opponent->CurrentState.ResolvePulse > 0)
+				Owner->Opponent->CurrentState.ResolvePulse--;
+			else
+				Owner->Opponent->CurrentState.ResolveRecoverTimer = FMath::Max(0, (int32)Owner->Opponent->CurrentState.ResolveRecoverTimer - 30);
 
 			//blocked hits chip away at durability
 			if (Owner->Opponent->CurrentState.Resolve > 0)
@@ -677,26 +684,26 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 				{
 					if (Hitbox.AttackProperties & AntiAir) //attacks with the anti air property must be Instant Blocked
 					{
-						Owner->Opponent->CurrentState.Durability = -1;
+						Owner->Opponent->CurrentState.ResolvePulse--;
 						AttackCalculation(Hitbox, HurtboxCenter);
 						return;
 					}
 
 					if (Hitbox.AttackProperties & IsSuper)
-						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .35f);
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 10);
 					else if (Hitbox.AttackProperties & IsSpecial)
-						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .25f);
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 8);
 					else
-						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .2f);
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 6);
 				}
 				else
 				{
 					if (Hitbox.AttackProperties & IsSuper)
-						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .25f);
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 7);
 					else if (Hitbox.AttackProperties & IsSpecial)
-						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .15f);
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 5);
 					else
-						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * .1f);
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 3);
 				}
 
 			}
@@ -787,8 +794,8 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 	}
 	else if (Owner->Opponent->CurrentState.bArmorActive && Owner->Opponent->CurrentState.Resolve > 0 && !(Hitbox.AttackProperties & Piercing) && !(Hitbox.AttackProperties & Shatter))
 	{
-		Owner->Opponent->CurrentState.ResolveRecoverTimer = 0;
-		Owner->Opponent->CurrentState.RecoverInterval = 0;
+		Owner->Opponent->CurrentState.ResolveRecoverTimer = FMath::Max(0, (int32)Owner->Opponent->CurrentState.ResolveRecoverTimer - 60);
+		Owner->Opponent->CurrentState.ResolvePulse /= 2;
 		Owner->Opponent->CurrentState.Durability -= Hitbox.DurabilityDamage;
 		Owner->Opponent->CurrentState.Resolve -= Hitbox.ResolveDamage;
 		Owner->CurrentState.HitStop = Hitbox.BaseHitStop;
