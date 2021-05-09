@@ -1397,7 +1397,7 @@ void ABTCharacterBase::UpdateResolve()
 				CurrentState.ResolvePulse = 8;
 
 			if (CurrentState.Resolute) //being resolute increases ResolvePulse
-				CurrentState.ResolvePulse += .02f;
+				CurrentState.ResolvePulse += .012f;
 			else if (CurrentState.bIsRunning && ((CurrentState.bFacingRight && CurrentState.Position.X < Opponent->CurrentState.Position.X) || 
 				(!CurrentState.bFacingRight && CurrentState.Position.X > Opponent->CurrentState.Position.X)))
 				CurrentState.ResolvePulse += .01f;
@@ -1438,13 +1438,14 @@ void ABTCharacterBase::UpdateResolve()
 						CurrentState.Durability += FMath::Max(1, FMath::CeilToInt(CurrentState.ResolvePulse * .1f));
 				}
 			}
-			else if (CurrentState.ResolveRecoverTimer < 240)
+			
+			if (CurrentState.ResolveRecoverTimer < 240)
 			{
 				if (CurrentState.ResolveRecoverTimer < 180 || CurrentState.HitStun == 0) //can only reach stage two ResolveRecovery while not in hitstun
 					CurrentState.ResolveRecoverTimer++;
 
-				if ((CurrentState.Resolute || (CurrentState.bIsRunning && ((CurrentState.bFacingRight && CurrentState.Position.X < Opponent->CurrentState.Position.X) || 
-					(!CurrentState.bFacingRight && CurrentState.Position.X > Opponent->CurrentState.Position.X))))) //being resolute or running toward opponent only aids up to the first stage Resolve Recovery
+				if (CurrentState.Resolute || (CurrentState.bIsRunning && ((CurrentState.bFacingRight && CurrentState.Position.X < Opponent->CurrentState.Position.X) || 
+					(!CurrentState.bFacingRight && CurrentState.Position.X > Opponent->CurrentState.Position.X)))) //being resolute or running toward opponent only aids up to the first stage Resolve Recovery
 					CurrentState.ResolveRecoverTimer++;
 			}
 		}
@@ -1807,7 +1808,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			CurrentState.Velocity.Y = 1.5f;
 			//make flash white and play chime
 			StatusMix = .5f;
-			StatusColor = FVector(1);
+			StatusColor = FVector(.9);
 			CurrentState.SlowMoTime = 0;
 			CurrentState.StatusTimer = 10;
 			CurrentState.JumpsUsed = 0;
@@ -1822,7 +1823,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		{
 			//make flash white and play chime
 			StatusMix = .5f;
-			StatusColor = FVector(1);
+			StatusColor = FVector(.9);
 			CurrentState.StatusTimer = 10;
 			CurrentState.LPressed = 0;
 			CurrentState.MPressed = 0;
@@ -2926,7 +2927,7 @@ bool ABTCharacterBase::BlitzCancel()
 		CurrentState.MPressed > 0 && CurrentState.HPressed > 0 && FMath::Abs(CurrentState.MPressed - CurrentState.HPressed) <= 3) //Blitz cancel is performed by hitting M and H at the same time
 	{
 		CurrentState.Resolve--;
-		CurrentState.Durability = 80;
+		CurrentState.Durability = 750;
 		CurrentState.MPressed = 0;
 		CurrentState.HPressed = 0;
 		CurrentState.ResolveRecoverTimer = 0;
