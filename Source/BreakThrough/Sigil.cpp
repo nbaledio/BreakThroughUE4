@@ -12,11 +12,17 @@ ASigil::ASigil()
 	Transform = CreateDefaultSubobject<USceneComponent>(TEXT("Transform"));
 	RootComponent = Transform;
 
-	MainMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Main Mesh"));
-	MainMesh->SetupAttachment(RootComponent);
+	SigilBack = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Sigil Back"));
+	SigilBack->SetupAttachment(RootComponent);
 
+	SigilMid = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Sigil Mid"));
+	SigilMid ->SetupAttachment(SigilBack);
+
+	SigilFront = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Sigil Front"));
+	SigilFront->SetupAttachment(SigilBack);
+	
 	Echo = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Echo"));
-	Echo->SetupAttachment(MainMesh);
+	Echo->SetupAttachment(SigilBack);
 }
 
 // Called when the game starts or when spawned
@@ -26,22 +32,48 @@ void ASigil::BeginPlay()
 
 	if (BaseSigilMaterial != nullptr)
 	{
-		DynamicSigilMaterial = UMaterialInstanceDynamic::Create(BaseSigilMaterial, this);
+		DynamicSigilBackMaterial = UMaterialInstanceDynamic::Create(BaseSigilMaterial, this);
+		DynamicSigilMidMaterial = UMaterialInstanceDynamic::Create(BaseSigilMaterial, this);
+		DynamicSigilFrontMaterial = UMaterialInstanceDynamic::Create(BaseSigilMaterial, this);
 	}
 	if (EchoSigilMaterial != nullptr)
 	{
 		DynamicEchoMaterial = UMaterialInstanceDynamic::Create(EchoSigilMaterial, this);
 	}
 
-	if (DynamicSigilMaterial != nullptr)
-		MainMesh->SetMaterial(0, DynamicSigilMaterial);
+	if (DynamicSigilBackMaterial != nullptr)
+	{
+		if (BackSigilImage)
+			DynamicSigilBackMaterial->SetTextureParameterValue(FName("SigilTexture"), BackSigilImage);
+		SigilBack->SetMaterial(0, DynamicSigilBackMaterial);
+	}
+
+	if (DynamicSigilMidMaterial != nullptr)
+	{
+		if (MidSigilImage)
+			DynamicSigilMidMaterial->SetTextureParameterValue(FName("SigilTexture"), MidSigilImage);
+		SigilMid->SetMaterial(0, DynamicSigilMidMaterial);
+	}
+
+	if (DynamicSigilFrontMaterial != nullptr)
+	{
+		if (FrontSigilImage)
+			DynamicSigilFrontMaterial->SetTextureParameterValue(FName("SigilTexture"), FrontSigilImage);
+		SigilFront->SetMaterial(0, DynamicSigilFrontMaterial);
+	}
+
 	if (DynamicEchoMaterial != nullptr)
+	{
+		if (FullSigilImage != nullptr)
+			DynamicEchoMaterial->SetTextureParameterValue(FName("SigilTexture"), FullSigilImage);
 		Echo->SetMaterial(0, DynamicEchoMaterial);
+	}
 
 	CurrentState.bIsActive = false;
-	MainMesh->SetVisibility(false);
+	SigilBack->SetVisibility(false);
+	SigilMid->SetVisibility(false);
+	SigilFront->SetVisibility(false);
 	Echo->SetVisibility(false);
-	//Activate(FVector2D(0), FRotator(-15, 0, 20));
 }
 
 void ASigil::Tick(float DeltaTime)
@@ -56,36 +88,24 @@ void ASigil::Activate(FVector2D Location, FRotator Orientation)
 	CurrentState.Position = Location;
 	CurrentState.Rotation = Orientation;
 
-	MainMesh->SetRelativeRotation(FRotator(0, 0, 0));
+	SigilBack->SetRelativeRotation(FRotator(0, 0, 0));
 
 	CurrentState.bIsActive = true;
 	CurrentState.MainEmissiveAlpha = 0;
 	CurrentState.MainScaleAlpha = 0;
 	CurrentState.EchoScaleAlpha = 0;
-
-	if (DynamicSigilMaterial != nullptr)
-	{
-		if (DynamicEchoMaterial != nullptr)
-		{
-			if (SigilImage != nullptr)
-			{
-				DynamicSigilMaterial->SetTextureParameterValue(FName("SigilTexture"), SigilImage);
-				DynamicEchoMaterial->SetTextureParameterValue(FName("SigilTexture"), SigilImage);
-			}
-		}
-	}
 }
 
 void ASigil::Update()
 {
 	if (CurrentState.bIsActive)
 	{
-		if (CurrentState.MainScaleAlpha < 1)
+		//if (CurrentState.MainScaleAlpha < 3)
 			CurrentState.MainScaleAlpha += .1f;
-		else if (CurrentState.MainScaleAlpha >= 1 && CurrentState.MainEmissiveAlpha < 1)
+		if (CurrentState.MainScaleAlpha >= 3 && CurrentState.MainEmissiveAlpha < 1)
 		{
-			CurrentState.MainScaleAlpha = 1;
-			CurrentState.MainEmissiveAlpha += .04f;
+			//CurrentState.MainScaleAlpha = 1;
+			CurrentState.MainEmissiveAlpha += .1f;
 		}
 
 		if (CurrentState.MainScaleAlpha < 1)
@@ -102,30 +122,43 @@ void ASigil::DrawSigil()
 {
 	if (CurrentState.bIsActive)
 	{
-		MainMesh->SetVisibility(true);
+		SigilBack->SetVisibility(true);
+		SigilMid->SetVisibility(true);
+		SigilFront->SetVisibility(true);
 		Echo->SetVisibility(true);
 
 		Transform->SetWorldLocation(FVector(CurrentState.Position.X, -25, CurrentState.Position.Y));
 		Transform->SetWorldRotation(CurrentState.Rotation);
 
-		//if (CurrentState.MainScaleAlpha < 1)
-			MainMesh->SetRelativeScale3D(FVector(FMath::Lerp(0.f, 1.f, FMath::Min(1.f, CurrentState.MainScaleAlpha))));
-		/*else if (CurrentState.MainEmissiveAlpha >= .5)
-			MainMesh->SetRelativeScale3D(FVector(FMath::Lerp(1.f, 1.3f, FMath::Min(1.f, 2 *(CurrentState.MainEmissiveAlpha - .5f)))));*/
+		SigilBack->SetRelativeScale3D(FVector(FMath::Lerp(0.f, 1.f, FMath::Min(1.f, CurrentState.MainScaleAlpha))));
 		
 		Echo->SetRelativeScale3D(FVector(FMath::Lerp(0.f, 1.5f, FMath::Min(1.f, CurrentState.EchoScaleAlpha)), FMath::Lerp(0.f, 1.75f, FMath::Min(1.f, CurrentState.EchoScaleAlpha)), 1));
 
-		FVector EchoLocation = FVector(0, 0, FMath::Lerp(0.f, -150.f, FMath::Min(1.f, CurrentState.EchoScaleAlpha)));
+		FVector EchoLocation = FVector(0, 0, FMath::Lerp(0.f, -50.f, FMath::Min(1.f, CurrentState.EchoScaleAlpha)));
+		FVector MidLocation = FVector(0, 0, FMath::Lerp(0.f, 20.f, FMath::Min(1.f, CurrentState.MainScaleAlpha - .5f)));
+		FVector FrontLocation = FVector(0, 0, FMath::Lerp(MidLocation.Z, 40.f, FMath::Min(1.f, CurrentState.MainScaleAlpha - .5f)));
 		Echo->SetRelativeLocation(EchoLocation);
+		SigilMid->SetRelativeLocation(MidLocation);
+		SigilFront->SetRelativeLocation(FrontLocation);
 
-		MainMesh->SetRelativeRotation(FRotator(MainMesh->GetRelativeRotation().Pitch, MainMesh->GetRelativeRotation().Yaw + 1, MainMesh->GetRelativeRotation().Roll));
-		Echo->SetRelativeRotation(FRotator(MainMesh->GetRelativeRotation().Pitch, MainMesh->GetRelativeRotation().Yaw - 2, MainMesh->GetRelativeRotation().Roll));
+		SigilBack->SetRelativeRotation(FRotator(SigilBack->GetRelativeRotation().Pitch, SigilBack->GetRelativeRotation().Yaw + .15f, SigilBack->GetRelativeRotation().Roll));
+		//Echo->SetRelativeRotation(FRotator(SigilBack->GetRelativeRotation().Pitch, SigilBack->GetRelativeRotation().Yaw - 2, SigilBack->GetRelativeRotation().Roll));
 
 		//set material parameters
-		if (DynamicSigilMaterial != nullptr)
+		if (DynamicSigilBackMaterial != nullptr)
 		{
-			DynamicSigilMaterial->SetScalarParameterValue(FName("Alpha"), CurrentState.MainEmissiveAlpha);
-			DynamicSigilMaterial->SetVectorParameterValue(FName("SigilColor"), SigilColor);
+			DynamicSigilBackMaterial->SetScalarParameterValue(FName("Alpha"), CurrentState.MainEmissiveAlpha);
+			DynamicSigilBackMaterial->SetVectorParameterValue(FName("SigilColor"), SigilColor);
+		}
+		if (DynamicSigilMidMaterial != nullptr)
+		{
+			DynamicSigilMidMaterial->SetScalarParameterValue(FName("Alpha"), CurrentState.MainEmissiveAlpha);
+			DynamicSigilMidMaterial->SetVectorParameterValue(FName("SigilColor"), SigilColor);
+		}
+		if (DynamicSigilFrontMaterial != nullptr)
+		{
+			DynamicSigilFrontMaterial->SetScalarParameterValue(FName("Alpha"), CurrentState.MainEmissiveAlpha);
+			DynamicSigilFrontMaterial->SetVectorParameterValue(FName("SigilColor"), SigilColor);
 		}
 		if (DynamicEchoMaterial != nullptr)
 		{
@@ -135,7 +168,9 @@ void ASigil::DrawSigil()
 	}
 	else
 	{
-		MainMesh->SetVisibility(false);
+		SigilBack->SetVisibility(false);
+		SigilMid->SetVisibility(false);
+		SigilFront->SetVisibility(false);
 		Echo->SetVisibility(false);
 	}
 }

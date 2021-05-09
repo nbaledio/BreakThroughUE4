@@ -23,8 +23,8 @@ struct FBlitzState
 	float Alpha;
 	uint8 FlashEffectFrameIndex;
 	uint8 FlashEffectFramePlayTime;
-	uint8 WaveEffectFrameIndex;
-	uint8 WaveEffectFramePlayTime;
+	float WaveScaleAlpha;
+	float WaveAlpha;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
 		uint8 EffectColor;
@@ -64,6 +64,7 @@ public:
 		FVector LineDissolveColor = FVector(1);
 
 	UMaterialInstanceDynamic* DynamicFlashMaterial;
+	UMaterialInstanceDynamic* DynamicWaveMaterial;
 	UMaterialInstanceDynamic* DynamicLineMaterial;
 
 	FVector LightVector;
@@ -82,6 +83,8 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UMaterialBillboardComponent* BlitzFlash;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UStaticMeshComponent* BlitzWave;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
 		UMaterialInterface* InvisibleMaterial;
@@ -91,6 +94,8 @@ protected:
 		UMaterialInterface* LineMaterial;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
 		UMaterialInterface* FlashMaterial;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
+		UMaterialInterface* WaveMaterial;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
 		UAnimationAsset* DefaultAnimation;

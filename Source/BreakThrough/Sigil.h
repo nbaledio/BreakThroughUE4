@@ -48,9 +48,17 @@ public:
 		FVector EchoColor;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
-		UTexture* SigilImage;
+		UTexture* FullSigilImage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
+		UTexture* BackSigilImage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
+		UTexture* MidSigilImage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
+		UTexture* FrontSigilImage;
 
-	UMaterialInstanceDynamic* DynamicSigilMaterial;
+	UMaterialInstanceDynamic* DynamicSigilBackMaterial;
+	UMaterialInstanceDynamic* DynamicSigilMidMaterial;
+	UMaterialInstanceDynamic* DynamicSigilFrontMaterial;
 	UMaterialInstanceDynamic* DynamicEchoMaterial;
 
 protected:
@@ -61,7 +69,11 @@ protected:
 		USceneComponent* Transform;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		UStaticMeshComponent* MainMesh;
+		UStaticMeshComponent* SigilBack;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UStaticMeshComponent* SigilMid;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UStaticMeshComponent* SigilFront;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UStaticMeshComponent* Echo;

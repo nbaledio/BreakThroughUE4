@@ -101,6 +101,8 @@ protected:
 		float PushboxWidth = 50;
 	UPROPERTY(EditAnywhere, Category = "Movement Properties")
 		float PushboxVerticalOffset = 0;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float PushboxHorizontalOffset = 0;
 
 	void DrawPushbox();
 

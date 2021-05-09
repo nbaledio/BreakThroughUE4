@@ -26,10 +26,31 @@ void ABTCharacterACH::DrawCharacter()
 	{
 		DynamicBodyMain->SetVectorParameterValue("StatusColor", StatusColor);
 		DynamicBodyMain->SetScalarParameterValue("StatusMix", StatusMix);
+		DynamicBodyMetallic->SetVectorParameterValue("StatusColor", StatusColor);
+		DynamicBodyMetallic->SetScalarParameterValue("StatusMix", StatusMix);
+		DynamicBodySpec->SetVectorParameterValue("StatusColor", StatusColor);
+		DynamicBodySpec->SetScalarParameterValue("StatusMix", StatusMix);
+		DynamicSeals->SetVectorParameterValue("StatusColor", StatusColor);
+		DynamicSeals->SetScalarParameterValue("StatusMix", StatusMix);
+		DynamicRightEye->SetVectorParameterValue("StatusColor", StatusColor);
+		DynamicRightEye->SetScalarParameterValue("StatusMix", StatusMix);
+		DynamicSpearEdge->SetVectorParameterValue("StatusColor", StatusColor);
+		DynamicSpearEdge->SetScalarParameterValue("StatusMix", StatusMix);
+		DynamicSpearMetallic->SetVectorParameterValue("StatusColor", StatusColor);
+		DynamicSpearMetallic->SetScalarParameterValue("StatusMix", StatusMix);
+		DynamicSpearSpec->SetVectorParameterValue("StatusColor", StatusColor);
+		DynamicSpearSpec->SetScalarParameterValue("StatusMix", StatusMix);
 	}
 	else
 	{
 		DynamicBodyMain->SetScalarParameterValue("StatusMix", 0);
+		DynamicBodyMetallic->SetScalarParameterValue("StatusMix", 0);
+		DynamicBodySpec->SetScalarParameterValue("StatusMix", 0);
+		DynamicSpearEdge->SetScalarParameterValue("StatusMix", 0);
+		DynamicSpearSpec->SetScalarParameterValue("StatusMix", 0);
+		DynamicSpearMetallic->SetScalarParameterValue("StatusMix", 0);
+		DynamicRightEye->SetScalarParameterValue("StatusMix", 0);
+		DynamicSeals->SetScalarParameterValue("StatusMix", 0);
 	}
 }
 
@@ -42,21 +63,44 @@ bool ABTCharacterACH::ActiveTransitions()
 {
 	if (BlitzCancel())
 		return true;
+
 	//Break Triggers/Supers
 	//Special Attacks
 	//Normal Attacks
-	if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
+	if (CurrentState.Dir1 == InputTime || CurrentState.Dir2 == InputTime || CurrentState.Dir3 == InputTime) // holding the down direction
 	{
-		if (!CurrentState.bIsAirborne)
+		
+	}
+	else //otherwise
+	{
+		if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
 		{
-			if ((CurrentState.MoveList & n5M) == 0)
+			if (!CurrentState.bIsAirborne)
 			{
-				CurrentState.MPressed = 0;
-				CurrentState.MoveList |= n5M;
-				return EnterNewAnimation(Normal5M);
+				if ((CurrentState.MoveList & n5M) == 0)
+				{
+					CurrentState.MPressed = 0;
+					CurrentState.MoveList |= n5M;
+					return EnterNewAnimation(Normal5M);
+				}
+			}
+			else
+			{
+
 			}
 		}
+		if (CurrentState.LPressed > 0 && (CurrentState.AvailableActions & AcceptLight))
+		{
+			if (!CurrentState.bIsAirborne)
+			{
+				CurrentState.LPressed = 0;
+				return EnterNewAnimation(Normal5L);
+			}
+			else
+			{
 
+			}
+		}
 	}
 
 	return ABTCharacterBase::ActiveTransitions();
@@ -74,7 +118,7 @@ bool ABTCharacterACH::PassiveTransitions()
 
 bool ABTCharacterACH::ExitTimeTransitions()
 {
-	if (IsCurrentAnimation(Normal5M))
+	if (IsCurrentAnimation(Normal5M) || IsCurrentAnimation(Normal5L))
 		return EnterNewAnimation(IdleStand);
 
 	return ABTCharacterBase::ExitTimeTransitions();
@@ -163,8 +207,10 @@ void ABTCharacterACH::CreateMaterials()
 	{
 		BaseMesh->SetMaterial(4, DynamicSeals);
 
+		if (BodyBC != nullptr)
+			DynamicSeals->SetTextureParameterValue(FName("BaseColor"), BodyBC);
 		if (SealsBC != nullptr)
-			DynamicSeals->SetTextureParameterValue(FName("BaseColor"), SealsBC);
+			DynamicSeals->SetTextureParameterValue(FName("SealBaseColor"), SealsBC);
 		if (BodyILM != nullptr)
 			DynamicSeals->SetTextureParameterValue(FName("ILM"), BodyILM);
 		if (BodyLines != nullptr)
@@ -231,6 +277,9 @@ void ABTCharacterACH::CreateMaterials()
 			DynamicSpearEdge->SetTextureParameterValue(FName("SSS"), SpearSSS);
 	}
 
+	if (DynamicEyeShine)
+		BaseMesh->SetMaterial(6, DynamicEyeShine);
+
 }
 
 void ABTCharacterACH::SetColor(uint8 ColorID)
@@ -258,9 +307,9 @@ void ABTCharacterACH::SetColor(uint8 ColorID)
 		TexPaths.SpearShading = TEXT("Texture'/Game/CharacterAssets/ACH/Textures/Color01/T_ACH_Spear_01_SSS.T_ACH_Spear_01_SSS'");
 		TexPaths.SealBaseColor = TEXT("Texture'/Game/CharacterAssets/ACH/Textures/Color01/T_ACH_Seal_01_BC.T_ACH_Seal_01_BC'");
 		TexPaths.AltBodyBaseColor = TEXT("Texture'/Game/CharacterAssets/ACH/Textures/Color01/T_ACH_WC_01_BC.T_ACH_WC_01_BC'");
-		Sigils[0]->SigilColor = FVector(1, .25f, 1); //Change sigil colors based on color id
+		Sigils[0]->SigilColor = FVector(1, .25f, .85f); //Change sigil colors based on color id
 		Sigils[1]->SigilColor = Sigils[0]->SigilColor;
-		Sigils[0]->EchoColor = FVector(1, 0, 1);
+		Sigils[0]->EchoColor = FVector(1, .1f, 1);
 		Sigils[1]->EchoColor = Sigils[0]->EchoColor;
 		//BlitzImage->BlitzColor = FVector(.9f, .2f, .75f);
 		break;
@@ -314,8 +363,10 @@ void ABTCharacterACH::SetColor(uint8 ColorID)
 
 	if (DynamicSeals != nullptr)
 	{
+		if (BodyBC != nullptr)
+			DynamicSeals->SetTextureParameterValue(FName("BaseColor"), BodyBC);
 		if (SealsBC != nullptr)
-			DynamicSeals->SetTextureParameterValue(FName("BaseColor"), SealsBC);
+			DynamicSeals->SetTextureParameterValue(FName("SealBaseColor"), SealsBC);
 		if (BodySSS != nullptr)
 			DynamicSeals->SetTextureParameterValue(FName("SSS"), BodySSS);
 	}
@@ -391,7 +442,9 @@ void ABTCharacterACH::SetColor(uint8 ColorID)
 			if (ACHBlitz->DynamicSealMaterial)
 			{
 				if (SealsBC != nullptr)
-					ACHBlitz->DynamicSealMaterial->SetTextureParameterValue(FName("BaseColor"), SealsBC);
+					ACHBlitz->DynamicSealMaterial->SetTextureParameterValue(FName("SealBaseColor"), SealsBC);
+				if (BodyBC != nullptr)
+					ACHBlitz->DynamicSealMaterial->SetTextureParameterValue(FName("BaseColor"), BodyBC);
 				if (BodyILM != nullptr)
 					ACHBlitz->DynamicSealMaterial->SetTextureParameterValue(FName("ILM"), BodyILM);
 				if (BodyLines != nullptr)
@@ -417,6 +470,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicBodyMain->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicBodyMain->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
 		DynamicBodyMain->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
+		DynamicBodyMain->SetScalarParameterValue(FName("LightIntensity"), CurrentState.LightIntensity);
 	}
 	if (DynamicBodyMetallic)
 	{
@@ -425,6 +479,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicBodyMetallic->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicBodyMetallic->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
 		DynamicBodyMetallic->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
+		DynamicBodyMetallic->SetScalarParameterValue(FName("LightIntensity"), CurrentState.LightIntensity);
 	}
 		
 	if (DynamicBodySpec)
@@ -434,6 +489,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicBodySpec->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicBodySpec->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
 		DynamicBodySpec->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
+		DynamicBodySpec->SetScalarParameterValue(FName("LightIntensity"), CurrentState.LightIntensity);
 	}
 	if (DynamicSeals)
 	{
@@ -442,6 +498,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicSeals->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicSeals->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
 		DynamicSeals->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
+		DynamicSeals->SetScalarParameterValue(FName("LightIntensity"), CurrentState.LightIntensity);
 	}
 	if (DynamicRightEye)
 	{
@@ -450,6 +507,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicRightEye->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicRightEye->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
 		DynamicRightEye->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
+		DynamicRightEye->SetScalarParameterValue(FName("LightIntensity"), CurrentState.LightIntensity);
 	}
 	if (DynamicSpearMetallic)
 	{
@@ -458,6 +516,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicSpearMetallic->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicSpearMetallic->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
 		DynamicSpearMetallic->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
+		DynamicSpearMetallic->SetScalarParameterValue(FName("LightIntensity"), CurrentState.LightIntensity);
 	}
 	if (DynamicSpearSpec)
 	{
@@ -466,6 +525,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicSpearSpec->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicSpearSpec->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
 		DynamicSpearSpec->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
+		DynamicSpearSpec->SetScalarParameterValue(FName("LightIntensity"), CurrentState.LightIntensity);
 	}
 	if (DynamicSpearEdge)
 	{
@@ -474,6 +534,7 @@ void ABTCharacterACH::LightSettings()
 		DynamicSpearEdge->SetVectorParameterValue(FName("MainLightColor"), CurrentState.MainLightColor);
 		DynamicSpearEdge->SetVectorParameterValue(FName("FillLightColor"), CurrentState.FillLightColor);
 		DynamicSpearEdge->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
+		DynamicSpearEdge->SetScalarParameterValue(FName("LightIntensity"), CurrentState.LightIntensity);
 	}	
 }
 

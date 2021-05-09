@@ -66,31 +66,33 @@ enum CharacterActions
 
 enum AttackProperties
 {
-	PlayHitEffect = (1 << 0),
+	NoHitEffect = (1 << 0),
 	Piercing = (1 << 1), //Attack ignores armor
 	Shatter = (1 << 2), //Attack destroys armor
 	CanAirGroundBounce = (1 << 3),
 	CanGroundBounce = (1 << 4), //can be bounced against the ground
 	CanWallBounce = (1 << 5), //can be bounced off of walls
-	CanWallStick = (1 << 6), //can be stuck against walls, wall stick transitions into crumple if hits the ground before wallsticktime is up
-	CanSweep = (1 << 7), //sweep: no special properties
-	CanLaunch = (1 << 8), //launch: no special properties, purely aesthetic
-	CanStagger = (1 << 9), //stagger: can still be thrown despite being a hitstun state, need to hold button to recover back to standing position once hitstun ends
-	CanCrumple = (1 << 10), //crumple: long hitstun state with preset duration, ends in facedown knockdown, can still be thrown despite being a hitstun state
-	CanKnockAway = (1 << 11), //knock away: no special properties, purely aesthetic
-	CanDeflect = (1 << 12), //deflect: non-deflect attacks are deflected by a hitbox with this property, character enters a hitstun state with preset duration, can still be thrown, two deflective attacks will clash normally
-	CanTumble = (1 << 13), //tumbling: an airborne hitstun state that cannot be air recovered from
-	ComboThrow = (1 << 14), //Throws with this flag can hit opponents even if they are in hitstun
-	AntiAir = (1 << 15),
-	DisableBurst = (1 << 16),
-	ReflectProjectile = (1 << 17),
-	IsSpecial = (1 << 18),
-	IsSuper = (1 << 19),
-	IsSlash = (1 << 20),
-	IsVertical = (1 << 21),
-	IsHorizontal = (1 << 22),
-	IsHeavy = (1 << 23),
-	LowerBodyHit = (1 << 24),
+	CanMidScreenWallBounce = (1 << 6), //can be bounced back after a certain number of frames
+	CanWallStick = (1 << 7), //can be stuck against walls, wall stick transitions into crumple if hits the ground before wallsticktime is up
+	CanSweep = (1 << 8), //sweep: no special properties
+	CanLaunch = (1 << 9), //launch: no special properties, purely aesthetic
+	CanStagger = (1 << 10), //stagger: can still be thrown despite being a hitstun state, need to hold button to recover back to standing position once hitstun ends
+	CanCrumple = (1 << 11), //crumple: long hitstun state with preset duration, ends in facedown knockdown, can still be thrown despite being a hitstun state
+	CanKnockAway = (1 << 12), //knock away: no special properties, purely aesthetic
+	CanDeflect = (1 << 13), //deflect: non-deflect attacks are deflected by a hitbox with this property, character enters a hitstun state with preset duration, can still be thrown, two deflective attacks will clash normally
+	CanTumble = (1 << 14), //tumbling: an airborne hitstun state that cannot be air recovered from
+	ForceCrouch = (1 << 15),
+	ComboThrow = (1 << 16), //Throws with this flag can hit opponents even if they are in hitstun
+	AntiAir = (1 << 17),
+	DisableBurst = (1 << 18),
+	ReflectProjectile = (1 << 19),
+	IsSpecial = (1 << 20),
+	IsSuper = (1 << 21),
+	IsSlash = (1 << 22),
+	IsVertical = (1 << 23),
+	IsHorizontal = (1 << 24),
+	IsHeavy = (1 << 25),
+	LowerBodyHit = (1 << 26),
 };
 
 class ABTProjectileBase;
@@ -140,6 +142,8 @@ struct FAnimationFrame
 	//overrides color of fill light
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 		FVector FillLightColor;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+		float LightIntensity;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hitboxes")
 		TArray<FHitbox> Hitboxes;
@@ -191,7 +195,7 @@ struct FCharacterState
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
 	uint8 AnimFrameIndex = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
-	uint8 PosePlayTime = 0;
+	float PosePlayTime = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
 	uint8 IdleCycle = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
@@ -214,6 +218,8 @@ struct FCharacterState
 		uint8 ShatteredTime = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 		uint8 SlowMoTime = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		uint8 WallBounceTime = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 		uint8 JumpsUsed = 0;
@@ -246,12 +252,12 @@ struct FCharacterState
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
 		uint8 Resolve = 4;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
-		int32 Durability = 100;
+		int32 Durability = 1000;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	uint8 ResolveRecoverTimer; //Resolve starts passive recovery after 3 seconds of not being used and while not shattered, does not increment while shattered
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
-	uint8 RecoverInterval; //dictates how quickly Resolve replenishes, recovers more quickly the lower the character's life, doubled while in slow mo
+		float ResolvePulse; //dictates how quickly Resolve replenishes based on player actions, recovers more quickly the lower the character's life
 
 	UPROPERTY(VisibleAnywhere, Category = "Movement Properties")
 		FVector2D Position; // Y = 0 is considered the ground, X = (-/+)10 are the left and right walls respectively
@@ -398,13 +404,9 @@ struct FCharacterState
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 	float LightIntensity;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
-	float OverallBrightness;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
-	float LineThickness; //0-1 during cinematics, 2 during normal gameplay
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
-	int32 StatusTimer; //only mixes with status color as long as this is greater than zero
+	uint8 StatusTimer = 0; //only mixes with status color as long as this is greater than zero
 };
 
 UCLASS()
@@ -487,7 +489,8 @@ public:
 
 	FVector StatusColor;
 	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
-	float DepthOffset = 300;
+	float DepthOffset;
+	float LineThickness; //0-1 during cinematics, 3 during normal gameplay or Lerp from (0,1) to 3 based on camera's distance from character
 
 	//Blitz Cancel
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
@@ -522,9 +525,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
 		UMaterialInterface* Outline;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
+		UMaterialInterface* EyeShine;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
-		UTexture* SigilTexture;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* BodyBC;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
@@ -545,7 +548,11 @@ protected:
 		FVector DefaultFillLightColor;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
 		FVector DefaultRimLightColor = FVector(1);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
+		float DefaultLightIntensity = 0;
+
 	UMaterialInstanceDynamic* DynamicOutline;
+	UMaterialInstanceDynamic* DynamicEyeShine;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay();
@@ -615,6 +622,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float InitRunSpeed = 2; //set InitRunSpeed to zero to disable run/dash
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float MaxRunSpeed = 5; //Caps Velocity upon hitting an opponent with an attack
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float BlitzDashForce = 2;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		uint8 MaxJumps = 2;
@@ -626,7 +635,7 @@ protected:
 		FVector2D JumpForce;
 
 	//number of frames that an input is active for
-		uint8 InputTime = 10;
+		uint8 InputTime = 8;
 
 public:
 	//Idle Stance Animations

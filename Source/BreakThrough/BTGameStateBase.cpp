@@ -151,7 +151,8 @@ void ABTGameStateBase::SpawnCharacters()
         gs.Player[1]->CurrentState.bFacingRight = false;
         gs.Player[0]->CurrentState.Position = FVector2D(-75, gs.Player[0]->GetActorLocation().Z);
         gs.Player[1]->CurrentState.Position = FVector2D(75, gs.Player[1]->GetActorLocation().Z);
-        gs.Player[1]->DepthOffset = 600;
+        gs.Player[0]->DepthOffset = 0;
+        gs.Player[1]->DepthOffset = 300;
     }
 }
 
