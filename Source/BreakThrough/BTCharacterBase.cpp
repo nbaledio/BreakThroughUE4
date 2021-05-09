@@ -2349,6 +2349,8 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			Opponent->CurrentState.Durability += 250;
 			Opponent->CurrentState.ResolvePulse += 3;
 			Opponent->CurrentState.JustDefense = 0;
+			if (Opponent->CurrentState.ResolveRecoverTimer < 180)
+				Opponent->CurrentState.ResolveRecoverTimer = 180;
 
 			//make opponent flash white
 			Opponent->StatusMix = .5f;
@@ -2487,7 +2489,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 	else if (Opponent->CurrentState.SlowMoTime == 0 && Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve > 0 && !(Hitbox.AttackProperties & Piercing) && !(Hitbox.AttackProperties & Shatter))
 	{
 		//armor hit
-		Opponent->CurrentState.ResolveRecoverTimer = FMath::Max(0, (int32)Opponent->CurrentState.ResolveRecoverTimer - 60);
+		Opponent->CurrentState.ResolveRecoverTimer = FMath::Max(0, (int32)Opponent->CurrentState.ResolveRecoverTimer - 48);
 		Opponent->CurrentState.ResolvePulse /= 2;
 		Opponent->CurrentState.Durability -= Hitbox.DurabilityDamage;
 		Opponent->CurrentState.Resolve -= Hitbox.ResolveDamage;

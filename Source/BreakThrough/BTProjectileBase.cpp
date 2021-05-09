@@ -460,6 +460,7 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 	int32 DamageToApply = OpponentValor * Owner->CurrentState.SpecialProration * Hitbox.BaseDamage;
 	uint8 HitStunToApply = Hitbox.BaseHitStun;
 	FVector2D KnockBackToApply;
+	uint8 HitStopToApply = Hitbox.BaseHitStop;
 
 	if (Owner->Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)
 	{
@@ -488,6 +489,8 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 			Owner->Opponent->CurrentState.ResolveRecoverTimer = 0;
 			Owner->Opponent->CurrentState.ResolvePulse /= 2;
 			HitStunToApply *= 1.2f;
+			if (Hitbox.PotentialCounterKnockBack != FVector2D(0))
+				KnockBackToApply = Hitbox.PotentialCounterKnockBack;
 			Owner->Opponent->CurrentState.CharacterHitState |= Hitbox.CounterAttackProperties;
 			//set shatter UI effect to play
 		}
@@ -496,6 +499,7 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 			HitStunToApply *= 1.2f;
 			if (KnockBackToApply.Y > 0)
 				KnockBackToApply.Y *= 1.2f;
+			HitStopToApply += HitStopToApply / 2;
 			Owner->Opponent->CurrentState.CharacterHitState |= Hitbox.CounterAttackProperties;
 			//set counter hit ui effect to play
 		}
@@ -581,8 +585,9 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 		Owner->Opponent->CurrentState.HitStun += 2;
 
 	//apply hitstop
-	Owner->Opponent->CurrentState.HitStop = Hitbox.BaseHitStop;
-	CurrentState.HitStop = Hitbox.BaseHitStop;
+	//apply hitstop
+	Owner->Opponent->CurrentState.HitStop = HitStopToApply;
+	CurrentState.HitStop = HitStopToApply;
 
 	//meter gain for each character
 	if (Owner->Opponent->CurrentState.ShatteredTime == 0)
@@ -590,6 +595,12 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 
 	if (Owner->CurrentState.ResolveRecoverTimer >= 180)
 		Owner->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * .1f), 1);
+
+	//increase ResolvePulse
+	if (!(Hitbox.AttackProperties & IsSuper))
+	{
+		Owner->CurrentState.ResolvePulse += (float)Hitbox.BaseDamage * .005f;
+	}
 
 	//Make certain actions available for hitting with an attack
 	Owner->CurrentState.AvailableActions = Hitbox.PotentialActions;
@@ -663,6 +674,8 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			Owner->Opponent->CurrentState.Durability += 250;
 			Owner->Opponent->CurrentState.ResolvePulse += 3;
 			Owner->Opponent->CurrentState.JustDefense = 0;
+			if (Owner->Opponent->CurrentState.ResolveRecoverTimer < 180)
+				Owner->Opponent->CurrentState.ResolveRecoverTimer = 180;
 
 			//make opponent flash white
 			Owner->Opponent->StatusMix = 3;
@@ -672,10 +685,7 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		}
 		else
 		{
-			if (Owner->Opponent->CurrentState.ResolveRecoverTimer == 0 && Owner->Opponent->CurrentState.ResolvePulse > 0)
-				Owner->Opponent->CurrentState.ResolvePulse--;
-			else
-				Owner->Opponent->CurrentState.ResolveRecoverTimer = FMath::Max(0, (int32)Owner->Opponent->CurrentState.ResolveRecoverTimer - 30);
+			Owner->Opponent->CurrentState.ResolveRecoverTimer = FMath::Max(0, (int32)Owner->Opponent->CurrentState.ResolveRecoverTimer - 24);
 
 			//blocked hits chip away at durability
 			if (Owner->Opponent->CurrentState.Resolve > 0)
@@ -756,6 +766,9 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 				Owner->Opponent->CurrentState.KnockBack = KnockbackToApply;
 		}
 
+		//increase ResolvePulse
+		Owner->CurrentState.ResolvePulse += (float)Hitbox.BaseDamage * .001f;
+
 		//Made contact so can cancel into other actions
 		Owner->CurrentState.AvailableActions = Hitbox.PotentialActions;
 		Owner->CurrentState.AvailableActions &= AcceptAll - AcceptJump - AcceptBlitz;
@@ -794,7 +807,7 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 	}
 	else if (Owner->Opponent->CurrentState.bArmorActive && Owner->Opponent->CurrentState.Resolve > 0 && !(Hitbox.AttackProperties & Piercing) && !(Hitbox.AttackProperties & Shatter))
 	{
-		Owner->Opponent->CurrentState.ResolveRecoverTimer = FMath::Max(0, (int32)Owner->Opponent->CurrentState.ResolveRecoverTimer - 60);
+		Owner->Opponent->CurrentState.ResolveRecoverTimer = FMath::Max(0, (int32)Owner->Opponent->CurrentState.ResolveRecoverTimer - 48);
 		Owner->Opponent->CurrentState.ResolvePulse /= 2;
 		Owner->Opponent->CurrentState.Durability -= Hitbox.DurabilityDamage;
 		Owner->Opponent->CurrentState.Resolve -= Hitbox.ResolveDamage;
