@@ -3,25 +3,38 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
 #include "BTCharacterBase.h"
-
+#include "RoundManager.generated.h"
 
 /**
 -Add A camera manager at some point
  **/
+
 enum RoundData
 {
 	frameNumber,
 };
 
-class BREAKTHROUGH_API RoundManager
+UCLASS()
+class BREAKTHROUGH_API ARoundManager : public AActor
 {
+	GENERATED_BODY()
 public:
+	// Sets default values for this actor's properties
+	ARoundManager();
 	//References for character variables
 	ABTCharacterBase* Player1Base;
 	ABTCharacterBase* Player2Base;
 	FCharacterState* Player1State;
 	FCharacterState* Player2State;
+	void UpdateTimer();
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+
+protected:
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
 
 private:
 	// Round variables
@@ -42,11 +55,10 @@ private:
 	bool suddenDeath;
 
 	//Functions
-	void BeginPlay();
-	void UpdateTimer();
 	void ResetPositions();
 	void RoundStart();
 	void RoundStop();
 	void ResetGame();
 	void DetermineWinMethod();
+
 };

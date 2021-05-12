@@ -3,21 +3,37 @@
 
 #include "RoundManager.h"
 
-//Start function
-void RoundManager::BeginPlay()
+// Sets default values
+ARoundManager::ARoundManager()
 {
+	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	PrimaryActorTick.bCanEverTick = false; //Gamestate will update this
+}
+
+// Called when the game starts or when spawned
+void ARoundManager::BeginPlay()
+{
+	Super::BeginPlay();
 	//Assume 60 FPS. Change number if a longer/short in game second is desired
 	//60 * (Real world seconds length) = Number of frames to check
 	gameTime = 60;
 	//Change any values based on player settings (ex: max rounds or round time)
 }
 
-//Update function to be used by GameState
-void RoundManager::UpdateTimer()
+// Called every frame
+void ARoundManager::Tick(float DeltaTime)
 {
-	if (gameActive) 
+	Super::Tick(DeltaTime);;
+
+}
+
+//Update function to be used by GameState
+void ARoundManager::UpdateTimer()
+{
+	UE_LOG(LogTemp, Warning, TEXT("%d"),Player2State->Health);
+	/*if (gameActive)
 	{
-		if (!suddenDeath) 
+		if (!suddenDeath)
 		{
 			frameCount++;
 			//Check if one in-game second has passed and decrement timer
@@ -29,10 +45,10 @@ void RoundManager::UpdateTimer()
 		}
 		//Check if a win condition is met
 		DetermineWinMethod();
-	}
+	}*/
 }
 
-void RoundManager::ResetPositions()
+void ARoundManager::ResetPositions()
 {
 	roundCount++;
 	roundTimer = 99;
@@ -42,19 +58,19 @@ void RoundManager::ResetPositions()
 	Player2State->Health = Player2Base->MaxHealth;
 }
 
-void RoundManager::RoundStart()
+void ARoundManager::RoundStart()
 {
 	gameActive = true;
 	lockInputs = false;
 }
 
-void RoundManager::RoundStop()
+void ARoundManager::RoundStop()
 {
 	gameActive = false;
 	lockInputs = true;
 }
 
-void RoundManager::ResetGame()
+void ARoundManager::ResetGame()
 {
 	roundCount = 0;
 	p1Wins = 0;
@@ -67,7 +83,7 @@ void RoundManager::ResetGame()
 }
 
 //Used to check if a win condition has been met 
-void RoundManager::DetermineWinMethod()
+void ARoundManager::DetermineWinMethod()
 {
 	if (!suddenDeath && roundTimer <= 0 && Player1State->Health > 0 && Player2State->Health > 0 && Player1State->Health == Player2State->Health)
 	{
@@ -98,7 +114,7 @@ void RoundManager::DetermineWinMethod()
 		{
 			p1Wins++;
 		}
-		else 
+		else
 		{
 			p2Wins++;
 		}
@@ -123,3 +139,4 @@ void RoundManager::DetermineWinMethod()
 		//Play Double KO Animation
 	}
 }
+
