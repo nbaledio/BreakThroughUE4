@@ -17,21 +17,21 @@ void ARoundManager::BeginPlay()
 	//Assume 60 FPS. Change number if a longer/short in game second is desired
 	//60 * (Real world seconds length) = Number of frames to check
 	gameTime = 60;
+	roundTimer = 99;
 	//Change any values based on player settings (ex: max rounds or round time)
+	RoundStart(); //Temp, remove this when there's a round start animation
 }
 
 // Called every frame
 void ARoundManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);;
-
 }
 
 //Update function to be used by GameState
 void ARoundManager::UpdateTimer()
 {
-	UE_LOG(LogTemp, Warning, TEXT("%d"),Player2State->Health);
-	/*if (gameActive)
+	if (gameActive)
 	{
 		if (!suddenDeath)
 		{
@@ -45,7 +45,7 @@ void ARoundManager::UpdateTimer()
 		}
 		//Check if a win condition is met
 		DetermineWinMethod();
-	}*/
+	}
 }
 
 void ARoundManager::ResetPositions()
@@ -90,53 +90,65 @@ void ARoundManager::DetermineWinMethod()
 		RoundStop();
 		suddenDeath = true;
 		//Play Sudden Death Animation
+		//UE_LOG(LogTemp, Warning, TEXT("Sudden Death"));
+		RoundStart();
 	}
 	else if (!suddenDeath && roundTimer <= 0 && Player1State->Health > 0 && Player2State->Health > 0 && Player1State->Health != Player2State->Health)
 	{
 		RoundStop();
 		//Play Time Up Animation
+		//UE_LOG(LogTemp, Warning, TEXT("Time Out"));
 		//Increment win count
 		if (Player1State->Health > Player2State->Health)
 		{
 			p1Wins++;
+			//UE_LOG(LogTemp, Warning, TEXT("P1 Wins"));
 		}
 		else
 		{
 			p2Wins++;
+			//UE_LOG(LogTemp, Warning, TEXT("P2 Wins"));
 		}
 	}
 	else if ((Player1State->Health == Player1Base->MaxHealth && Player2State->Health <= 0) || (Player2State->Health == Player2Base->MaxHealth && Player1State->Health <= 0))
 	{
 		RoundStop();
 		//Play Perfect KO Animation
+		UE_LOG(LogTemp, Warning, TEXT("Perfect"));
 		//Increment win count
 		if (Player2State->Health <= 0)
 		{
 			p1Wins++;
+			//UE_LOG(LogTemp, Warning, TEXT("P1 Wins"));
 		}
 		else
 		{
 			p2Wins++;
+			//UE_LOG(LogTemp, Warning, TEXT("P2 Wins"));
 		}
 	}
 	else if ((Player1State->Health > 0 && Player2State->Health <= 0) || (Player2State->Health > 0 && Player1State->Health <= 0))
 	{
 		RoundStop();
 		//Play BreakDown Animation
+		//UE_LOG(LogTemp, Warning, TEXT("Breakdown"));
 		//Increment win count
 		if (Player2State->Health <= 0)
 		{
 			p1Wins++;
+			//UE_LOG(LogTemp, Warning, TEXT("P1 Wins"));
 		}
 		else
 		{
 			p2Wins++;
+			//UE_LOG(LogTemp, Warning, TEXT("P2 Wins"));
 		}
 	}
 	else if (Player1State->Health <= 0 && Player2State->Health <= 0)
 	{
 		RoundStop();
 		//Play Double KO Animation
+		//UE_LOG(LogTemp, Warning, TEXT("Double KO"));
 	}
 }
 
