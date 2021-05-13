@@ -485,9 +485,18 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 	{
 		if ((Owner->Opponent->CurrentState.bArmorActive || Owner->Opponent->CurrentState.bCounterHitState) && Hitbox.AttackProperties & Shatter)
 		{
+			//Opponent's penalty for getting shattered
 			Owner->Opponent->CurrentState.ShatteredTime = 120;
 			Owner->Opponent->CurrentState.ResolveRecoverTimer = 0;
-			Owner->Opponent->CurrentState.ResolvePulse /= 2;
+			Owner->Opponent->CurrentState.ResolvePulse *= .5f;
+			Owner->Opponent->CurrentState.Durability = 0;
+			Owner->Opponent->CurrentState.Resolve = 0;
+
+			//Player's reward for landing a shatter
+			if (Owner->CurrentState.ResolveRecoverTimer < 180)
+				Owner->CurrentState.ResolveRecoverTimer = 180;
+			Owner->CurrentState.ResolvePulse += 5;
+
 			HitStunToApply *= 1.2f;
 			if (Hitbox.PotentialCounterKnockBack != FVector2D(0))
 				KnockBackToApply = Hitbox.PotentialCounterKnockBack;
@@ -585,16 +594,12 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 		Owner->Opponent->CurrentState.HitStun += 2;
 
 	//apply hitstop
-	//apply hitstop
 	Owner->Opponent->CurrentState.HitStop = HitStopToApply;
 	CurrentState.HitStop = HitStopToApply;
 
-	//meter gain for each character
+	//meter gain for opponent character
 	if (Owner->Opponent->CurrentState.ShatteredTime == 0)
-		Owner->Opponent->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * .2f), 1);
-
-	if (Owner->CurrentState.ResolveRecoverTimer >= 180)
-		Owner->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * .1f), 1);
+		Owner->Opponent->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * FMath::Max(1.f, Owner->Opponent->CurrentState.ResolvePulse * .5f)), 1);
 
 	//increase ResolvePulse
 	if (!(Hitbox.AttackProperties & IsSuper))

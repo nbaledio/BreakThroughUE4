@@ -1235,8 +1235,10 @@ void ABTCharacterBase::RunBraking()
 	
 	if (!CurrentState.bIsRunning && !CurrentState.bIsAirborne) //braking/friction to slow down character when not voluntarily accelerating
 	{
-		if (FMath::Abs(CurrentState.Velocity.X) > 1.f)
+		if (FMath::Abs(CurrentState.Velocity.X) > 1.f || CurrentState.SlowMoTime > 0)
+		{
 			CurrentState.Velocity.X *= .95f; //gradually come to stop
+		}
 		else
 		{
 			CurrentState.Velocity.X = 0;
@@ -1397,7 +1399,7 @@ void ABTCharacterBase::UpdateResolve()
 				CurrentState.ResolvePulse = 8;
 
 			if (CurrentState.Resolute) //being resolute increases ResolvePulse
-				CurrentState.ResolvePulse += .02f;
+				CurrentState.ResolvePulse += .012f;
 			else if (CurrentState.bIsRunning && ((CurrentState.bFacingRight && CurrentState.Position.X < Opponent->CurrentState.Position.X) || 
 				(!CurrentState.bFacingRight && CurrentState.Position.X > Opponent->CurrentState.Position.X)))
 				CurrentState.ResolvePulse += .01f;
@@ -1438,13 +1440,14 @@ void ABTCharacterBase::UpdateResolve()
 						CurrentState.Durability += FMath::Max(1, FMath::CeilToInt(CurrentState.ResolvePulse * .1f));
 				}
 			}
-			else if (CurrentState.ResolveRecoverTimer < 240)
+			
+			if (CurrentState.ResolveRecoverTimer < 240)
 			{
 				if (CurrentState.ResolveRecoverTimer < 180 || CurrentState.HitStun == 0) //can only reach stage two ResolveRecovery while not in hitstun
 					CurrentState.ResolveRecoverTimer++;
 
-				if ((CurrentState.Resolute || (CurrentState.bIsRunning && ((CurrentState.bFacingRight && CurrentState.Position.X < Opponent->CurrentState.Position.X) || 
-					(!CurrentState.bFacingRight && CurrentState.Position.X > Opponent->CurrentState.Position.X))))) //being resolute or running toward opponent only aids up to the first stage Resolve Recovery
+				if (CurrentState.Resolute || (CurrentState.bIsRunning && ((CurrentState.bFacingRight && CurrentState.Position.X < Opponent->CurrentState.Position.X) || 
+					(!CurrentState.bFacingRight && CurrentState.Position.X > Opponent->CurrentState.Position.X)))) //being resolute or running toward opponent only aids up to the first stage Resolve Recovery
 					CurrentState.ResolveRecoverTimer++;
 			}
 		}
@@ -1807,7 +1810,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			CurrentState.Velocity.Y = 1.5f;
 			//make flash white and play chime
 			StatusMix = .5f;
-			StatusColor = FVector(1);
+			StatusColor = FVector(.9);
 			CurrentState.SlowMoTime = 0;
 			CurrentState.StatusTimer = 10;
 			CurrentState.JumpsUsed = 0;
@@ -1822,7 +1825,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		{
 			//make flash white and play chime
 			StatusMix = .5f;
-			StatusColor = FVector(1);
+			StatusColor = FVector(.9);
 			CurrentState.StatusTimer = 10;
 			CurrentState.LPressed = 0;
 			CurrentState.MPressed = 0;
@@ -1892,13 +1895,6 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			return EnterNewAnimation(IdleStand);
 		}
 
-		if (CurrentState.bIsCrouching && !IsCurrentAnimation(TurnAroundCrouch) && !IsCurrentAnimation(CrouchDown) && !IsCurrentAnimation(IdleCrouch) && !IsCurrentAnimation(IdleCrouchBlink) && !IsCurrentAnimation(CrouchIdleAction)
-			&& !IsCurrentAnimation(GuardLoIn) && !IsCurrentAnimation(GuardLo) && !IsCurrentAnimation(GuardLoOut) && !IsCurrentAnimation(HitCOut) && !IsCurrentAnimation(HitCHeavyOut))
-			return EnterNewAnimation(CrouchDown);
-
-		if (!CurrentState.bIsCrouching && (IsCurrentAnimation(IdleCrouch) || IsCurrentAnimation(CrouchDown) || IsCurrentAnimation(IdleCrouchBlink) || IsCurrentAnimation(CrouchIdleAction)))
-			return EnterNewAnimation(StandUp);
-
 		if (CurrentState.Dir6 == InputTime && !IsCurrentAnimation(WalkForward))
 			return EnterNewAnimation(WalkForward);
 
@@ -1906,11 +1902,21 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			return EnterNewAnimation(WalkBackward);
 	}
 
-	if (CurrentState.DoubleDir4 > 0 && (!CurrentState.bIsAirborne && CurrentState.AvailableActions & AcceptGuard && CurrentState.BlockStun == 0))
+	if (!CurrentState.bIsAirborne && CurrentState.AvailableActions & AcceptGuard)
 	{
-		CurrentState.DoubleDir4 = 0;
-		CurrentState.ResolvePulse *= .8f;
-		return EnterNewAnimation(BackDash);
+		if (CurrentState.bIsCrouching && !IsCurrentAnimation(TurnAroundCrouch) && !IsCurrentAnimation(CrouchDown) && !IsCurrentAnimation(IdleCrouch) && !IsCurrentAnimation(IdleCrouchBlink) && !IsCurrentAnimation(CrouchIdleAction)
+			&& !IsCurrentAnimation(GuardLoIn) && !IsCurrentAnimation(GuardLo) && !IsCurrentAnimation(GuardLoOut) && !IsCurrentAnimation(HitCOut) && !IsCurrentAnimation(HitCHeavyOut))
+			return EnterNewAnimation(CrouchDown);
+
+		if (!CurrentState.bIsCrouching && (IsCurrentAnimation(IdleCrouch) || IsCurrentAnimation(CrouchDown) || IsCurrentAnimation(IdleCrouchBlink) || IsCurrentAnimation(CrouchIdleAction)))
+			return EnterNewAnimation(StandUp);
+
+		if (CurrentState.DoubleDir4 > 0 && CurrentState.BlockStun == 0 && CurrentState.LandingLag == 0)
+		{
+			CurrentState.DoubleDir4 = 0;
+			CurrentState.ResolvePulse *= .8f;
+			return EnterNewAnimation(BackDash);
+		}
 	}
 
 	return false;
@@ -2597,9 +2603,18 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	{
 		if ((Opponent->CurrentState.bArmorActive || Opponent->CurrentState.bCounterHitState) && Hitbox.AttackProperties & Shatter)
 		{
+			//Opponent's penalty for getting shattered
 			Opponent->CurrentState.ShatteredTime = 120;
 			Opponent->CurrentState.ResolveRecoverTimer = 0;
-			Opponent->CurrentState.ResolvePulse /= 2;
+			Opponent->CurrentState.ResolvePulse *= .5f;
+			Opponent->CurrentState.Durability = 0;
+			Opponent->CurrentState.Resolve = 0;
+
+			//Player's reward for landing a shatter
+			if (CurrentState.ResolveRecoverTimer < 180)
+				CurrentState.ResolveRecoverTimer = 180;
+			CurrentState.ResolvePulse += 5;
+
 			HitStunToApply *= 1.2f;
 			if (Hitbox.PotentialCounterKnockBack != FVector2D(0))
 				KnockBackToApply = Hitbox.PotentialCounterKnockBack;
@@ -2706,10 +2721,10 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 	//meter gain for each character
 	if (Opponent->CurrentState.ShatteredTime == 0)
-		Opponent->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * 5), 1);
+		Opponent->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * FMath::Max(1.f, Opponent->CurrentState.ResolvePulse * .5f)), 1);
 
-	if (CurrentState.ResolveRecoverTimer >= 180)
-		CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * 3), 1);
+	/*if (CurrentState.ResolveRecoverTimer >= 180)
+		CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * 3), 1);*/
 
 	//increase ResolvePulse
 	if (!(Hitbox.AttackProperties & IsSuper))
@@ -2926,7 +2941,7 @@ bool ABTCharacterBase::BlitzCancel()
 		CurrentState.MPressed > 0 && CurrentState.HPressed > 0 && FMath::Abs(CurrentState.MPressed - CurrentState.HPressed) <= 3) //Blitz cancel is performed by hitting M and H at the same time
 	{
 		CurrentState.Resolve--;
-		CurrentState.Durability = 80;
+		CurrentState.Durability = 750;
 		CurrentState.MPressed = 0;
 		CurrentState.HPressed = 0;
 		CurrentState.ResolveRecoverTimer = 0;
