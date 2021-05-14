@@ -15,6 +15,9 @@ ABTCharacterBase::ABTCharacterBase()
 	BaseMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Character Mesh"));
 	BaseMesh->SetupAttachment(RootComponent);
 
+	SmearMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Smear Mesh"));
+	SmearMesh->SetupAttachment(RootComponent);
+
 	CharacterVoice = CreateDefaultSubobject<UAudioComponent>(TEXT("Character Voice"));
 	CharacterVoice->SetupAttachment(RootComponent);
 
@@ -3074,6 +3077,11 @@ void ABTCharacterBase::CreateMaterials()
 		DynamicOutline = UMaterialInstanceDynamic::Create(Outline, this);
 	if (EyeShine != nullptr)
 		DynamicEyeShine = UMaterialInstanceDynamic::Create(EyeShine, this);
+	if (SmearEffect != nullptr)
+		DynamicSmear = UMaterialInstanceDynamic::Create(SmearEffect, this);
+
+	if (DynamicSmear != nullptr)
+		SmearMesh->SetMaterial(0, DynamicSmear);
 }
 
 void ABTCharacterBase::SpawnPBS() //spawn projectiles, blitz image, and sigils

@@ -509,6 +509,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		USkeletalMeshComponent* BaseMesh;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
+		USkeletalMeshComponent* SmearMesh;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		USceneComponent* MainLightRotator;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
@@ -527,6 +530,8 @@ protected:
 		UMaterialInterface* Outline;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
 		UMaterialInterface* EyeShine;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
+		UMaterialInterface* SmearEffect;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* BodyBC;
@@ -553,6 +558,7 @@ protected:
 
 	UMaterialInstanceDynamic* DynamicOutline;
 	UMaterialInstanceDynamic* DynamicEyeShine;
+	UMaterialInstanceDynamic* DynamicSmear;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay();

@@ -22,6 +22,15 @@ void ABTCharacterACH::DrawCharacter()
 {
 	ABTCharacterBase::DrawCharacter();
 
+	if (IsCurrentAnimation(Normal5H))
+	{
+
+	}
+	else
+	{
+		SmearMesh->SetVisibility(false);
+	}
+
 	if (CurrentState.StatusTimer > 0)
 	{
 		DynamicBodyMain->SetVectorParameterValue("StatusColor", StatusColor);
