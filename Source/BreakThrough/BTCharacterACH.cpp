@@ -22,13 +22,11 @@ void ABTCharacterACH::DrawCharacter()
 {
 	ABTCharacterBase::DrawCharacter();
 
-	if (IsCurrentAnimation(Normal5H))
-	{
+	SmearMesh->SetVisibility(false);
 
-	}
-	else
+	if (IsCurrentAnimation(Normal5H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
 	{
-		SmearMesh->SetVisibility(false);
+		SmearMesh->SetVisibility(true);
 	}
 
 	if (CurrentState.StatusTimer > 0)
@@ -82,6 +80,22 @@ bool ABTCharacterACH::ActiveTransitions()
 	}
 	else //otherwise
 	{
+		if (CurrentState.HPressed > 0 && (CurrentState.AvailableActions & AcceptHeavy))
+		{
+			if (!CurrentState.bIsAirborne)
+			{
+				if ((CurrentState.MoveList & n5H) == 0)
+				{
+					CurrentState.HPressed = 0;
+					CurrentState.MoveList |= n5H;
+					return EnterNewAnimation(Normal5H);
+				}
+			}
+			else
+			{
+
+			}
+		}
 		if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
 		{
 			if (!CurrentState.bIsAirborne)
@@ -127,7 +141,7 @@ bool ABTCharacterACH::PassiveTransitions()
 
 bool ABTCharacterACH::ExitTimeTransitions()
 {
-	if (IsCurrentAnimation(Normal5M) || IsCurrentAnimation(Normal5L))
+	if (IsCurrentAnimation(Normal5H) || IsCurrentAnimation(Normal5M) || IsCurrentAnimation(Normal5L))
 		return EnterNewAnimation(IdleStand);
 
 	return ABTCharacterBase::ExitTimeTransitions();
@@ -136,6 +150,42 @@ bool ABTCharacterACH::ExitTimeTransitions()
 void ABTCharacterACH::AnimationEvents()
 {
 	ABTCharacterBase::AnimationEvents();
+
+	if (IsCurrentAnimation(Normal5H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
+	{
+		FVector Scale = FVector(1);
+		FVector SmearFrameIndex = FVector(0);
+		FVector EmitFrameIndex = FVector((CurrentState.AnimFrameIndex - 3) % 2, (CurrentState.AnimFrameIndex - 3) / 2, 0);
+
+		if (!CurrentState.bFacingRight)
+			Scale.X *= -1;
+		if (CurrentState.AnimFrameIndex > 3)
+		{
+			if (CurrentState.AnimFrameIndex == 4)
+				SmearFrameIndex.X = 1;
+			else if (CurrentState.AnimFrameIndex == 5)
+			{
+				SmearFrameIndex.X = 1;
+				SmearFrameIndex.Y = 1;
+			}
+			else
+			{
+				SmearFrameIndex.X = .5f;
+				SmearFrameIndex.Y = 0;
+			}
+		}
+
+		if (DynamicSmear)
+		{
+			DynamicSmear->SetVectorParameterValue(TEXT("RowsAndColumns"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionRC"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("AnimIndex"), SmearFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionAnimIndex"), EmitFrameIndex);
+		}
+
+		SmearMesh->SetRelativeScale3D(Scale);
+		SmearMesh->SetMorphTarget(TEXT("ACH_5H"), 1);
+	}
 }
 
 void ABTCharacterACH::CreateMaterials()
