@@ -93,6 +93,7 @@ enum AttackProperties
 	IsHorizontal = (1 << 24),
 	IsHeavy = (1 << 25),
 	LowerBodyHit = (1 << 26),
+	ForceStand = (1 << 27),
 };
 
 class ABTProjectileBase;

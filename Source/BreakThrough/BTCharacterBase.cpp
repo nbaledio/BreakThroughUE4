@@ -2521,8 +2521,8 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		CurrentState.HitStop = Hitbox.BaseHitStop;
 		Opponent->CurrentState.HitStop = CurrentState.HitStop;
 		//make opponent flash red
-		Opponent->StatusMix = .8f;
-		Opponent->CurrentState.StatusTimer = 8;
+		Opponent->StatusMix = .7f;
+		Opponent->CurrentState.StatusTimer = 10;
 		Opponent->StatusColor = FVector(1, 0, 0);
 
 		//available actions are more limited when hitting an opponent's armor
@@ -2580,6 +2580,8 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 	if (Hitbox.AttackProperties & ForceCrouch && !Opponent->CurrentState.bIsAirborne)
 		Opponent->CurrentState.bIsCrouching = true;
+	else if (Hitbox.AttackProperties & ForceStand && !Opponent->CurrentState.bIsAirborne)
+		Opponent->CurrentState.bIsCrouching = false;
 
 	//calculate damage scaling based on opponent's remaining health
 	float OpponentValor;
@@ -2640,8 +2642,8 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			Opponent->CurrentState.CharacterHitState |= Hitbox.CounterAttackProperties;
 			//set shatter UI effect to play
 		}
-		else if ((Opponent->CurrentState.bArmorActive || Opponent->CurrentState.bCounterHitState) && 
-			(!(Hitbox.AttackProperties & Piercing && Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve > 0) || Opponent->CurrentState.SlowMoTime > 0))
+		else if ((Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve == 0) || Opponent->CurrentState.bCounterHitState ||
+			(Hitbox.AttackProperties & Piercing && Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve > 0) || Opponent->CurrentState.SlowMoTime > 0)
 		{
 			//increase hitstun and vertical knockback on counterhit
 			HitStunToApply += HitStunToApply/2;
@@ -2651,11 +2653,28 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 				KnockBackToApply.Y *= 1.2f;
 			HitStopToApply += HitStopToApply / 2;
 			Opponent->CurrentState.CharacterHitState |= Hitbox.CounterAttackProperties;
-			//set counter hit ui effect to play
-		}
-		else if (Hitbox.AttackProperties & Piercing && Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve > 0)
-		{
-			//set piercing ui effect to play
+
+			if (Hitbox.AttackProperties & Piercing && Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve > 0)
+			{
+				//set piercing ui effect to play
+				//piercing attacks still take away opponent's Resolve on hit
+				Opponent->CurrentState.Durability -= Hitbox.DurabilityDamage;
+				Opponent->CurrentState.Resolve -= Hitbox.ResolveDamage;
+
+				//make opponent flash magenta on pierce
+				Opponent->StatusMix = .7f;
+				Opponent->CurrentState.StatusTimer = 12;
+				Opponent->StatusColor = FVector(1, .1, 1);
+			}
+			else
+			{
+				//set counter hit ui effect to play
+
+				//make opponent flash red on counter
+				Opponent->StatusMix = .7f;
+				Opponent->CurrentState.StatusTimer = 12;
+				Opponent->StatusColor = FVector(1, 0, 0);
+			}
 		}
 	}
 
