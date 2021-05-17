@@ -368,6 +368,8 @@ struct FCharacterState
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bBackwardJump = false;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
+		bool bSuperJump = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bArmorActive = false;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bCounterHitState = false;
@@ -541,6 +543,10 @@ protected:
 		UTexture* BodyILM;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* BodyLines;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* SmearBody;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* SmearEmit;
 
 	//Sets the corresponding parameters on character's materials
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
@@ -606,6 +612,10 @@ protected:
 	void ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter);
 
 	void ContactThrow(FHitbox Hitbox, int32 ThrowType);
+
+	virtual void ResetSmear();
+
+	bool bShowSmear;
 
 	/* Affects how quickly the character falls to the ground (See below for values per weight class)
 		Featherweight = .95 
@@ -730,9 +740,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardAirOut;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Resolute Counters")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
+		TArray<FAnimationFrame> ThrowAttempt;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
+		TArray<FAnimationFrame> AirThrowAttempt;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
 		TArray<FAnimationFrame> ResoluteCounter;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Resolute Counters")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
 		TArray<FAnimationFrame> AirResoluteCounter;
 
 	//Ground Hitstun Animations

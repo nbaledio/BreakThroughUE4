@@ -22,13 +22,6 @@ void ABTCharacterACH::DrawCharacter()
 {
 	ABTCharacterBase::DrawCharacter();
 
-	SmearMesh->SetVisibility(false);
-
-	if (IsCurrentAnimation(Normal5H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
-	{
-		SmearMesh->SetVisibility(true);
-	}
-
 	if (CurrentState.StatusTimer > 0)
 	{
 		DynamicBodyMain->SetVectorParameterValue("StatusColor", StatusColor);
@@ -80,6 +73,22 @@ bool ABTCharacterACH::ActiveTransitions()
 	}
 	else //otherwise
 	{
+		if (CurrentState.BPressed > 0 && (CurrentState.AvailableActions & AcceptBreak))
+		{
+			if (!CurrentState.bIsAirborne)
+			{
+				if ((CurrentState.MoveList & n5B) == 0)
+				{
+					CurrentState.BPressed = 0;
+					CurrentState.MoveList |= n5B;
+					return EnterNewAnimation(Normal5B);
+				}
+			}
+			else
+			{
+
+			}
+		}
 		if (CurrentState.HPressed > 0 && (CurrentState.AvailableActions & AcceptHeavy))
 		{
 			if (!CurrentState.bIsAirborne)
@@ -141,7 +150,7 @@ bool ABTCharacterACH::PassiveTransitions()
 
 bool ABTCharacterACH::ExitTimeTransitions()
 {
-	if (IsCurrentAnimation(Normal5H) || IsCurrentAnimation(Normal5M) || IsCurrentAnimation(Normal5L))
+	if (IsCurrentAnimation(Normal5B) || IsCurrentAnimation(Normal5H) || IsCurrentAnimation(Normal5M) || IsCurrentAnimation(Normal5L))
 		return EnterNewAnimation(IdleStand);
 
 	return ABTCharacterBase::ExitTimeTransitions();
@@ -151,14 +160,66 @@ void ABTCharacterACH::AnimationEvents()
 {
 	ABTCharacterBase::AnimationEvents();
 
-	if (IsCurrentAnimation(Normal5H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
+	//Add character specific animation logic here (adding more available actions based on current state, etc.)
+	/*if (CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0) //makes Achealis's special attacks able to cancel into other specials if her install is active
 	{
-		FVector Scale = FVector(1);
+		if (CurrentState.CurrentAnimFrame.Hitboxes[0].AttackProperties & IsSpecial)
+		{
+			for (int32 i = 0; i < CurrentState.CurrentAnimFrame.Hitboxes.Num(); i++)
+			{
+				CurrentState.CurrentAnimFrame.Hitboxes[i].PotentialActions |= AcceptSpecial;
+			}
+		}
+	}*/
+
+	ResetSmear();
+
+	if (IsCurrentAnimation(Normal5B) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
+	{
+		FVector SmearFrameIndex = FVector(0);
+		FVector EmitFrameIndex = FVector(FMath::Min(1, (CurrentState.AnimFrameIndex - 3) % 2), FMath::Min(1, (CurrentState.AnimFrameIndex - 3) / 2), 0);
+
+
+		if (CurrentState.AnimFrameIndex > 3)
+		{
+			if (CurrentState.AnimFrameIndex == 4)
+				SmearFrameIndex.X = 1;
+			else if (CurrentState.AnimFrameIndex == 5)
+			{
+				if (CurrentState.PosePlayTime < 2)
+					SmearFrameIndex.Y = 1;
+				else
+				{
+					SmearFrameIndex.X = 1;
+					SmearFrameIndex.Y = 1;
+				}
+			}
+			else
+				SmearFrameIndex.X = .5f;
+		}
+
+		if (DynamicSmear)
+		{
+			DynamicSmear->SetVectorParameterValue(TEXT("RowsAndColumns"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionRC"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("AnimIndex"), SmearFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionAnimIndex"), EmitFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("BodyEmissiveColor"), EffectColor);
+			DynamicSmear->SetScalarParameterValue(TEXT("BodyEmissivity"), 10);
+
+			if (SmearEmit)
+				DynamicSmear->SetTextureParameterValue(TEXT("SpriteSheet"), SmearBody);
+			if (SmearBody)
+				DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
+		}
+		SmearMesh->SetMorphTarget(TEXT("ACH_5B"), 1);
+	}
+	else if (IsCurrentAnimation(Normal5H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
+	{
 		FVector SmearFrameIndex = FVector(0);
 		FVector EmitFrameIndex = FVector((CurrentState.AnimFrameIndex - 3) % 2, (CurrentState.AnimFrameIndex - 3) / 2, 0);
 
-		if (!CurrentState.bFacingRight)
-			Scale.X *= -1;
+		
 		if (CurrentState.AnimFrameIndex > 3)
 		{
 			if (CurrentState.AnimFrameIndex == 4)
@@ -181,10 +242,19 @@ void ABTCharacterACH::AnimationEvents()
 			DynamicSmear->SetVectorParameterValue(TEXT("EmissionRC"), FVector(2));
 			DynamicSmear->SetVectorParameterValue(TEXT("AnimIndex"), SmearFrameIndex);
 			DynamicSmear->SetVectorParameterValue(TEXT("EmissionAnimIndex"), EmitFrameIndex);
-		}
+			DynamicSmear->SetVectorParameterValue(TEXT("BodyEmissiveColor"), FVector(1));
+			DynamicSmear->SetScalarParameterValue(TEXT("BodyEmissivity"), 1);
 
-		SmearMesh->SetRelativeScale3D(Scale);
+			if (SmearEmit)
+				DynamicSmear->SetTextureParameterValue(TEXT("SpriteSheet"), SmearBody);
+			if (SmearBody)
+				DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
+		}
 		SmearMesh->SetMorphTarget(TEXT("ACH_5H"), 1);
+	}
+	else
+	{
+		bShowSmear = false;
 	}
 }
 
@@ -602,4 +672,12 @@ void ABTCharacterACH::SpawnPBS()
 	ABTCharacterBase::SpawnPBS();
 
 	//spawn unique projectiles to character and save their states to character state
+}
+
+void ABTCharacterACH::ResetSmear()
+{
+	ABTCharacterBase::ResetSmear();
+
+	SmearMesh->SetMorphTarget(TEXT("ACH_5H"), 0);
+	SmearMesh->SetMorphTarget(TEXT("ACH_5B"), 0);
 }

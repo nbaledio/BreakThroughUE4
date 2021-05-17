@@ -65,6 +65,10 @@ protected:
 
 	virtual void SpawnPBS() override; //spawn in character's projectiles, blitz image, and sigils
 
+	virtual void ResetSmear() override;
+
+	FVector EffectColor = FVector(.85, .1, 1);
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* SpearBC;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
@@ -106,4 +110,6 @@ protected:
 		TArray<FAnimationFrame> Normal5M;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
 		TArray<FAnimationFrame> Normal5H;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> Normal5B;
 };
