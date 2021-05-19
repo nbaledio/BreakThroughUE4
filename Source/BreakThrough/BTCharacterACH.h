@@ -112,4 +112,10 @@ protected:
 		TArray<FAnimationFrame> Normal5H;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
 		TArray<FAnimationFrame> Normal5B;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> Normal2M;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> Normal2H;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> Normal2B;
 };

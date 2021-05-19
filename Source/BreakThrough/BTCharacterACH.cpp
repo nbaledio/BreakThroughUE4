@@ -77,7 +77,66 @@ bool ABTCharacterACH::ActiveTransitions()
 	//Normal Attacks
 	if (CurrentState.Dir1 == InputTime || CurrentState.Dir2 == InputTime || CurrentState.Dir3 == InputTime) // holding the down direction
 	{
-		
+		if (CurrentState.BPressed > 0 && (CurrentState.AvailableActions & AcceptBreak))
+		{
+			if (!CurrentState.bIsAirborne)
+			{
+				if ((CurrentState.MoveList & n2B) == 0)
+				{
+					CurrentState.BPressed = 0;
+					CurrentState.MoveList |= n2B;
+					return EnterNewAnimation(Normal2B);
+				}
+			}
+			else
+			{
+
+			}
+		}
+		if (CurrentState.HPressed > 0 && (CurrentState.AvailableActions & AcceptHeavy))
+		{
+			if (!CurrentState.bIsAirborne)
+			{
+				if ((CurrentState.MoveList & n2H) == 0)
+				{
+					CurrentState.HPressed = 0;
+					CurrentState.MoveList |= n2H;
+					return EnterNewAnimation(Normal2H);
+				}
+			}
+			else
+			{
+
+			}
+		}
+		if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
+		{
+			if (!CurrentState.bIsAirborne)
+			{
+				if ((CurrentState.MoveList & n2M) == 0)
+				{
+					CurrentState.MPressed = 0;
+					CurrentState.MoveList |= n2M;
+					return EnterNewAnimation(Normal2M);
+				}
+			}
+			else
+			{
+
+			}
+		}
+		if (CurrentState.LPressed > 0 && (CurrentState.AvailableActions & AcceptLight))
+		{
+			if (!CurrentState.bIsAirborne)
+			{
+				CurrentState.LPressed = 0;
+				return EnterNewAnimation(Normal2L);
+			}
+			else
+			{
+
+			}
+		}
 	}
 	else //otherwise
 	{
@@ -158,8 +217,11 @@ bool ABTCharacterACH::PassiveTransitions()
 
 bool ABTCharacterACH::ExitTimeTransitions()
 {
-	if (IsCurrentAnimation(Normal5B) || IsCurrentAnimation(Normal5H) || IsCurrentAnimation(Normal5M) || IsCurrentAnimation(Normal5L))
+	if (IsCurrentAnimation(Normal5B) || IsCurrentAnimation(Normal5H) || IsCurrentAnimation(Normal5M) || IsCurrentAnimation(Normal5L) || IsCurrentAnimation(Normal2B) || IsCurrentAnimation(Normal2H))
 		return EnterNewAnimation(IdleStand);
+
+	if (IsCurrentAnimation(Normal2M) || IsCurrentAnimation(Normal2L))
+		return EnterNewAnimation(IdleCrouch);
 
 	return ABTCharacterBase::ExitTimeTransitions();
 }

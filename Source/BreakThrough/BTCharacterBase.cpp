@@ -1923,7 +1923,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 	if (!CurrentState.bIsAirborne && CurrentState.AvailableActions & AcceptGuard)
 	{
 		if (CurrentState.bIsCrouching && !IsCurrentAnimation(TurnAroundCrouch) && !IsCurrentAnimation(CrouchDown) && !IsCurrentAnimation(IdleCrouch) && !IsCurrentAnimation(IdleCrouchBlink) && !IsCurrentAnimation(CrouchIdleAction)
-			&& !IsCurrentAnimation(GuardLoIn) && !IsCurrentAnimation(GuardLo) && !IsCurrentAnimation(GuardLoOut) && !IsCurrentAnimation(HitCOut) && !IsCurrentAnimation(HitCHeavyOut))
+			&& !IsCurrentAnimation(GuardLoIn) && !IsCurrentAnimation(GuardLo) && !IsCurrentAnimation(GuardLoOut) && !IsCurrentAnimation(HitCOut) && !IsCurrentAnimation(HitCHeavyOut) && !IsCurrentAnimation(Normal2L))
 			return EnterNewAnimation(CrouchDown);
 
 		if (!CurrentState.bIsCrouching && (IsCurrentAnimation(IdleCrouch) || IsCurrentAnimation(CrouchDown) || IsCurrentAnimation(IdleCrouchBlink) || IsCurrentAnimation(CrouchIdleAction)))
@@ -2643,7 +2643,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			//set shatter UI effect to play
 		}
 		else if ((Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve == 0) || Opponent->CurrentState.bCounterHitState ||
-			(Hitbox.AttackProperties & Piercing && Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve > 0) || Opponent->CurrentState.SlowMoTime > 0)
+			(Hitbox.AttackProperties & Piercing && Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve > 0) || (Opponent->CurrentState.SlowMoTime > 0 && CurrentState.ComboCount == 1))
 		{
 			//increase hitstun and vertical knockback on counterhit
 			HitStunToApply += HitStunToApply/2;
@@ -3195,7 +3195,7 @@ void ABTCharacterBase::ProcessBlitz()
 	{
 		if (Opponent->CurrentState.Resolute)
 		{
-			Opponent->CurrentState.Durability += 50;
+			Opponent->CurrentState.Durability += 500;
 			Opponent->CurrentState.ResolvePulse += 2;
 
 			//Play UI Resolute signal

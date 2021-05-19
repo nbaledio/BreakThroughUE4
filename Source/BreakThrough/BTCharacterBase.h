@@ -834,6 +834,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Win/Lose Anims")
 		TArray<FAnimationFrame> LoseCycle;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> Normal2L;
+
 private:
 
 	//Take in information from CurrentAnimFrame
