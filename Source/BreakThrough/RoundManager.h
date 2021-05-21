@@ -17,7 +17,7 @@ enum RoundData
 };
 
 UCLASS()
-class BREAKTHROUGH_API ARoundManager : public AActor
+class BREAKTHROUGH_API ARoundManager : public APawn
 {
 	GENERATED_BODY()
 public:

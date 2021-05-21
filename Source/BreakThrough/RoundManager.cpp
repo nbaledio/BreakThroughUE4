@@ -33,6 +33,7 @@ void ARoundManager::UpdateTimer()
 {
 	if (gameActive)
 	{
+		//UE_LOG(LogTemp, Warning, TEXT("GameActive"));
 		if (!suddenDeath)
 		{
 			frameCount++;
