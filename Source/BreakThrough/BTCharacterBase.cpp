@@ -353,9 +353,12 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 			}
 			CurrentState.GravDefyTime--;
 		}
+		BaseMesh->SetRelativeLocation(FVector(0));
 	}
 	else if (CurrentState.HitStop > 0)
 	{
+		if (CurrentState.HitStun > 0 && CurrentState.HitStop > 6)
+			BaseMesh->SetRelativeLocation(FVector(FMath::FRandRange(-5.f, 5.f), 0, 0));
 		CurrentState.HitStop--;
 	}
 
@@ -1242,7 +1245,7 @@ void ABTCharacterBase::RunBraking()
 	
 	if (!CurrentState.bIsRunning && !CurrentState.bIsAirborne) //braking/friction to slow down character when not voluntarily accelerating
 	{
-		if (FMath::Abs(CurrentState.Velocity.X) > 1.f || CurrentState.SlowMoTime > 0)
+		if (FMath::Abs(CurrentState.Velocity.X) > 1 || CurrentState.SlowMoTime > 0)
 		{
 			CurrentState.Velocity.X *= .95f; //gradually come to stop
 		}
@@ -1335,9 +1338,6 @@ void ABTCharacterBase::GravityCalculation()
 
 		CurrentState.Velocity.Y += GravCalc;
 	}
-	if (!CurrentState.bIsAirborne && CurrentState.Position.Y > 0)
-		CurrentState.bIsAirborne = true;
-	
 }
 
 void ABTCharacterBase::ApplyKnockBack()
@@ -1392,6 +1392,9 @@ void ABTCharacterBase::ApplyKnockBack()
 		}
 
 		CurrentState.KnockBack = FVector2D(0, 0);
+
+		if (!CurrentState.bIsAirborne && CurrentState.Velocity.Y > 0)
+			CurrentState.bIsAirborne = true;
 	}
 }
 
@@ -1545,7 +1548,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 			CurrentState.Dir2 = DirInputTime;
 		}
 
-		if (Opponent != nullptr)
+		if (Opponent != nullptr && CurrentState.AvailableActions & AcceptGuard)
 		{
 			if (Opponent->CurrentState.Position.X < CurrentState.Position.X && Inputs & INPUT_RIGHT && !(Inputs & INPUT_LEFT))
 				CurrentState.bIsGuarding = true;
@@ -1596,11 +1599,11 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 				CurrentState.Dir4 = DirInputTime;
 			}
 
-			if (Opponent != nullptr)
+			if (Opponent != nullptr && CurrentState.AvailableActions & AcceptGuard)
 			{
-				if (Opponent->CurrentState.Position.X < CurrentState.Position.X && Inputs & INPUT_RIGHT)
+				if (Opponent->CurrentState.Position.X < CurrentState.Position.X)
 					CurrentState.bIsGuarding = true;
-				else if (!CurrentState.bFacingRight && Inputs & INPUT_RIGHT)
+				else if (!CurrentState.bFacingRight)
 					CurrentState.bIsGuarding = true;
 			}
 		}
@@ -1623,11 +1626,11 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 				CurrentState.Dir6 = DirInputTime;
 			}
 
-			if (Opponent != nullptr)
+			if (Opponent != nullptr && CurrentState.AvailableActions & AcceptGuard)
 			{
-				if (Opponent->CurrentState.Position.X > CurrentState.Position.X && Inputs & INPUT_LEFT)
+				if (Opponent->CurrentState.Position.X > CurrentState.Position.X)
 					CurrentState.bIsGuarding = true;
-				else if (CurrentState.bFacingRight && Inputs & INPUT_LEFT)
+				else if (CurrentState.bFacingRight)
 					CurrentState.bIsGuarding = true;
 			}
 		}
@@ -1946,7 +1949,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 	if (!CurrentState.bIsAirborne && CurrentState.AvailableActions & AcceptGuard)
 	{
 		if (CurrentState.bIsCrouching && !IsCurrentAnimation(TurnAroundCrouch) && !IsCurrentAnimation(CrouchDown) && !IsCurrentAnimation(IdleCrouch) && !IsCurrentAnimation(IdleCrouchBlink) && !IsCurrentAnimation(CrouchIdleAction)
-			&& !IsCurrentAnimation(GuardLoIn) && !IsCurrentAnimation(GuardLo) && !IsCurrentAnimation(GuardLoOut) && !IsCurrentAnimation(HitCOut) && !IsCurrentAnimation(HitCHeavyOut) && !IsCurrentAnimation(Normal2L))
+			&& !IsCurrentAnimation(GuardLoIn) && !IsCurrentAnimation(GuardLo) && !IsCurrentAnimation(GuardLoHeavy) && !IsCurrentAnimation(GuardLoOut) && !IsCurrentAnimation(HitCOut) && !IsCurrentAnimation(HitCHeavyOut) && !IsCurrentAnimation(Normal2L) && !IsCurrentAnimation(BreakerBlitz))
 			return EnterNewAnimation(CrouchDown);
 
 		if (!CurrentState.bIsCrouching && (IsCurrentAnimation(IdleCrouch) || IsCurrentAnimation(CrouchDown) || IsCurrentAnimation(IdleCrouchBlink) || IsCurrentAnimation(CrouchIdleAction)))
@@ -2630,8 +2633,13 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	}
 	else if (Opponent->CurrentState.bIsAirborne)
 	{
-		if (Hitbox.PotentialAirKnockBack == FVector2D(0, 0) && Hitbox.PotentialKnockBack.Y == 0)
-			KnockBackToApply = FVector2D(Hitbox.PotentialKnockBack.X, 2.25f);
+		if (Hitbox.PotentialAirKnockBack == FVector2D(0, 0))
+		{
+			if (Hitbox.PotentialKnockBack.Y == 0)
+				KnockBackToApply = FVector2D(Hitbox.PotentialKnockBack.X, 2.25f);
+			else
+				KnockBackToApply = Hitbox.PotentialKnockBack;
+		}
 		else
 			KnockBackToApply = Hitbox.PotentialAirKnockBack;
 	}
@@ -3020,6 +3028,7 @@ bool ABTCharacterBase::BlitzCancel()
 		CurrentState.HPressed = 0;
 		CurrentState.ResolveRecoverTimer = 0;
 		CurrentState.ResolvePulse -= CurrentState.ResolvePulse/5;
+		CurrentState.SpecialProration *= .9; //scales all damage post mid-combo BlitzCancel by 90%
 
 		if (CurrentState.bIsAirborne && CurrentState.BlockStun == 0)
 		{
@@ -3121,7 +3130,7 @@ bool ABTCharacterBase::BlitzCancel()
 			{
 				TurnAroundCheck();
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 2);
-
+				
 				CurrentState.Resolve--;
 
 				return EnterNewAnimation(BreakerBlitz);
@@ -3129,7 +3138,6 @@ bool ABTCharacterBase::BlitzCancel()
 			if (CurrentState.AvailableActions & AcceptMove) //focus blitz
 			{
 				TurnAroundCheck();
-
 				return EnterNewAnimation(FocusBlitz);
 			}
 
