@@ -751,6 +751,7 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 void ABTCharacterBase::DrawCharacter()
 {
 	LightSettings();
+	DrawSmear();
 
 	SmearMesh->SetVisibility(bShowSmear);
 
@@ -1153,13 +1154,13 @@ void ABTCharacterBase::Guarding()
 	if (CurrentState.AvailableActions & AcceptGuard)
 	{
 		RefreshMovelist();
-		if (!CurrentState.bIsAirborne && (CurrentState.Dir1 == InputTime || CurrentState.Dir2 == InputTime || CurrentState.Dir3 == InputTime))
+		if (!CurrentState.bIsAirborne && (CurrentState.Dir1 == DirInputTime || CurrentState.Dir2 == DirInputTime || CurrentState.Dir3 == DirInputTime))
 		{
 			//on the ground and holding a downward direction means the character is crouching
 			CurrentState.bIsCrouching = true;
 		}
 
-		if (CurrentState.bIsGuarding) //(Dir7 == InputTime || Dir4 >= InputTime || Dir1 == InputTime)
+		if (CurrentState.bIsGuarding) //(Dir7 == DirInputTime || Dir4 >= InputTime || Dir1 == DirInputTime)
 		{
 			//holding a backward direction while able to guard keeps the character's guard up
 			//bIsGuarding = true;
@@ -1270,7 +1271,7 @@ void ABTCharacterBase::Jumping()
 
 	CurrentState.Velocity.Y = JumpForce.Y;
 
-	if (CurrentState.bIsAirborne || CurrentState.bSuperJump)
+	if (CurrentState.bIsAirborne)
 	{
 		TurnAroundCheck();
 
@@ -1281,12 +1282,6 @@ void ABTCharacterBase::Jumping()
 
 			if (CurrentState.JumpsUsed == 0)
 				CurrentState.JumpsUsed++;
-
-			if (CurrentState.bSuperJump)
-			{
-				CurrentState.Velocity.Y *= 1.5;
-				SigilLocation.Y -= 25;
-			}
 
 			if ((CurrentState.bFacingRight && CurrentState.bForwardJump) || (!CurrentState.bFacingRight && CurrentState.bBackwardJump))
 			{
@@ -1323,7 +1318,6 @@ void ABTCharacterBase::Jumping()
 	CurrentState.bIsRunning = false;
 	CurrentState.bForwardJump = false;
 	CurrentState.bBackwardJump = false;
-	CurrentState.bSuperJump = false;
 	CurrentState.JumpsUsed++;
 	TurnAroundCheck();
 }
@@ -1501,23 +1495,23 @@ void ABTCharacterBase::ChargeInputs(int32 Inputs)  //set the correct charges bas
 	if (Inputs & INPUT_UP) //up charge will override down charge
 	{
 		CurrentState.Charge8++;
-		CurrentState.Charge8Life = InputTime;
+		CurrentState.Charge8Life = DirInputTime;
 	}
 	else if (Inputs & INPUT_DOWN)
 	{
 		CurrentState.Charge2++;
-		CurrentState.Charge2Life = InputTime;
+		CurrentState.Charge2Life = DirInputTime;
 	}
 
 	if ((Inputs & INPUT_LEFT && CurrentState.Position.X > Opponent->CurrentState.Position.X) || (Inputs & INPUT_RIGHT && CurrentState.Position.X < Opponent->CurrentState.Position.X))
 	{
 		CurrentState.Charge6++;
-		CurrentState.Charge6Life = InputTime;
+		CurrentState.Charge6Life = DirInputTime;
 	}
 	else if ((Inputs & INPUT_LEFT && CurrentState.Position.X < Opponent->CurrentState.Position.X) || (Inputs & INPUT_RIGHT && CurrentState.Position.X > Opponent->CurrentState.Position.X)) //prevent charging both directions at the same time
 	{
 		CurrentState.Charge4++;
-		CurrentState.Charge4Life = InputTime;
+		CurrentState.Charge4Life = DirInputTime;
 	}
 	
 	if (CurrentState.Charge4Life == 0)
@@ -1539,16 +1533,16 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 	if (Inputs & INPUT_DOWN)
 	{
 		if ((CurrentState.Position.X < Opponent->CurrentState.Position.X && Inputs & INPUT_RIGHT) || (CurrentState.Position.X > Opponent->CurrentState.Position.X && Inputs & INPUT_LEFT))
-			CurrentState.Dir3 = InputTime;
+			CurrentState.Dir3 = DirInputTime;
 		else if ((CurrentState.Position.X > Opponent->CurrentState.Position.X && Inputs & INPUT_RIGHT) || (CurrentState.Position.X < Opponent->CurrentState.Position.X && Inputs & INPUT_LEFT))
-			CurrentState.Dir1 = InputTime;
+			CurrentState.Dir1 = DirInputTime;
 		else
 		{
-			if (CurrentState.Dir2 < InputTime - 1 && CurrentState.Dir2 > 3 && CurrentState.DoubleDir2 == 0)
+			if (CurrentState.Dir2 < DirInputTime - 1 && CurrentState.Dir2 > 3 && CurrentState.DoubleDir2 == 0)
 			{
-				CurrentState.DoubleDir2 = InputTime;
+				CurrentState.DoubleDir2 = DirInputTime;
 			}
-			CurrentState.Dir2 = InputTime;
+			CurrentState.Dir2 = DirInputTime;
 		}
 
 		if (Opponent != nullptr)
@@ -1565,20 +1559,20 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 	}
 	else if (Inputs & INPUT_UP)
 	{
-		if (CurrentState.Dir7 < InputTime - 1 && CurrentState.Dir8 < InputTime - 1 && CurrentState.Dir9 < InputTime - 1 && CurrentState.bIsAirborne && !IsCurrentAnimation(FocusBlitz))
-			CurrentState.AirJump = InputTime;
+		if (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir8 < DirInputTime - 1 && CurrentState.Dir9 < DirInputTime - 1 && CurrentState.bIsAirborne && !IsCurrentAnimation(FocusBlitz))
+			CurrentState.AirJump = DirInputTime;
 
 		if ((CurrentState.Position.X < Opponent->CurrentState.Position.X && Inputs & INPUT_RIGHT) || (CurrentState.Position.X > Opponent->CurrentState.Position.X && Inputs & INPUT_LEFT))
 		{
-			CurrentState.Dir9 = InputTime;
+			CurrentState.Dir9 = DirInputTime;
 		}
 		else if ((CurrentState.Position.X > Opponent->CurrentState.Position.X && Inputs & INPUT_RIGHT) || (CurrentState.Position.X < Opponent->CurrentState.Position.X && Inputs & INPUT_LEFT))
 		{
-			CurrentState.Dir7 = InputTime;
+			CurrentState.Dir7 = DirInputTime;
 		}
 		else
 		{
-			CurrentState.Dir8 = InputTime;
+			CurrentState.Dir8 = DirInputTime;
 		}
 	}
 	else if ((Inputs & INPUT_RIGHT && !(Inputs & INPUT_LEFT)) || (Inputs & INPUT_LEFT && !(Inputs & INPUT_RIGHT)))
@@ -1587,19 +1581,19 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		{
 			if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
 			{
-				if (((CurrentState.Dir6 < InputTime - 1 && CurrentState.Dir6 > 0) || (CurrentState.Dir9 < InputTime - 1 && CurrentState.Dir9 > 0)) && CurrentState.DoubleDir4 == 0)
+				if (((CurrentState.Dir6 < DirInputTime - 1 && CurrentState.Dir6 > 3) || (CurrentState.Dir9 < DirInputTime - 1 && CurrentState.Dir9 > 3)) && CurrentState.DoubleDir6 == 0)
 				{
-					CurrentState.DoubleDir6 = InputTime;
+					CurrentState.DoubleDir6 = DirInputTime;
 				}
-				CurrentState.Dir6 = InputTime;
+				CurrentState.Dir6 = DirInputTime;
 			}
 			else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
 			{
-				if (((CurrentState.Dir4 < InputTime - 1 && CurrentState.Dir4 > 0) || (CurrentState.Dir7 < InputTime - 1 && CurrentState.Dir7 > 0)) && CurrentState.DoubleDir4 == 0)
+				if (((CurrentState.Dir4 < DirInputTime - 1 && CurrentState.Dir4 > 3) || (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir7 > 3)) && CurrentState.DoubleDir4 == 0)
 				{
-					CurrentState.DoubleDir4 = InputTime;
+					CurrentState.DoubleDir4 = DirInputTime;
 				}
-				CurrentState.Dir4 = InputTime;
+				CurrentState.Dir4 = DirInputTime;
 			}
 
 			if (Opponent != nullptr)
@@ -1614,19 +1608,19 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		{
 			if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
 			{
-				if (((CurrentState.Dir4 < InputTime - 1 && CurrentState.Dir4 > 0) || (CurrentState.Dir7 < InputTime - 1 && CurrentState.Dir7 > 0)) && CurrentState.DoubleDir4 == 0)
+				if (((CurrentState.Dir4 < DirInputTime - 1 && CurrentState.Dir4 > 3) || (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir7 > 3)) && CurrentState.DoubleDir4 == 0)
 				{
-					CurrentState.DoubleDir4 = InputTime;
+					CurrentState.DoubleDir4 = DirInputTime;
 				}
-				CurrentState.Dir4 = InputTime;
+				CurrentState.Dir4 = DirInputTime;
 			}
 			else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
 			{
-				if (((CurrentState.Dir6 < InputTime - 1 && CurrentState.Dir6 > 0) || (CurrentState.Dir9 < InputTime - 1 && CurrentState.Dir9 > 0)) && CurrentState.DoubleDir4 == 0)
+				if (((CurrentState.Dir6 < DirInputTime - 1 && CurrentState.Dir6 > 3) || (CurrentState.Dir9 < DirInputTime - 1 && CurrentState.Dir9 > 3)) && CurrentState.DoubleDir6 == 0)
 				{
-					CurrentState.DoubleDir6 = InputTime;
+					CurrentState.DoubleDir6 = DirInputTime;
 				}
-				CurrentState.Dir6 = InputTime;
+				CurrentState.Dir6 = DirInputTime;
 			}
 
 			if (Opponent != nullptr)
@@ -1645,44 +1639,75 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	if (Inputs & INPUT_LIGHT && !CurrentState.bIsLDown) //Light Attack Button
 	{
 		CurrentState.LPressed = InputTime;
+
+		if (CurrentState.HitStop > InputTime)
+			CurrentState.LPressed *= 2;
 		CurrentState.bIsLDown = true;
 	}
 	else if (!(Inputs & INPUT_LIGHT) && CurrentState.bIsLDown)
 	{
 		CurrentState.LReleased = InputTime;
+
+		if (CurrentState.HitStop > InputTime)
+			CurrentState.LReleased *= 2;
+
 		CurrentState.bIsLDown = false;
 	}
 
 	if (Inputs & INPUT_MEDIUM && !CurrentState.bIsMDown) //Medium Attack Button
 	{
 		CurrentState.MPressed = InputTime;
+
+		if (CurrentState.HitStop > InputTime)
+			CurrentState.MPressed *= 2;
+
 		CurrentState.bIsMDown = true;
 	}
 	else if (!(Inputs & INPUT_MEDIUM) && CurrentState.bIsMDown)
 	{
 		CurrentState.MReleased = InputTime;
+
+		if (CurrentState.HitStop > InputTime)
+			CurrentState.MReleased *= 2;
+
 		CurrentState.bIsMDown = false;
 	}
 
 	if (Inputs & INPUT_HEAVY && !CurrentState.bIsHDown) //Heavy Attack Button
 	{
 		CurrentState.HPressed = InputTime;
+
+		if (CurrentState.HitStop > InputTime)
+			CurrentState.HPressed *= 2;
+
 		CurrentState.bIsHDown = true;
 	}
 	else if (!(Inputs & INPUT_HEAVY) && CurrentState.bIsHDown)
 	{
 		CurrentState.HReleased = InputTime;
+		
+		if (CurrentState.HitStop > InputTime)
+			CurrentState.HReleased *= 2;
+
 		CurrentState.bIsHDown = false;
 	}
 
 	if (Inputs & INPUT_BREAK && !CurrentState.bIsBDown) //Break Attack Button
 	{
 		CurrentState.BPressed = InputTime;
+
+		if (CurrentState.HitStop > InputTime)
+			CurrentState.BPressed *= 2;
+
 		CurrentState.bIsBDown = true;
 	}
 	else if (!(Inputs & INPUT_BREAK) && CurrentState.bIsBDown)
 	{
 		CurrentState.BReleased = InputTime;
+
+		if (CurrentState.HitStop > InputTime)
+			CurrentState.BReleased *= 2;
+
 		CurrentState.bIsBDown = false;
 	}
 }
@@ -1781,12 +1806,15 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 {
 	//Attack transitions supersede all others
 
+	if (HCF())
+		UE_LOG(LogTemp, Warning, TEXT("HCF"));
+
 	if (CurrentState.bIsAirborne && (CurrentState.CurrentAnimFrame.Invincibility == FaceDown || CurrentState.CurrentAnimFrame.Invincibility == FaceUp || IsCurrentAnimation(WallStick)) 
 		&& !IsCurrentAnimation(WallBounce) && !IsCurrentAnimation(GroundBounce) && CurrentState.HitStun == 0 && CurrentState.ShatteredTime == 0)
 	{
 		if (CurrentState.bIsLDown || CurrentState.bIsMDown || CurrentState.bIsHDown || CurrentState.bIsBDown) //hold any attack button down to air recover once able
 		{
-			if (CurrentState.Dir6 == InputTime) //can hold a direction as well to move in that direction while recovering
+			if (CurrentState.Dir6 == DirInputTime) //can hold a direction as well to move in that direction while recovering
 			{
 				if (CurrentState.bFacingRight)
 				{
@@ -1803,7 +1831,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 						CurrentState.Velocity.X = -.5f;
 				}
 			}
-			else if (CurrentState.Dir4 == InputTime)
+			else if (CurrentState.Dir4 == DirInputTime)
 			{
 				if (CurrentState.bFacingRight)
 				{
@@ -1860,7 +1888,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		}
 	}
 
-	if (CurrentState.AvailableActions & AcceptJump && ((!CurrentState.bIsAirborne && (CurrentState.Dir7 == InputTime || CurrentState.Dir8 == InputTime || CurrentState.Dir9 == InputTime)) || 
+	if (CurrentState.AvailableActions & AcceptJump && ((!CurrentState.bIsAirborne && (CurrentState.Dir7 == DirInputTime || CurrentState.Dir8 == DirInputTime || CurrentState.Dir9 == DirInputTime)) || 
 		CurrentState.AirJump > 0) && CurrentState.JumpsUsed < MaxJumps)
 	{
 		CurrentState.AirJump = 0;
@@ -1869,11 +1897,6 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			CurrentState.bForwardJump = true;
 		else if (CurrentState.Dir7 > 0 && CurrentState.Dir7 > CurrentState.Dir9 && CurrentState.Dir7 > CurrentState.Dir8) //Most recent input is backward jump
 				CurrentState.bBackwardJump = true;
-
-		if (CurrentState.Dir1 > 0 || CurrentState.Dir2 > 0 || CurrentState.Dir3 > 0)
-		{
-			CurrentState.bSuperJump = true;
-		}
 
 		if (!CurrentState.bIsAirborne)
 		{
@@ -1913,10 +1936,10 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			return EnterNewAnimation(IdleStand);
 		}
 
-		if (CurrentState.Dir6 == InputTime && !IsCurrentAnimation(WalkForward))
+		if (CurrentState.Dir6 == DirInputTime && !IsCurrentAnimation(WalkForward))
 			return EnterNewAnimation(WalkForward);
 
-		if (CurrentState.Dir4 == InputTime && !IsCurrentAnimation(WalkBackward))
+		if (CurrentState.Dir4 == DirInputTime && !IsCurrentAnimation(WalkBackward))
 			return EnterNewAnimation(WalkBackward);
 	}
 
@@ -2141,45 +2164,45 @@ void ABTCharacterBase::AnimationEvents()
 				CurrentState.bBlitzing = true;
 
 				//can hold direction to change velocity when exiting Focus Blitz
-				if (CurrentState.Dir2 == InputTime)
+				if (CurrentState.Dir2 == DirInputTime)
 					CurrentState.Velocity = FVector2D(0, -.25 * BlitzDashForce);
-				else if (CurrentState.Dir8 == InputTime)
+				else if (CurrentState.Dir8 == DirInputTime)
 					CurrentState.Velocity = FVector2D(0, .35 * BlitzDashForce);
-				else if (CurrentState.Dir4 == InputTime)
+				else if (CurrentState.Dir4 == DirInputTime)
 				{
 					CurrentState.Velocity = FVector2D(.35f * BlitzDashForce, 0);
 					if (CurrentState.bFacingRight)
 						CurrentState.Velocity.X *= -1;
 				}
-				else if (CurrentState.Dir6 == InputTime)
+				else if (CurrentState.Dir6 == DirInputTime)
 				{
 					CurrentState.Velocity = FVector2D(.35f * BlitzDashForce, 0);
 
 					if (!CurrentState.bFacingRight)
 						CurrentState.Velocity.X *= -1;
 				}
-				else if (CurrentState.Dir7 == InputTime)
+				else if (CurrentState.Dir7 == DirInputTime)
 				{
 					CurrentState.Velocity = FVector2D(.35f * BlitzDashForce);
 
 					if (CurrentState.bFacingRight)
 						CurrentState.Velocity.X *= -1;
 				}
-				else if (CurrentState.Dir9 == InputTime)
+				else if (CurrentState.Dir9 == DirInputTime)
 				{
 					CurrentState.Velocity = FVector2D(.35f * BlitzDashForce);
 
 					if (!CurrentState.bFacingRight)
 						CurrentState.Velocity.X *= -1;
 				}
-				else if (CurrentState.Dir1 == InputTime)
+				else if (CurrentState.Dir1 == DirInputTime)
 				{
 					CurrentState.Velocity = FVector2D(-.25f * BlitzDashForce);
 
 					if (!CurrentState.bFacingRight)
 						CurrentState.Velocity.X *= -1;
 				}
-				else if (CurrentState.Dir3 == InputTime)
+				else if (CurrentState.Dir3 == DirInputTime)
 				{
 					CurrentState.Velocity = FVector2D(-.25f * BlitzDashForce);
 
@@ -2247,7 +2270,7 @@ bool ABTCharacterBase::HCF()
 
 bool ABTCharacterBase::HCB()
 {
-	return (CurrentState.Dir4 > 0 && CurrentState.Dir2 > 0 && CurrentState.Dir6 > 0 && CurrentState.Dir6 < CurrentState.Dir2&& CurrentState.Dir2 < CurrentState.Dir4);
+	return (CurrentState.Dir4 > 0 && CurrentState.Dir2 > 0 && CurrentState.Dir6 > 0 && CurrentState.Dir6 < CurrentState.Dir2 && CurrentState.Dir2 < CurrentState.Dir4);
 }
 
 bool ABTCharacterBase::DP()
@@ -2319,7 +2342,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		Opponent->CurrentState.Position.Y = 0;
 		Opponent->CurrentState.Velocity.Y = 0;
 		Opponent->CurrentState.bIsAirborne = false;
-		if (Opponent->CurrentState.Dir1 == InputTime || Opponent->CurrentState.Dir2 == InputTime || Opponent->CurrentState.Dir3 == InputTime)
+		if (Opponent->CurrentState.Dir1 == DirInputTime || Opponent->CurrentState.Dir2 == DirInputTime || Opponent->CurrentState.Dir3 == DirInputTime)
 		{
 			Opponent->CurrentState.bIsCrouching = true;
 		}
@@ -2561,7 +2584,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	if (Hitbox.AttackHeight < Throw && (Opponent->IsCurrentAnimation(Opponent->Crumple) || Opponent->IsCurrentAnimation(Opponent->BackDash) || Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)) //treat opponent as if airborne if hitting them in crumple
 	{
 		Opponent->CurrentState.bIsAirborne = true;
-		Opponent->CurrentState.Position.Y += .05f;
+		Opponent->CurrentState.Position.Y += 1;
 	}
 
 	if (CurrentState.ComboCount >= 2)
@@ -2977,6 +3000,11 @@ bool ABTCharacterBase::BlitzCancel()
 {
 	if (CurrentState.AvailableActions & AcceptMove && CurrentState.LPressed > 0 && CurrentState.BPressed > 0 && FMath::Abs(CurrentState.LPressed - CurrentState.BPressed) <= 3)
 	{
+		if (CurrentState.Dir4 == DirInputTime)
+			bBackThrow = true;
+		else
+			bBackThrow = false;
+
 		if (CurrentState.bIsAirborne)
 			return EnterNewAnimation(AirThrowAttempt);
 
@@ -2995,7 +3023,7 @@ bool ABTCharacterBase::BlitzCancel()
 
 		if (CurrentState.bIsAirborne && CurrentState.BlockStun == 0)
 		{
-			if (CurrentState.Dir6 == InputTime) //blitz air dash forward
+			if (CurrentState.Dir6 == DirInputTime) //blitz air dash forward
 			{
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
 				TurnAroundCheck();
@@ -3030,7 +3058,7 @@ bool ABTCharacterBase::BlitzCancel()
 
 				return EnterNewAnimation(AirDashForward);
 			}
-			if (CurrentState.Dir4 == InputTime) //blitz air dash backward
+			if (CurrentState.Dir4 == DirInputTime) //blitz air dash backward
 			{
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
 				TurnAroundCheck();
@@ -3065,7 +3093,7 @@ bool ABTCharacterBase::BlitzCancel()
 
 				return EnterNewAnimation(AirDashBackward);
 			}
-			if (CurrentState.Dir2 == InputTime) //blitz downward
+			if (CurrentState.Dir2 == DirInputTime) //blitz downward
 			{
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
 				TurnAroundCheck();
@@ -3229,7 +3257,7 @@ void ABTCharacterBase::ProcessBlitz()
 				{
 					Opponent->CurrentState.Position.Y = 0;
 					Opponent->SurfaceContact();
-					if (Opponent->CurrentState.Dir1 == InputTime || Opponent->CurrentState.Dir2 == InputTime || Opponent->CurrentState.Dir3 == InputTime)
+					if (Opponent->CurrentState.Dir1 == DirInputTime || Opponent->CurrentState.Dir2 == DirInputTime || Opponent->CurrentState.Dir3 == DirInputTime)
 					{
 						CurrentState.bIsCrouching = true;
 					}
@@ -3558,3 +3586,5 @@ void ABTCharacterBase::ResetSmear()
 		Scale.X *= -1;
 	SmearMesh->SetRelativeScale3D(Scale);
 }
+
+void ABTCharacterBase::DrawSmear() {}

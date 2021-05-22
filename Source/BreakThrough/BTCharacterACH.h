@@ -67,6 +67,8 @@ protected:
 
 	virtual void ResetSmear() override;
 
+	virtual void DrawSmear() override;
+
 	FVector EffectColor = FVector(.85, .1, 1);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")

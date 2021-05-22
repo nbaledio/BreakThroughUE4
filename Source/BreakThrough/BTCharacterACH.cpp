@@ -10,7 +10,7 @@ void ABTCharacterACH::HitDetection()
 
 void ABTCharacterACH::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 {
-	if (CurrentState.HitStop > 10 && CurrentState.bHitSuccess && Opponent->CurrentState.CharacterHitState & Piercing && (IsCurrentAnimation(Normal5B)))
+	if (CurrentState.HitStop > 10 && CurrentState.bHitSuccess && Opponent->CurrentState.CharacterHitState & Piercing && (IsCurrentAnimation(Normal5B) || (IsCurrentAnimation(Normal2B) && CurrentState.AnimFrameIndex > 6)))
 	{
 		//make opponent flash magenta on pierce
 		Opponent->StatusMix = .7f;
@@ -75,7 +75,7 @@ bool ABTCharacterACH::ActiveTransitions()
 	//Break Triggers/Supers
 	//Special Attacks
 	//Normal Attacks
-	if (CurrentState.Dir1 == InputTime || CurrentState.Dir2 == InputTime || CurrentState.Dir3 == InputTime) // holding the down direction
+	if (CurrentState.Dir1 == DirInputTime || CurrentState.Dir2 == DirInputTime || CurrentState.Dir3 == DirInputTime) // holding the down direction
 	{
 		if (CurrentState.BPressed > 0 && (CurrentState.AvailableActions & AcceptBreak))
 		{
@@ -246,81 +246,25 @@ void ABTCharacterACH::AnimationEvents()
 
 	if (IsCurrentAnimation(Normal5B) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
 	{
-		FVector SmearFrameIndex = FVector(0);
-		FVector EmitFrameIndex = FVector(FMath::Min(1, (CurrentState.AnimFrameIndex - 3) % 2), FMath::Min(1, (CurrentState.AnimFrameIndex - 3) / 2), 0);
-
-
-		if (CurrentState.AnimFrameIndex > 3)
-		{
-			if (CurrentState.AnimFrameIndex == 4)
-				SmearFrameIndex.X = 1;
-			else if (CurrentState.AnimFrameIndex == 5)
-			{
-				if (CurrentState.PosePlayTime < 2)
-					SmearFrameIndex.Y = 1;
-				else
-				{
-					SmearFrameIndex.X = 1;
-					SmearFrameIndex.Y = 1;
-				}
-			}
-			else
-				SmearFrameIndex.X = .5f;
-		}
-
-		if (DynamicSmear)
-		{
-			DynamicSmear->SetVectorParameterValue(TEXT("RowsAndColumns"), FVector(2));
-			DynamicSmear->SetVectorParameterValue(TEXT("EmissionRC"), FVector(2));
-			DynamicSmear->SetVectorParameterValue(TEXT("AnimIndex"), SmearFrameIndex);
-			DynamicSmear->SetVectorParameterValue(TEXT("EmissionAnimIndex"), EmitFrameIndex);
-			DynamicSmear->SetVectorParameterValue(TEXT("BodyEmissiveColor"), EffectColor);
-			DynamicSmear->SetScalarParameterValue(TEXT("BodyEmissivity"), 10);
-
-			if (SmearEmit)
-				DynamicSmear->SetTextureParameterValue(TEXT("SpriteSheet"), SmearBody);
-			if (SmearBody)
-				DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
-		}
 		SmearMesh->SetMorphTarget(TEXT("ACH_5B"), 1);
+	}
+	else if (IsCurrentAnimation(Normal2B) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 11)
+	{
+		if (CurrentState.AnimFrameIndex < 7)
+			SmearMesh->SetMorphTarget(TEXT("ACH_2B_00"), 1);
+		else
+			SmearMesh->SetMorphTarget(TEXT("ACH_2B_01"), 1);
 	}
 	else if (IsCurrentAnimation(Normal5H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
 	{
-		FVector SmearFrameIndex = FVector(0);
-		FVector EmitFrameIndex = FVector((CurrentState.AnimFrameIndex - 3) % 2, (CurrentState.AnimFrameIndex - 3) / 2, 0);
-
-		
-		if (CurrentState.AnimFrameIndex > 3)
-		{
-			if (CurrentState.AnimFrameIndex == 4)
-				SmearFrameIndex.X = 1;
-			else if (CurrentState.AnimFrameIndex == 5)
-			{
-				SmearFrameIndex.X = 1;
-				SmearFrameIndex.Y = 1;
-			}
-			else
-			{
-				SmearFrameIndex.X = .5f;
-				SmearFrameIndex.Y = 0;
-			}
-		}
-
-		if (DynamicSmear)
-		{
-			DynamicSmear->SetVectorParameterValue(TEXT("RowsAndColumns"), FVector(2));
-			DynamicSmear->SetVectorParameterValue(TEXT("EmissionRC"), FVector(2));
-			DynamicSmear->SetVectorParameterValue(TEXT("AnimIndex"), SmearFrameIndex);
-			DynamicSmear->SetVectorParameterValue(TEXT("EmissionAnimIndex"), EmitFrameIndex);
-			DynamicSmear->SetVectorParameterValue(TEXT("BodyEmissiveColor"), FVector(1));
-			DynamicSmear->SetScalarParameterValue(TEXT("BodyEmissivity"), 1);
-
-			if (SmearEmit)
-				DynamicSmear->SetTextureParameterValue(TEXT("SpriteSheet"), SmearBody);
-			if (SmearBody)
-				DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
-		}
 		SmearMesh->SetMorphTarget(TEXT("ACH_5H"), 1);
+	}
+	else if (IsCurrentAnimation(Normal2H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 8)
+	{
+		if (CurrentState.AnimFrameIndex == 3)
+			SmearMesh->SetMorphTarget(TEXT("ACH_2H_00"), 1);
+		else
+			SmearMesh->SetMorphTarget(TEXT("ACH_2H_01"), 1);
 	}
 	else
 	{
@@ -749,5 +693,210 @@ void ABTCharacterACH::ResetSmear()
 	ABTCharacterBase::ResetSmear();
 
 	SmearMesh->SetMorphTarget(TEXT("ACH_5H"), 0);
+	SmearMesh->SetMorphTarget(TEXT("ACH_2H_00"), 0);
+	SmearMesh->SetMorphTarget(TEXT("ACH_2H_01"), 0);
 	SmearMesh->SetMorphTarget(TEXT("ACH_5B"), 0);
+	SmearMesh->SetMorphTarget(TEXT("ACH_2B_00"), 0);
+	SmearMesh->SetMorphTarget(TEXT("ACH_2B_01"), 0);
+}
+
+void ABTCharacterACH::DrawSmear()
+{
+	ABTCharacterBase::DrawSmear();
+
+	if (IsCurrentAnimation(Normal5B) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
+	{
+		FVector SmearFrameIndex = FVector(0);
+		FVector EmitFrameIndex = FVector(FMath::Min(1, (CurrentState.AnimFrameIndex - 3) % 2), FMath::Min(1, (CurrentState.AnimFrameIndex - 3) / 2), 0);
+
+
+		if (CurrentState.AnimFrameIndex > 3)
+		{
+			if (CurrentState.AnimFrameIndex == 4)
+				SmearFrameIndex.X = 1;
+			else if (CurrentState.AnimFrameIndex == 5)
+			{
+				if (CurrentState.PosePlayTime < 2)
+					SmearFrameIndex.Y = 1;
+				else
+				{
+					SmearFrameIndex.X = 1;
+					SmearFrameIndex.Y = 1;
+				}
+			}
+			else
+				SmearFrameIndex.X = .5f;
+		}
+
+		if (DynamicSmear)
+		{
+			DynamicSmear->SetVectorParameterValue(TEXT("RowsAndColumns"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionRC"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("AnimIndex"), SmearFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionAnimIndex"), EmitFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("BodyEmissiveColor"), EffectColor);
+			DynamicSmear->SetScalarParameterValue(TEXT("BodyEmissivity"), 10);
+
+			if (SmearEmit)
+				DynamicSmear->SetTextureParameterValue(TEXT("SpriteSheet"), SmearBody);
+			if (SmearBody)
+				DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
+		}
+	}
+	if (IsCurrentAnimation(Normal2B) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 11)
+	{
+		FVector SmearFrameIndex = FVector(0);
+		FVector EmitFrameIndex = FVector(0);
+
+
+		if (CurrentState.AnimFrameIndex < 7)
+		{
+			if (CurrentState.AnimFrameIndex == 4)
+			{
+				SmearFrameIndex.X = 1;
+				EmitFrameIndex.X = 1;
+			}
+			else if (CurrentState.AnimFrameIndex == 5)
+			{
+				SmearFrameIndex.Y = 1;
+				EmitFrameIndex.Y = 1;
+			}
+			else if (CurrentState.AnimFrameIndex == 6)
+			{
+				SmearFrameIndex = FVector(1);
+				EmitFrameIndex.Y = 1;
+				//EmitFrameIndex = FVector(1);
+			}
+		}
+		else
+		{
+			if (CurrentState.AnimFrameIndex == 8)
+			{
+				SmearFrameIndex.X = 1;
+				EmitFrameIndex.X = 1;
+			}
+			else if (CurrentState.AnimFrameIndex == 9)
+			{
+				SmearFrameIndex.Y = 1;
+				EmitFrameIndex.Y = 1;
+			}
+			else if (CurrentState.AnimFrameIndex == 10)
+			{
+				SmearFrameIndex = FVector(1);
+				if (CurrentState.PosePlayTime < 2)
+					EmitFrameIndex.Y = 1;
+				else
+					EmitFrameIndex = FVector(1);
+			}
+		}
+
+		if (DynamicSmear)
+		{
+			DynamicSmear->SetVectorParameterValue(TEXT("RowsAndColumns"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionRC"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("AnimIndex"), SmearFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionAnimIndex"), EmitFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("BodyEmissiveColor"), EffectColor);
+			DynamicSmear->SetScalarParameterValue(TEXT("BodyEmissivity"), 10);
+
+			if (SmearEmit)
+				DynamicSmear->SetTextureParameterValue(TEXT("SpriteSheet"), SmearBody);
+			if (SmearBody)
+				DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
+		}
+	}
+	else if (IsCurrentAnimation(Normal5H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
+	{
+		FVector SmearFrameIndex = FVector(0);
+		FVector EmitFrameIndex = FVector((CurrentState.AnimFrameIndex - 3) % 2, (CurrentState.AnimFrameIndex - 3) / 2, 0);
+
+
+		if (CurrentState.AnimFrameIndex > 3)
+		{
+			if (CurrentState.AnimFrameIndex == 4)
+				SmearFrameIndex.X = 1;
+			else if (CurrentState.AnimFrameIndex == 5)
+			{
+				SmearFrameIndex.X = 1;
+				SmearFrameIndex.Y = 1;
+			}
+			else
+			{
+				SmearFrameIndex.X = .5f;
+				SmearFrameIndex.Y = 0;
+			}
+		}
+
+		if (DynamicSmear)
+		{
+			DynamicSmear->SetVectorParameterValue(TEXT("RowsAndColumns"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionRC"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("AnimIndex"), SmearFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionAnimIndex"), EmitFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("BodyEmissiveColor"), FVector(1));
+			DynamicSmear->SetScalarParameterValue(TEXT("BodyEmissivity"), 1);
+
+			if (SmearEmit)
+				DynamicSmear->SetTextureParameterValue(TEXT("SpriteSheet"), SmearBody);
+			if (SmearBody)
+				DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
+		}
+	}
+	else if (IsCurrentAnimation(Normal2H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 8)
+	{
+		FVector SmearFrameIndex = FVector(0);
+		FVector EmitFrameIndex = FVector((CurrentState.AnimFrameIndex - 4) % 2, (CurrentState.AnimFrameIndex - 4) / 2, 0);
+
+
+		if (CurrentState.AnimFrameIndex == 3)
+		{
+			EmitFrameIndex.X = 1;
+			EmitFrameIndex.Y = 1;
+			SmearFrameIndex.X = 1;
+			SmearFrameIndex.Y = 1;
+		}
+		else
+		{
+			if (CurrentState.AnimFrameIndex == 4)
+				EmitFrameIndex = FVector(0);
+			else if ((CurrentState.AnimFrameIndex == 5 && CurrentState.PosePlayTime < 3))
+			{
+				SmearFrameIndex = FVector(1, 0, 0);
+				EmitFrameIndex = FVector(0, 0, 0);
+			}
+			else if ((CurrentState.AnimFrameIndex == 5) || (CurrentState.AnimFrameIndex == 6 && CurrentState.PosePlayTime < 1))
+			{
+				SmearFrameIndex = FVector(1, 1, 0);
+				EmitFrameIndex = FVector(1, 0, 0);
+			}
+			else if (CurrentState.AnimFrameIndex == 6)
+			{
+				SmearFrameIndex = FVector(.5, 0, 0);
+				EmitFrameIndex = FVector(0, 1, 0);
+			}
+			else if (CurrentState.AnimFrameIndex == 7 && CurrentState.PosePlayTime < 2)
+			{
+				SmearFrameIndex = FVector(.5, 0, 0);
+				EmitFrameIndex = FVector(1, 1, 0);
+			}
+			else
+				bShowSmear = false;
+
+		}
+
+		if (DynamicSmear)
+		{
+			DynamicSmear->SetVectorParameterValue(TEXT("RowsAndColumns"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionRC"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("AnimIndex"), SmearFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionAnimIndex"), EmitFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("BodyEmissiveColor"), FVector(1));
+			DynamicSmear->SetScalarParameterValue(TEXT("BodyEmissivity"), 1);
+
+			if (SmearEmit)
+				DynamicSmear->SetTextureParameterValue(TEXT("SpriteSheet"), SmearBody);
+			if (SmearBody)
+				DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
+		}
+	}
 }

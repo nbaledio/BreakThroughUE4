@@ -369,8 +369,6 @@ struct FCharacterState
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bBackwardJump = false;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
-		bool bSuperJump = false;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bArmorActive = false;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bCounterHitState = false;
@@ -489,6 +487,9 @@ public:
 		float PushboxWidth = 1;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float AirPushboxVerticalOffset = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
+		bool bBackThrow = false;
 
 	FVector StatusColor;
 	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
@@ -616,6 +617,8 @@ protected:
 
 	virtual void ResetSmear();
 
+	virtual void DrawSmear();
+
 	bool bShowSmear;
 
 	/* Affects how quickly the character falls to the ground (See below for values per weight class)
@@ -653,6 +656,7 @@ protected:
 
 	//number of frames that an input is active for
 		uint8 InputTime = 8;
+		uint8 DirInputTime = 12;
 
 public:
 	//Idle Stance Animations
