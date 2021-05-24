@@ -75,11 +75,47 @@ bool ABTCharacterACH::ActiveTransitions()
 	//Break Triggers/Supers
 	//Special Attacks
 	//Normal Attacks
-	if (CurrentState.Dir1 == DirInputTime || CurrentState.Dir2 == DirInputTime || CurrentState.Dir3 == DirInputTime) // holding the down direction
+	if (CurrentState.bIsAirborne)
 	{
 		if (CurrentState.BPressed > 0 && (CurrentState.AvailableActions & AcceptBreak))
 		{
-			if (!CurrentState.bIsAirborne)
+
+			if ((CurrentState.MoveList & nJB) == 0)
+			{
+				CurrentState.BPressed = 0;
+				CurrentState.MoveList |= nJB;
+				return EnterNewAnimation(NormalJB);
+			}
+		}
+		if (CurrentState.HPressed > 0 && (CurrentState.AvailableActions & AcceptHeavy))
+		{
+			if ((CurrentState.MoveList & nJH) == 0)
+			{
+				CurrentState.HPressed = 0;
+				CurrentState.MoveList |= nJH;
+				return EnterNewAnimation(NormalJH);
+			}
+		}
+		if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
+		{
+			if ((CurrentState.MoveList & nJM) == 0)
+			{
+				CurrentState.MPressed = 0;
+				CurrentState.MoveList |= nJM;
+				return EnterNewAnimation(NormalJM);
+			}
+		}
+		if (CurrentState.LPressed > 0 && (CurrentState.AvailableActions & AcceptLight))
+		{
+			CurrentState.LPressed = 0;
+			return EnterNewAnimation(NormalJL);
+		}
+	}
+	else
+	{
+		if (CurrentState.Dir1 == DirInputTime || CurrentState.Dir2 == DirInputTime || CurrentState.Dir3 == DirInputTime) // holding the down direction
+		{
+			if (CurrentState.BPressed > 0 && (CurrentState.AvailableActions & AcceptBreak))
 			{
 				if ((CurrentState.MoveList & n2B) == 0)
 				{
@@ -88,14 +124,7 @@ bool ABTCharacterACH::ActiveTransitions()
 					return EnterNewAnimation(Normal2B);
 				}
 			}
-			else
-			{
-
-			}
-		}
-		if (CurrentState.HPressed > 0 && (CurrentState.AvailableActions & AcceptHeavy))
-		{
-			if (!CurrentState.bIsAirborne)
+			if (CurrentState.HPressed > 0 && (CurrentState.AvailableActions & AcceptHeavy))
 			{
 				if ((CurrentState.MoveList & n2H) == 0)
 				{
@@ -104,14 +133,7 @@ bool ABTCharacterACH::ActiveTransitions()
 					return EnterNewAnimation(Normal2H);
 				}
 			}
-			else
-			{
-
-			}
-		}
-		if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
-		{
-			if (!CurrentState.bIsAirborne)
+			if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
 			{
 				if ((CurrentState.MoveList & n2M) == 0)
 				{
@@ -120,30 +142,17 @@ bool ABTCharacterACH::ActiveTransitions()
 					return EnterNewAnimation(Normal2M);
 				}
 			}
-			else
-			{
-
-			}
-		}
-		if (CurrentState.LPressed > 0 && (CurrentState.AvailableActions & AcceptLight))
-		{
-			if (!CurrentState.bIsAirborne)
+			if (CurrentState.LPressed > 0 && (CurrentState.AvailableActions & AcceptLight))
 			{
 				CurrentState.LPressed = 0;
 				return EnterNewAnimation(Normal2L);
 			}
-			else
+		}
+		else //otherwise
+		{
+			if (CurrentState.BPressed > 0 && (CurrentState.AvailableActions & AcceptBreak))
 			{
 
-			}
-		}
-	}
-	else //otherwise
-	{
-		if (CurrentState.BPressed > 0 && (CurrentState.AvailableActions & AcceptBreak))
-		{
-			if (!CurrentState.bIsAirborne)
-			{
 				if ((CurrentState.MoveList & n5B) == 0)
 				{
 					CurrentState.BPressed = 0;
@@ -151,14 +160,7 @@ bool ABTCharacterACH::ActiveTransitions()
 					return EnterNewAnimation(Normal5B);
 				}
 			}
-			else
-			{
-
-			}
-		}
-		if (CurrentState.HPressed > 0 && (CurrentState.AvailableActions & AcceptHeavy))
-		{
-			if (!CurrentState.bIsAirborne)
+			if (CurrentState.HPressed > 0 && (CurrentState.AvailableActions & AcceptHeavy))
 			{
 				if ((CurrentState.MoveList & n5H) == 0)
 				{
@@ -167,14 +169,7 @@ bool ABTCharacterACH::ActiveTransitions()
 					return EnterNewAnimation(Normal5H);
 				}
 			}
-			else
-			{
-
-			}
-		}
-		if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
-		{
-			if (!CurrentState.bIsAirborne)
+			if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
 			{
 				if ((CurrentState.MoveList & n5M) == 0)
 				{
@@ -183,21 +178,10 @@ bool ABTCharacterACH::ActiveTransitions()
 					return EnterNewAnimation(Normal5M);
 				}
 			}
-			else
-			{
-
-			}
-		}
-		if (CurrentState.LPressed > 0 && (CurrentState.AvailableActions & AcceptLight))
-		{
-			if (!CurrentState.bIsAirborne)
+			if (CurrentState.LPressed > 0 && (CurrentState.AvailableActions & AcceptLight))
 			{
 				CurrentState.LPressed = 0;
 				return EnterNewAnimation(Normal5L);
-			}
-			else
-			{
-
 			}
 		}
 	}
@@ -217,6 +201,9 @@ bool ABTCharacterACH::PassiveTransitions()
 
 bool ABTCharacterACH::ExitTimeTransitions()
 {
+	if (IsCurrentAnimation(NormalJB) || IsCurrentAnimation(NormalJH) || IsCurrentAnimation(NormalJM) || IsCurrentAnimation(NormalJL))
+		return EnterNewAnimation(MidJump);
+
 	if (IsCurrentAnimation(Normal5B) || IsCurrentAnimation(Normal5H) || IsCurrentAnimation(Normal5M) || IsCurrentAnimation(Normal5L) || IsCurrentAnimation(Normal2B) || IsCurrentAnimation(Normal2H))
 		return EnterNewAnimation(IdleStand);
 

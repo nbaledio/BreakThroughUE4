@@ -362,7 +362,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 		CurrentState.HitStop--;
 	}
 
-	if ((CurrentState.HitStun > 0 || CurrentState.CurrentAnimFrame.Invincibility == FaceDown || CurrentState.CurrentAnimFrame.Invincibility == FaceUp) && CurrentState.ShatteredTime == 0)
+	if ((CurrentState.HitStun > 0 || IsCurrentAnimation(Stagger) || CurrentState.CurrentAnimFrame.Invincibility == FaceDown || CurrentState.CurrentAnimFrame.Invincibility == FaceUp) && CurrentState.ShatteredTime == 0)
 	{
 		if (CurrentState.SlowMoTime % 2 == 0 && !Opponent->CurrentState.CurrentAnimFrame.bSuperFlash)
 			CurrentState.ComboTimer++;
@@ -2584,7 +2584,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	Opponent->CurrentState.BlockStun = 0;
 	CurrentState.bHitSuccess = true;
 
-	if (Hitbox.AttackHeight < Throw && (Opponent->IsCurrentAnimation(Opponent->Crumple) || Opponent->IsCurrentAnimation(Opponent->BackDash) || Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)) //treat opponent as if airborne if hitting them in crumple
+	if (Hitbox.AttackHeight < Throw && (Opponent->IsCurrentAnimation(Opponent->BackDash) || Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)) //treat opponent as if airborne if hitting them in crumple
 	{
 		Opponent->CurrentState.bIsAirborne = true;
 		Opponent->CurrentState.Position.Y += 1;
@@ -2646,6 +2646,14 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	else
 	{
 		KnockBackToApply = Hitbox.PotentialKnockBack;
+
+		if (Opponent->IsCurrentAnimation(Opponent->Crumple))
+		{
+			if (Hitbox.PotentialAirKnockBack.Y <= 0)
+				KnockBackToApply.Y = 2;
+			else
+				KnockBackToApply.Y = Hitbox.PotentialAirKnockBack.Y;
+		}
 	}
 
 	CurrentState.AvailableActions = Hitbox.PotentialActions;
@@ -2822,18 +2830,36 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 		if (Opponent->CurrentState.ComboTimer > 180) //will not experience pushback during first three seconds of a combo
 		{
-			if (Opponent->CurrentState.ComboTimer < 300)
-				PushBack = 1.25f;
-			else if (Opponent->CurrentState.ComboTimer < 420)
-				PushBack = 1.5f;
-			else if (Opponent->CurrentState.ComboTimer < 540)
-				PushBack = 1.75f;
-			else if (Opponent->CurrentState.ComboTimer < 720)
-				PushBack = 2.f;
-			else if (Opponent->CurrentState.ComboTimer < 900)
-				PushBack = 2.25f;
+			if (CurrentState.bIsAirborne)
+			{
+				if (Opponent->CurrentState.ComboTimer < 300)
+					PushBack = .05f;
+				else if (Opponent->CurrentState.ComboTimer < 420)
+					PushBack = .1f;
+				else if (Opponent->CurrentState.ComboTimer < 540)
+					PushBack = .15f;
+				else if (Opponent->CurrentState.ComboTimer < 720)
+					PushBack = .2f;
+				else if (Opponent->CurrentState.ComboTimer < 900)
+					PushBack = .25f;
+				else
+					PushBack = .35f;
+			}
 			else
-				PushBack = 2.5f;
+			{
+				if (Opponent->CurrentState.ComboTimer < 300)
+					PushBack = 1.05f;
+				else if (Opponent->CurrentState.ComboTimer < 420)
+					PushBack = 1.1f;
+				else if (Opponent->CurrentState.ComboTimer < 540)
+					PushBack = 1.15f;
+				else if (Opponent->CurrentState.ComboTimer < 720)
+					PushBack = 1.2f;
+				else if (Opponent->CurrentState.ComboTimer < 900)
+					PushBack = 1.25f;
+				else
+					PushBack = 1.35f;
+			}
 		}
 		else if (!CurrentState.bIsAirborne)
 			PushBack = .25f;
