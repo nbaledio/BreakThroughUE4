@@ -379,7 +379,8 @@ void ABTProjectileBase::UpdateProjectile()
 
 	if (bHasLifeSpan)
 	{
-		CurrentState.CurrentLife++;
+		if (Owner->CurrentState.SlowMoTime % 2 == 0)
+			CurrentState.CurrentLife++;
 		if (CurrentState.CurrentLife > MaxLife)
 			CurrentState.bIsActive = false;
 	}

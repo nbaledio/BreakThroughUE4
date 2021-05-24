@@ -10,6 +10,14 @@ void ABTCharacterACH::HitDetection()
 
 void ABTCharacterACH::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 {
+	if (CurrentState.HitStop > 10 && CurrentState.bHitSuccess && Opponent->CurrentState.CharacterHitState & Piercing && (IsCurrentAnimation(Normal5B) || (IsCurrentAnimation(Normal2B) && CurrentState.AnimFrameIndex > 6)))
+	{
+		//make opponent flash magenta on pierce
+		Opponent->StatusMix = .7f;
+		Opponent->CurrentState.StatusTimer = 10;
+		Opponent->StatusColor = FVector(1, .1, 1);
+	}
+
 	ABTCharacterBase::UpdateCharacter(CurrentInputs, FrameNumber);
 }
 
@@ -67,15 +75,101 @@ bool ABTCharacterACH::ActiveTransitions()
 	//Break Triggers/Supers
 	//Special Attacks
 	//Normal Attacks
-	if (CurrentState.Dir1 == InputTime || CurrentState.Dir2 == InputTime || CurrentState.Dir3 == InputTime) // holding the down direction
+	if (CurrentState.bIsAirborne)
 	{
-		
-	}
-	else //otherwise
-	{
+		if (CurrentState.BPressed > 0 && (CurrentState.AvailableActions & AcceptBreak))
+		{
+
+			if ((CurrentState.MoveList & nJB) == 0)
+			{
+				CurrentState.BPressed = 0;
+				CurrentState.MoveList |= nJB;
+				return EnterNewAnimation(NormalJB);
+			}
+		}
+		if (CurrentState.HPressed > 0 && (CurrentState.AvailableActions & AcceptHeavy))
+		{
+			if ((CurrentState.MoveList & nJH) == 0)
+			{
+				CurrentState.HPressed = 0;
+				CurrentState.MoveList |= nJH;
+				return EnterNewAnimation(NormalJH);
+			}
+		}
 		if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
 		{
-			if (!CurrentState.bIsAirborne)
+			if ((CurrentState.MoveList & nJM) == 0)
+			{
+				CurrentState.MPressed = 0;
+				CurrentState.MoveList |= nJM;
+				return EnterNewAnimation(NormalJM);
+			}
+		}
+		if (CurrentState.LPressed > 0 && (CurrentState.AvailableActions & AcceptLight))
+		{
+			CurrentState.LPressed = 0;
+			return EnterNewAnimation(NormalJL);
+		}
+	}
+	else
+	{
+		if (CurrentState.Dir1 == DirInputTime || CurrentState.Dir2 == DirInputTime || CurrentState.Dir3 == DirInputTime) // holding the down direction
+		{
+			if (CurrentState.BPressed > 0 && (CurrentState.AvailableActions & AcceptBreak))
+			{
+				if ((CurrentState.MoveList & n2B) == 0)
+				{
+					CurrentState.BPressed = 0;
+					CurrentState.MoveList |= n2B;
+					return EnterNewAnimation(Normal2B);
+				}
+			}
+			if (CurrentState.HPressed > 0 && (CurrentState.AvailableActions & AcceptHeavy))
+			{
+				if ((CurrentState.MoveList & n2H) == 0)
+				{
+					CurrentState.HPressed = 0;
+					CurrentState.MoveList |= n2H;
+					return EnterNewAnimation(Normal2H);
+				}
+			}
+			if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
+			{
+				if ((CurrentState.MoveList & n2M) == 0)
+				{
+					CurrentState.MPressed = 0;
+					CurrentState.MoveList |= n2M;
+					return EnterNewAnimation(Normal2M);
+				}
+			}
+			if (CurrentState.LPressed > 0 && (CurrentState.AvailableActions & AcceptLight))
+			{
+				CurrentState.LPressed = 0;
+				return EnterNewAnimation(Normal2L);
+			}
+		}
+		else //otherwise
+		{
+			if (CurrentState.BPressed > 0 && (CurrentState.AvailableActions & AcceptBreak))
+			{
+
+				if ((CurrentState.MoveList & n5B) == 0)
+				{
+					CurrentState.BPressed = 0;
+					CurrentState.MoveList |= n5B;
+					return EnterNewAnimation(Normal5B);
+				}
+			}
+			if (CurrentState.HPressed > 0 && (CurrentState.AvailableActions & AcceptHeavy))
+			{
+				if ((CurrentState.MoveList & n5H) == 0)
+				{
+					CurrentState.HPressed = 0;
+					CurrentState.MoveList |= n5H;
+					return EnterNewAnimation(Normal5H);
+				}
+			}
+			if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
 			{
 				if ((CurrentState.MoveList & n5M) == 0)
 				{
@@ -84,21 +178,10 @@ bool ABTCharacterACH::ActiveTransitions()
 					return EnterNewAnimation(Normal5M);
 				}
 			}
-			else
-			{
-
-			}
-		}
-		if (CurrentState.LPressed > 0 && (CurrentState.AvailableActions & AcceptLight))
-		{
-			if (!CurrentState.bIsAirborne)
+			if (CurrentState.LPressed > 0 && (CurrentState.AvailableActions & AcceptLight))
 			{
 				CurrentState.LPressed = 0;
 				return EnterNewAnimation(Normal5L);
-			}
-			else
-			{
-
 			}
 		}
 	}
@@ -118,8 +201,14 @@ bool ABTCharacterACH::PassiveTransitions()
 
 bool ABTCharacterACH::ExitTimeTransitions()
 {
-	if (IsCurrentAnimation(Normal5M) || IsCurrentAnimation(Normal5L))
+	if (IsCurrentAnimation(NormalJB) || IsCurrentAnimation(NormalJH) || IsCurrentAnimation(NormalJM) || IsCurrentAnimation(NormalJL))
+		return EnterNewAnimation(MidJump);
+
+	if (IsCurrentAnimation(Normal5B) || IsCurrentAnimation(Normal5H) || IsCurrentAnimation(Normal5M) || IsCurrentAnimation(Normal5L) || IsCurrentAnimation(Normal2B) || IsCurrentAnimation(Normal2H))
 		return EnterNewAnimation(IdleStand);
+
+	if (IsCurrentAnimation(Normal2M) || IsCurrentAnimation(Normal2L))
+		return EnterNewAnimation(IdleCrouch);
 
 	return ABTCharacterBase::ExitTimeTransitions();
 }
@@ -127,6 +216,47 @@ bool ABTCharacterACH::ExitTimeTransitions()
 void ABTCharacterACH::AnimationEvents()
 {
 	ABTCharacterBase::AnimationEvents();
+
+	//Add character specific animation logic here (adding more available actions based on current state, etc.)
+	/*if (CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0) //makes Achealis's special attacks able to cancel into other specials if her install is active
+	{
+		if (CurrentState.CurrentAnimFrame.Hitboxes[0].AttackProperties & IsSpecial)
+		{
+			for (int32 i = 0; i < CurrentState.CurrentAnimFrame.Hitboxes.Num(); i++)
+			{
+				CurrentState.CurrentAnimFrame.Hitboxes[i].PotentialActions |= AcceptSpecial;
+			}
+		}
+	}*/
+
+	ResetSmear();
+
+	if (IsCurrentAnimation(Normal5B) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
+	{
+		SmearMesh->SetMorphTarget(TEXT("ACH_5B"), 1);
+	}
+	else if (IsCurrentAnimation(Normal2B) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 11)
+	{
+		if (CurrentState.AnimFrameIndex < 7)
+			SmearMesh->SetMorphTarget(TEXT("ACH_2B_00"), 1);
+		else
+			SmearMesh->SetMorphTarget(TEXT("ACH_2B_01"), 1);
+	}
+	else if (IsCurrentAnimation(Normal5H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
+	{
+		SmearMesh->SetMorphTarget(TEXT("ACH_5H"), 1);
+	}
+	else if (IsCurrentAnimation(Normal2H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 8)
+	{
+		if (CurrentState.AnimFrameIndex == 3)
+			SmearMesh->SetMorphTarget(TEXT("ACH_2H_00"), 1);
+		else
+			SmearMesh->SetMorphTarget(TEXT("ACH_2H_01"), 1);
+	}
+	else
+	{
+		bShowSmear = false;
+	}
 }
 
 void ABTCharacterACH::CreateMaterials()
@@ -543,4 +673,217 @@ void ABTCharacterACH::SpawnPBS()
 	ABTCharacterBase::SpawnPBS();
 
 	//spawn unique projectiles to character and save their states to character state
+}
+
+void ABTCharacterACH::ResetSmear()
+{
+	ABTCharacterBase::ResetSmear();
+
+	SmearMesh->SetMorphTarget(TEXT("ACH_5H"), 0);
+	SmearMesh->SetMorphTarget(TEXT("ACH_2H_00"), 0);
+	SmearMesh->SetMorphTarget(TEXT("ACH_2H_01"), 0);
+	SmearMesh->SetMorphTarget(TEXT("ACH_5B"), 0);
+	SmearMesh->SetMorphTarget(TEXT("ACH_2B_00"), 0);
+	SmearMesh->SetMorphTarget(TEXT("ACH_2B_01"), 0);
+}
+
+void ABTCharacterACH::DrawSmear()
+{
+	ABTCharacterBase::DrawSmear();
+
+	if (IsCurrentAnimation(Normal5B) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
+	{
+		FVector SmearFrameIndex = FVector(0);
+		FVector EmitFrameIndex = FVector(FMath::Min(1, (CurrentState.AnimFrameIndex - 3) % 2), FMath::Min(1, (CurrentState.AnimFrameIndex - 3) / 2), 0);
+
+
+		if (CurrentState.AnimFrameIndex > 3)
+		{
+			if (CurrentState.AnimFrameIndex == 4)
+				SmearFrameIndex.X = 1;
+			else if (CurrentState.AnimFrameIndex == 5)
+			{
+				if (CurrentState.PosePlayTime < 2)
+					SmearFrameIndex.Y = 1;
+				else
+				{
+					SmearFrameIndex.X = 1;
+					SmearFrameIndex.Y = 1;
+				}
+			}
+			else
+				SmearFrameIndex.X = .5f;
+		}
+
+		if (DynamicSmear)
+		{
+			DynamicSmear->SetVectorParameterValue(TEXT("RowsAndColumns"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionRC"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("AnimIndex"), SmearFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionAnimIndex"), EmitFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("BodyEmissiveColor"), EffectColor);
+			DynamicSmear->SetScalarParameterValue(TEXT("BodyEmissivity"), 10);
+
+			if (SmearEmit)
+				DynamicSmear->SetTextureParameterValue(TEXT("SpriteSheet"), SmearBody);
+			if (SmearBody)
+				DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
+		}
+	}
+	if (IsCurrentAnimation(Normal2B) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 11)
+	{
+		FVector SmearFrameIndex = FVector(0);
+		FVector EmitFrameIndex = FVector(0);
+
+
+		if (CurrentState.AnimFrameIndex < 7)
+		{
+			if (CurrentState.AnimFrameIndex == 4)
+			{
+				SmearFrameIndex.X = 1;
+				EmitFrameIndex.X = 1;
+			}
+			else if (CurrentState.AnimFrameIndex == 5)
+			{
+				SmearFrameIndex.Y = 1;
+				EmitFrameIndex.Y = 1;
+			}
+			else if (CurrentState.AnimFrameIndex == 6)
+			{
+				SmearFrameIndex = FVector(1);
+				EmitFrameIndex.Y = 1;
+				//EmitFrameIndex = FVector(1);
+			}
+		}
+		else
+		{
+			if (CurrentState.AnimFrameIndex == 8)
+			{
+				SmearFrameIndex.X = 1;
+				EmitFrameIndex.X = 1;
+			}
+			else if (CurrentState.AnimFrameIndex == 9)
+			{
+				SmearFrameIndex.Y = 1;
+				EmitFrameIndex.Y = 1;
+			}
+			else if (CurrentState.AnimFrameIndex == 10)
+			{
+				SmearFrameIndex = FVector(1);
+				if (CurrentState.PosePlayTime < 2)
+					EmitFrameIndex.Y = 1;
+				else
+					EmitFrameIndex = FVector(1);
+			}
+		}
+
+		if (DynamicSmear)
+		{
+			DynamicSmear->SetVectorParameterValue(TEXT("RowsAndColumns"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionRC"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("AnimIndex"), SmearFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionAnimIndex"), EmitFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("BodyEmissiveColor"), EffectColor);
+			DynamicSmear->SetScalarParameterValue(TEXT("BodyEmissivity"), 10);
+
+			if (SmearEmit)
+				DynamicSmear->SetTextureParameterValue(TEXT("SpriteSheet"), SmearBody);
+			if (SmearBody)
+				DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
+		}
+	}
+	else if (IsCurrentAnimation(Normal5H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
+	{
+		FVector SmearFrameIndex = FVector(0);
+		FVector EmitFrameIndex = FVector((CurrentState.AnimFrameIndex - 3) % 2, (CurrentState.AnimFrameIndex - 3) / 2, 0);
+
+
+		if (CurrentState.AnimFrameIndex > 3)
+		{
+			if (CurrentState.AnimFrameIndex == 4)
+				SmearFrameIndex.X = 1;
+			else if (CurrentState.AnimFrameIndex == 5)
+			{
+				SmearFrameIndex.X = 1;
+				SmearFrameIndex.Y = 1;
+			}
+			else
+			{
+				SmearFrameIndex.X = .5f;
+				SmearFrameIndex.Y = 0;
+			}
+		}
+
+		if (DynamicSmear)
+		{
+			DynamicSmear->SetVectorParameterValue(TEXT("RowsAndColumns"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionRC"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("AnimIndex"), SmearFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionAnimIndex"), EmitFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("BodyEmissiveColor"), FVector(1));
+			DynamicSmear->SetScalarParameterValue(TEXT("BodyEmissivity"), 1);
+
+			if (SmearEmit)
+				DynamicSmear->SetTextureParameterValue(TEXT("SpriteSheet"), SmearBody);
+			if (SmearBody)
+				DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
+		}
+	}
+	else if (IsCurrentAnimation(Normal2H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 8)
+	{
+		FVector SmearFrameIndex = FVector(0);
+		FVector EmitFrameIndex = FVector((CurrentState.AnimFrameIndex - 4) % 2, (CurrentState.AnimFrameIndex - 4) / 2, 0);
+
+
+		if (CurrentState.AnimFrameIndex == 3)
+		{
+			EmitFrameIndex.X = 1;
+			EmitFrameIndex.Y = 1;
+			SmearFrameIndex.X = 1;
+			SmearFrameIndex.Y = 1;
+		}
+		else
+		{
+			if (CurrentState.AnimFrameIndex == 4)
+				EmitFrameIndex = FVector(0);
+			else if ((CurrentState.AnimFrameIndex == 5 && CurrentState.PosePlayTime < 3))
+			{
+				SmearFrameIndex = FVector(1, 0, 0);
+				EmitFrameIndex = FVector(0, 0, 0);
+			}
+			else if ((CurrentState.AnimFrameIndex == 5) || (CurrentState.AnimFrameIndex == 6 && CurrentState.PosePlayTime < 1))
+			{
+				SmearFrameIndex = FVector(1, 1, 0);
+				EmitFrameIndex = FVector(1, 0, 0);
+			}
+			else if (CurrentState.AnimFrameIndex == 6)
+			{
+				SmearFrameIndex = FVector(.5, 0, 0);
+				EmitFrameIndex = FVector(0, 1, 0);
+			}
+			else if (CurrentState.AnimFrameIndex == 7 && CurrentState.PosePlayTime < 2)
+			{
+				SmearFrameIndex = FVector(.5, 0, 0);
+				EmitFrameIndex = FVector(1, 1, 0);
+			}
+			else
+				bShowSmear = false;
+
+		}
+
+		if (DynamicSmear)
+		{
+			DynamicSmear->SetVectorParameterValue(TEXT("RowsAndColumns"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionRC"), FVector(2));
+			DynamicSmear->SetVectorParameterValue(TEXT("AnimIndex"), SmearFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("EmissionAnimIndex"), EmitFrameIndex);
+			DynamicSmear->SetVectorParameterValue(TEXT("BodyEmissiveColor"), FVector(1));
+			DynamicSmear->SetScalarParameterValue(TEXT("BodyEmissivity"), 1);
+
+			if (SmearEmit)
+				DynamicSmear->SetTextureParameterValue(TEXT("SpriteSheet"), SmearBody);
+			if (SmearBody)
+				DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
+		}
+	}
 }

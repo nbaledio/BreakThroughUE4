@@ -93,6 +93,7 @@ enum AttackProperties
 	IsHorizontal = (1 << 24),
 	IsHeavy = (1 << 25),
 	LowerBodyHit = (1 << 26),
+	ForceStand = (1 << 27),
 };
 
 class ABTProjectileBase;
@@ -487,6 +488,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float AirPushboxVerticalOffset = 0;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
+		bool bBackThrow = false;
+
 	FVector StatusColor;
 	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
 	float DepthOffset;
@@ -509,6 +513,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		USkeletalMeshComponent* BaseMesh;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
+		USkeletalMeshComponent* SmearMesh;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		USceneComponent* MainLightRotator;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
@@ -527,6 +534,8 @@ protected:
 		UMaterialInterface* Outline;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
 		UMaterialInterface* EyeShine;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
+		UMaterialInterface* SmearEffect;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* BodyBC;
@@ -536,6 +545,10 @@ protected:
 		UTexture* BodyILM;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* BodyLines;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* SmearBody;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+		UTexture* SmearEmit;
 
 	//Sets the corresponding parameters on character's materials
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Visuals")
@@ -553,6 +566,7 @@ protected:
 
 	UMaterialInstanceDynamic* DynamicOutline;
 	UMaterialInstanceDynamic* DynamicEyeShine;
+	UMaterialInstanceDynamic* DynamicSmear;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay();
@@ -601,6 +615,12 @@ protected:
 
 	void ContactThrow(FHitbox Hitbox, int32 ThrowType);
 
+	virtual void ResetSmear();
+
+	virtual void DrawSmear();
+
+	bool bShowSmear;
+
 	/* Affects how quickly the character falls to the ground (See below for values per weight class)
 		Featherweight = .95 
 		Lightweight = .98
@@ -636,6 +656,7 @@ protected:
 
 	//number of frames that an input is active for
 		uint8 InputTime = 8;
+		uint8 DirInputTime = 12;
 
 public:
 	//Idle Stance Animations
@@ -724,9 +745,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Guard Anims")
 		TArray<FAnimationFrame> GuardAirOut;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Resolute Counters")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
+		TArray<FAnimationFrame> ThrowAttempt;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
+		TArray<FAnimationFrame> AirThrowAttempt;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
 		TArray<FAnimationFrame> ResoluteCounter;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Resolute Counters")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
 		TArray<FAnimationFrame> AirResoluteCounter;
 
 	//Ground Hitstun Animations
@@ -812,6 +837,9 @@ public:
 		TArray<FAnimationFrame> TimeOverLose;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Win/Lose Anims")
 		TArray<FAnimationFrame> LoseCycle;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> Normal2L;
 
 private:
 

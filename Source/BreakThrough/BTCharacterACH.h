@@ -12,22 +12,24 @@ enum Moves  //keeps track of what moves have already been used in a string using
 	n5M = (1 << 0), //used for both air and ground normals, light attacks not listed since they can be used whenever available
 	n5H = (1 << 1),
 	n5B = (1 << 2),
-	n2L = (1 << 3),
-	n2M = (1 << 4),
-	n2H = (1 << 5),
-	n2B = (1 << 6),
-	n6L = (1 << 7),
-	n6M = (1 << 8),
-	n6B = (1 << 9), 
-	TowerLeap = (1 << 10), //need to keep track of which Specials Achealis has used since she can enter a state where she can cancel specials into each other
-	LevelHell = (1 << 11), 
-	HeavenClimber= (1 << 12),
-	GenesisEdge = (1 << 13),
-	Starfall = (1 << 14),
-	/*IsSlash = (1 << 16),
-	IsVertical = (1 << 17),
-	IsHorizontal = (1 << 18),
-	LowerBodyHit = (1 << 19),*/
+	n2M = (1 << 3),
+	n2H = (1 << 4),
+	n2B = (1 << 5),
+	n6L = (1 << 6),
+	n6M = (1 << 7),
+	n6B = (1 << 8), 
+	nJM = (1 << 9),
+	nJH = (1 << 10),
+	nJB = (1 << 11),
+	TowerLeap = (1 << 12), //need to keep track of which Specials Achealis has used since she can enter a state where she can cancel specials into each other
+	LevelHell = (1 << 13), 
+	HeavenClimber= (1 << 14),
+	GenesisEdge = (1 << 15),
+	Starfall = (1 << 16),
+	/*IsSlash = (1 << 17),
+	IsVertical = (1 << 18),
+	IsHorizontal = (1 << 19),
+	LowerBodyHit = (1 << 20),*/
 };
 
 UCLASS()
@@ -65,6 +67,12 @@ protected:
 
 	virtual void SpawnPBS() override; //spawn in character's projectiles, blitz image, and sigils
 
+	virtual void ResetSmear() override;
+
+	virtual void DrawSmear() override;
+
+	FVector EffectColor = FVector(.85, .1, 1);
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
 		UTexture* SpearBC;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
@@ -101,7 +109,25 @@ protected:
 	UMaterialInstanceDynamic* DynamicSpearEdge;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> NormalJL;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> NormalJM;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> NormalJH;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> NormalJB;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
 		TArray<FAnimationFrame> Normal5L;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
 		TArray<FAnimationFrame> Normal5M;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> Normal5H;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> Normal5B;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> Normal2M;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> Normal2H;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> Normal2B;
 };
