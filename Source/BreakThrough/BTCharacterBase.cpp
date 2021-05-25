@@ -2629,6 +2629,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 	if (Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)
 	{
+		Hitbox.AttackProperties = None;
 		KnockBackToApply = FVector2D(1.1f * FMath::Abs(Hitbox.PotentialKnockBack.X), 3);
 	}
 	else if (Opponent->CurrentState.bIsAirborne)

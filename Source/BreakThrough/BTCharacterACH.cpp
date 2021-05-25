@@ -10,7 +10,7 @@ void ABTCharacterACH::HitDetection()
 
 void ABTCharacterACH::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 {
-	if (CurrentState.HitStop > 10 && CurrentState.bHitSuccess && Opponent->CurrentState.CharacterHitState & Piercing && (IsCurrentAnimation(Normal5B) || (IsCurrentAnimation(Normal2B) && CurrentState.AnimFrameIndex > 6)))
+	if (CurrentState.HitStop > 9 && CurrentState.bHitSuccess && Opponent->CurrentState.CharacterHitState & Piercing && (IsCurrentAnimation(Normal5B) || IsCurrentAnimation(Normal2B)))
 	{
 		//make opponent flash magenta on pierce
 		Opponent->StatusMix = .7f;
