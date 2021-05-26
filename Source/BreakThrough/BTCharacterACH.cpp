@@ -253,6 +253,13 @@ void ABTCharacterACH::AnimationEvents()
 		else
 			SmearMesh->SetMorphTarget(TEXT("ACH_2H_01"), 1);
 	}
+	else if (IsCurrentAnimation(NormalJH) && CurrentState.AnimFrameIndex > 1 && CurrentState.AnimFrameIndex < 7)
+	{
+		if (CurrentState.AnimFrameIndex < 4)
+			SmearMesh->SetMorphTarget(TEXT("ACH_jH_00"), 1);
+		else
+			SmearMesh->SetMorphTarget(TEXT("ACH_jH_01"), 1);
+	}
 	else
 	{
 		bShowSmear = false;
@@ -685,6 +692,8 @@ void ABTCharacterACH::ResetSmear()
 	SmearMesh->SetMorphTarget(TEXT("ACH_5B"), 0);
 	SmearMesh->SetMorphTarget(TEXT("ACH_2B_00"), 0);
 	SmearMesh->SetMorphTarget(TEXT("ACH_2B_01"), 0);
+	SmearMesh->SetMorphTarget(TEXT("ACH_jH_00"), 0);
+	SmearMesh->SetMorphTarget(TEXT("ACH_jH_01"), 0);
 }
 
 void ABTCharacterACH::DrawSmear()
@@ -832,7 +841,7 @@ void ABTCharacterACH::DrawSmear()
 	else if (IsCurrentAnimation(Normal2H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 8)
 	{
 		FVector SmearFrameIndex = FVector(0);
-		FVector EmitFrameIndex = FVector((CurrentState.AnimFrameIndex - 4) % 2, (CurrentState.AnimFrameIndex - 4) / 2, 0);
+		FVector EmitFrameIndex;
 
 
 		if (CurrentState.AnimFrameIndex == 3)
@@ -885,5 +894,47 @@ void ABTCharacterACH::DrawSmear()
 			if (SmearBody)
 				DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
 		}
+	}
+	else if (IsCurrentAnimation(NormalJH) && CurrentState.AnimFrameIndex > 1 && CurrentState.AnimFrameIndex < 7)
+	{
+		FVector SmearFrameIndex = FVector(0);
+		FVector EmitFrameIndex;
+
+
+	if (CurrentState.AnimFrameIndex < 4)
+	{
+		EmitFrameIndex = FVector(0);
+		if (CurrentState.AnimFrameIndex == 2)
+			SmearFrameIndex = FVector(1,0,0);
+	}
+	else
+	{
+		SmearFrameIndex = FVector(.5, 0, 0);
+
+		if (CurrentState.AnimFrameIndex == 4)
+		{
+			SmearFrameIndex = FVector(0, 1, 0);
+			EmitFrameIndex = FVector(1, 0, 0);
+		}
+		else if (CurrentState.AnimFrameIndex == 5)
+			EmitFrameIndex = FVector(0, 1, 0);
+		else
+			EmitFrameIndex = FVector(1, 1, 0);
+	}
+
+	if (DynamicSmear)
+	{
+		DynamicSmear->SetVectorParameterValue(TEXT("RowsAndColumns"), FVector(2));
+		DynamicSmear->SetVectorParameterValue(TEXT("EmissionRC"), FVector(2));
+		DynamicSmear->SetVectorParameterValue(TEXT("AnimIndex"), SmearFrameIndex);
+		DynamicSmear->SetVectorParameterValue(TEXT("EmissionAnimIndex"), EmitFrameIndex);
+		DynamicSmear->SetVectorParameterValue(TEXT("BodyEmissiveColor"), FVector(1));
+		DynamicSmear->SetScalarParameterValue(TEXT("BodyEmissivity"), 1);
+
+		if (SmearEmit)
+			DynamicSmear->SetTextureParameterValue(TEXT("SpriteSheet"), SmearBody);
+		if (SmearBody)
+			DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
+	}
 	}
 }

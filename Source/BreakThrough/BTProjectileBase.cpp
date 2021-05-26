@@ -11,6 +11,9 @@ ABTProjectileBase::ABTProjectileBase()
 
 	Transform = CreateDefaultSubobject<USceneComponent>(TEXT("Transform"));
 	RootComponent = Transform;
+
+	BaseMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Base Mesh"));
+	BaseMesh->SetupAttachment(RootComponent);
 }
 
 // Called when the game starts or when spawned
@@ -39,6 +42,9 @@ void ABTProjectileBase::Activate(bool FacingRight)
 	CurrentState.bHitSuccess = false;
 	CurrentState.bAttackMadeContact = false;
 	CurrentState.bProjectileClash = false;
+
+	CurrentState.AnimFrameIndex = 0;
+	CurrentState.FramePlayTime = 0;
 }
 
 void ABTProjectileBase::HitDetection()
@@ -850,3 +856,5 @@ void ABTProjectileBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 	CurrentState.bHitSuccess = true;
 	AttackCalculation(Hitbox, Owner->Opponent->CurrentState.Position);
 }
+
+void ABTProjectileBase::CreateMaterials(){ }

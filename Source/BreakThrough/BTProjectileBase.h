@@ -8,7 +8,6 @@
 #include "Sound/SoundCue.h"
 #include "BTProjectileBase.generated.h"
 
-//struct FHitbox;
 class ABTCharacterBase;
 
 USTRUCT(BlueprintType)
@@ -193,6 +192,8 @@ public:
 
 	virtual void DrawProjectile();  //set material parameters from child class
 
+	virtual void CreateMaterials();
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -201,6 +202,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		USceneComponent* Transform;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		USkeletalMeshComponent* BaseMesh;
 
 	void AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter);
 

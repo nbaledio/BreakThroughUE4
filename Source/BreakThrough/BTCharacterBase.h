@@ -8,6 +8,7 @@
 #include "BTProjectileBase.h"
 #include "Sigil.h"
 #include "BlitzImageBase.h"
+#include "BTVFXBase.h"
 #include "BreakThroughPlayerController.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundCue.h"
@@ -103,6 +104,8 @@ struct FSigilState;
 class ABlitzImageBase;
 struct FBlitzState;
 class UAnimationFrame;
+class ABTVFXBase;
+struct FEffectState;
 
 USTRUCT(BlueprintType)
 struct FAnimationFrame
@@ -192,6 +195,7 @@ struct FCharacterState
 	TArray<FProjectileState> CurrentProjectileStates;
 	TArray<FSigilState> CurrentSigilStates;
 	TArray<FBlitzState> CurrentBlitzState;
+	TArray<FEffectState> CurrentEffectStates;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
 	uint8 AnimFrameIndex = 0;
@@ -460,6 +464,8 @@ public:
 	TArray<ABTProjectileBase*> Projectiles;
 
 	TArray<ASigil*> Sigils;
+
+	TArray<ABTVFXBase*> SpecialVFX;
 
 	ABlitzImageBase* BlitzImage;
 

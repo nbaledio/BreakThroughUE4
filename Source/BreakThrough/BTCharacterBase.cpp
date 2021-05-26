@@ -240,6 +240,11 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 			{
 				Projectile->UpdateProjectile();
 			}
+
+			for (ABTVFXBase* Effect : SpecialVFX)
+			{
+				Effect->Update();
+			}
 		}
 	}
 
@@ -773,14 +778,14 @@ void ABTCharacterBase::DrawCharacter()
 		DynamicOutline->SetScalarParameterValue("StatusMix", 0);
 	}
 
-	if (CurrentState.bFacingRight)
+	FVector Scale = FVector(1);
+	if (!CurrentState.bFacingRight)
 	{
-		BaseMesh->SetRelativeScale3D(FVector(1, 1, 1));
+		Scale.X *= -1;
 	}
-	else
-	{
-		BaseMesh->SetRelativeScale3D(FVector(-1, 1, 1));
-	}
+
+	BaseMesh->SetRelativeScale3D(Scale);
+	SmearMesh->SetRelativeScale3D(Scale);
 
 	SetActorLocation(FVector(CurrentState.Position.X, GetActorLocation().Y, CurrentState.Position.Y));
 
@@ -808,6 +813,11 @@ void ABTCharacterBase::DrawCharacter()
 			for (ASigil* Sigil : Sigils)
 			{
 				Sigil->DrawSigil();
+			}
+
+			for (ABTVFXBase* Effect : SpecialVFX)
+			{
+				Effect->DrawEffect();
 			}
 		}
 	}
@@ -1563,7 +1573,12 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 	else if (Inputs & INPUT_UP)
 	{
 		if (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir8 < DirInputTime - 1 && CurrentState.Dir9 < DirInputTime - 1 && CurrentState.bIsAirborne && !IsCurrentAnimation(FocusBlitz))
-			CurrentState.AirJump = DirInputTime;
+		{
+			CurrentState.AirJump = InputTime;
+			if (CurrentState.HitStop > 0)
+				CurrentState.AirJump *= 2;
+		}
+		
 
 		if ((CurrentState.Position.X < Opponent->CurrentState.Position.X && Inputs & INPUT_RIGHT) || (CurrentState.Position.X > Opponent->CurrentState.Position.X && Inputs & INPUT_LEFT))
 		{
@@ -3051,6 +3066,7 @@ bool ABTCharacterBase::BlitzCancel()
 	{
 		CurrentState.Resolve--;
 		CurrentState.Durability = 750;
+		CurrentState.LandingLag = 0;
 		CurrentState.MPressed = 0;
 		CurrentState.HPressed = 0;
 		CurrentState.ResolveRecoverTimer = 0;
@@ -3615,11 +3631,6 @@ void ABTCharacterBase::DrawHurtbox(FHurtbox Box)
 void ABTCharacterBase::ResetSmear()
 {
 	bShowSmear = true;
-
-	FVector Scale = FVector(1);
-	if (!CurrentState.bFacingRight)
-		Scale.X *= -1;
-	SmearMesh->SetRelativeScale3D(Scale);
 }
 
 void ABTCharacterBase::DrawSmear() {}
