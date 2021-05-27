@@ -1393,11 +1393,11 @@ void ABTCharacterBase::ApplyKnockBack()
 
 				if (CurrentState.KnockBack.Y > 0)
 					CurrentState.Velocity.Y = CurrentState.KnockBack.Y;
-			}
 
-			if (CurrentState.bFacingRight)
-			{
-				CurrentState.Velocity *= FVector2D(-1, 1);
+				if (CurrentState.bFacingRight)
+				{
+					CurrentState.Velocity *= FVector2D(-1, 1);
+				}
 			}
 		}
 
@@ -1815,7 +1815,6 @@ bool ABTCharacterBase::NonKnockdownLanding()
 
 	CurrentState.LandingLag = 4;
 	CurrentState.Velocity.X *= .75f;
-	CurrentState.AvailableActions = AcceptAll - (AcceptMove + AcceptJump);
 
 	return EnterNewAnimation(StandUp);
 }
@@ -2673,6 +2672,16 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			else
 				KnockBackToApply.Y = Hitbox.PotentialAirKnockBack.Y;
 		}
+	}
+
+	if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+		KnockBackToApply *= FVector2D(-1, 1);
+	else if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+	{
+	}
+	else if (CurrentState.bFacingRight)
+	{
+		KnockBackToApply *= FVector2D(-1, 1);
 	}
 
 	CurrentState.AvailableActions = Hitbox.PotentialActions;
