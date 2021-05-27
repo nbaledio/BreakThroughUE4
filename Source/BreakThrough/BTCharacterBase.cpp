@@ -2181,51 +2181,54 @@ void ABTCharacterBase::AnimationEvents()
 			{
 				CurrentState.bBlitzing = true;
 
-				//can hold direction to change velocity when exiting Focus Blitz
-				if (CurrentState.Dir2 == DirInputTime)
-					CurrentState.Velocity = FVector2D(0, -.25 * BlitzDashForce);
-				else if (CurrentState.Dir8 == DirInputTime)
-					CurrentState.Velocity = FVector2D(0, .35 * BlitzDashForce);
-				else if (CurrentState.Dir4 == DirInputTime)
+				if (CurrentState.bIsAirborne)
 				{
-					CurrentState.Velocity = FVector2D(.35f * BlitzDashForce, 0);
-					if (CurrentState.bFacingRight)
-						CurrentState.Velocity.X *= -1;
-				}
-				else if (CurrentState.Dir6 == DirInputTime)
-				{
-					CurrentState.Velocity = FVector2D(.35f * BlitzDashForce, 0);
+					//can hold direction to change velocity when exiting Focus Blitz
+					if (CurrentState.Dir2 == DirInputTime)
+						CurrentState.Velocity = FVector2D(0, -.25 * BlitzDashForce);
+					else if (CurrentState.Dir8 == DirInputTime)
+						CurrentState.Velocity = FVector2D(0, .35 * BlitzDashForce);
+					else if (CurrentState.Dir4 == DirInputTime)
+					{
+						CurrentState.Velocity = FVector2D(.35f * BlitzDashForce, 0);
+						if (CurrentState.bFacingRight)
+							CurrentState.Velocity.X *= -1;
+					}
+					else if (CurrentState.Dir6 == DirInputTime)
+					{
+						CurrentState.Velocity = FVector2D(.35f * BlitzDashForce, 0);
 
-					if (!CurrentState.bFacingRight)
-						CurrentState.Velocity.X *= -1;
-				}
-				else if (CurrentState.Dir7 == DirInputTime)
-				{
-					CurrentState.Velocity = FVector2D(.35f * BlitzDashForce);
+						if (!CurrentState.bFacingRight)
+							CurrentState.Velocity.X *= -1;
+					}
+					else if (CurrentState.Dir7 == DirInputTime)
+					{
+						CurrentState.Velocity = FVector2D(.35f * BlitzDashForce);
 
-					if (CurrentState.bFacingRight)
-						CurrentState.Velocity.X *= -1;
-				}
-				else if (CurrentState.Dir9 == DirInputTime)
-				{
-					CurrentState.Velocity = FVector2D(.35f * BlitzDashForce);
+						if (CurrentState.bFacingRight)
+							CurrentState.Velocity.X *= -1;
+					}
+					else if (CurrentState.Dir9 == DirInputTime)
+					{
+						CurrentState.Velocity = FVector2D(.35f * BlitzDashForce);
 
-					if (!CurrentState.bFacingRight)
-						CurrentState.Velocity.X *= -1;
-				}
-				else if (CurrentState.Dir1 == DirInputTime)
-				{
-					CurrentState.Velocity = FVector2D(-.25f * BlitzDashForce);
+						if (!CurrentState.bFacingRight)
+							CurrentState.Velocity.X *= -1;
+					}
+					else if (CurrentState.Dir1 == DirInputTime)
+					{
+						CurrentState.Velocity = FVector2D(-.25f * BlitzDashForce);
 
-					if (!CurrentState.bFacingRight)
-						CurrentState.Velocity.X *= -1;
-				}
-				else if (CurrentState.Dir3 == DirInputTime)
-				{
-					CurrentState.Velocity = FVector2D(-.25f * BlitzDashForce);
+						if (!CurrentState.bFacingRight)
+							CurrentState.Velocity.X *= -1;
+					}
+					else if (CurrentState.Dir3 == DirInputTime)
+					{
+						CurrentState.Velocity = FVector2D(-.25f * BlitzDashForce);
 
-					if (CurrentState.bFacingRight)
-						CurrentState.Velocity.X *= -1;
+						if (CurrentState.bFacingRight)
+							CurrentState.Velocity.X *= -1;
+					}
 				}
 			}
 		}

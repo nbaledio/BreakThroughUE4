@@ -13,7 +13,7 @@ ABTVFXBase::ABTVFXBase()
 	Transform = CreateDefaultSubobject<USceneComponent>(TEXT("Transform"));
 	RootComponent = Transform;
 
-	BaseMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Base Mesh"));
+	BaseMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Base Mesh"));
 	BaseMesh->SetupAttachment(RootComponent);
 
 	Billboard = CreateDefaultSubobject<UMaterialBillboardComponent>(TEXT("Billboard"));

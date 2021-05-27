@@ -59,7 +59,7 @@ protected:
 		USceneComponent* Transform;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		UStaticMeshComponent* BaseMesh;
+		USkeletalMeshComponent* BaseMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UMaterialBillboardComponent* Billboard;
