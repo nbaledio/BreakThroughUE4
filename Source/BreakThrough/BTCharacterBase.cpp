@@ -1358,17 +1358,17 @@ void ABTCharacterBase::ApplyKnockBack()
 		if (Opponent->CurrentState.ComboCount <= 8 || CurrentState.CharacterHitState & IsSuper || CurrentState.ShatteredTime > 0)
 			ComboGravity = 1;
 		else if (Opponent->CurrentState.ComboCount <= 12)
-			ComboGravity = .98;
+			ComboGravity = .99;
 		else if (Opponent->CurrentState.ComboCount <= 16)
-			ComboGravity = .95;
+			ComboGravity = .98;
 		else if (Opponent->CurrentState.ComboCount <= 20)
-			ComboGravity = .93;
+			ComboGravity = .97;
 		else if (Opponent->CurrentState.ComboCount <= 24)
-			ComboGravity = .9;
+			ComboGravity = .96;
 		else if (Opponent->CurrentState.ComboCount <= 30)
-			ComboGravity = .87;
+			ComboGravity = .95;
 		else
-			ComboGravity = .85f;
+			ComboGravity = .9f;
 	}
 
 	if (CurrentState.KnockBack != FVector2D(0, 0)) //apply any knockback
@@ -2689,7 +2689,8 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	//apply certain modifiers based on circumstances around the hit
 	if (Hitbox.AttackHeight < Throw)
 	{
-		if ((Opponent->CurrentState.bArmorActive || Opponent->CurrentState.bCounterHitState) && Hitbox.AttackProperties & Shatter)
+		if ((Opponent->CurrentState.bArmorActive || Opponent->CurrentState.bCounterHitState || 
+			IsCurrentAnimation(AirResoluteCounter) || IsCurrentAnimation(ResoluteCounter)) && Hitbox.AttackProperties & Shatter)
 		{
 			//Opponent's penalty for getting shattered
 			Opponent->CurrentState.ShatteredTime = 120;
