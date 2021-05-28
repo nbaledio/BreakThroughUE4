@@ -1658,16 +1658,16 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	{
 		CurrentState.LPressed = InputTime;
 
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.LPressed *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.LPressed += CurrentState.HitStop;
 		CurrentState.bIsLDown = true;
 	}
 	else if (!(Inputs & INPUT_LIGHT) && CurrentState.bIsLDown)
 	{
 		CurrentState.LReleased = InputTime;
 
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.LReleased *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.LReleased += CurrentState.HitStop;
 
 		CurrentState.bIsLDown = false;
 	}
@@ -1676,8 +1676,8 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	{
 		CurrentState.MPressed = InputTime;
 
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.MPressed *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.MPressed += CurrentState.HitStop;
 
 		CurrentState.bIsMDown = true;
 	}
@@ -1685,8 +1685,8 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	{
 		CurrentState.MReleased = InputTime;
 
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.MReleased *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.MReleased += CurrentState.HitStop;
 
 		CurrentState.bIsMDown = false;
 	}
@@ -1695,8 +1695,8 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	{
 		CurrentState.HPressed = InputTime;
 
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.HPressed *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.HPressed += CurrentState.HitStop;
 
 		CurrentState.bIsHDown = true;
 	}
@@ -1704,8 +1704,8 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	{
 		CurrentState.HReleased = InputTime;
 		
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.HReleased *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.HReleased += CurrentState.HitStop;
 
 		CurrentState.bIsHDown = false;
 	}
@@ -1714,8 +1714,8 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	{
 		CurrentState.BPressed = InputTime;
 
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.BPressed *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.BPressed += CurrentState.HitStop;
 
 		CurrentState.bIsBDown = true;
 	}
@@ -1723,8 +1723,8 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	{
 		CurrentState.BReleased = InputTime;
 
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.BReleased *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.BReleased += CurrentState.HitStop;
 
 		CurrentState.bIsBDown = false;
 	}
