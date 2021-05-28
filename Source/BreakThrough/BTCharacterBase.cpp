@@ -1246,7 +1246,7 @@ void ABTCharacterBase::RunBraking()
 			}
 
 			//stop running if forward direction is no longer being held for run type characters and if animation has finished on dash type characters
-			if ((RunAcceleration > 0 && CurrentState.Dir6 < InputTime && CurrentState.Dir4 < InputTime && CurrentState.Dir9 < InputTime) || (!IsCurrentAnimation(RunStart) && !IsCurrentAnimation(RunCycle) && !IsCurrentAnimation(PreJump)))
+			if ((RunAcceleration > 0 && CurrentState.Dir6 < InputTime && CurrentState.Dir9 < InputTime) || (!IsCurrentAnimation(RunStart) && !IsCurrentAnimation(RunCycle) && !IsCurrentAnimation(PreJump)))
 			{
 				CurrentState.bIsRunning = false;
 			}
@@ -1868,7 +1868,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			CurrentState.Velocity.Y = 1.5f;
 			//make flash white and play chime
 			StatusMix = .5f;
-			StatusColor = FVector(.9);
+			StatusColor = FVector(1);
 			CurrentState.SlowMoTime = 0;
 			CurrentState.StatusTimer = 10;
 			CurrentState.JumpsUsed = 0;
@@ -1883,7 +1883,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		{
 			//make flash white and play chime
 			StatusMix = .5f;
-			StatusColor = FVector(.9);
+			StatusColor = FVector(1);
 			CurrentState.StatusTimer = 10;
 			CurrentState.LPressed = 0;
 			CurrentState.MPressed = 0;
@@ -3093,7 +3093,7 @@ bool ABTCharacterBase::BlitzCancel()
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
 				TurnAroundCheck();
 				CurrentState.Velocity = FVector2D(BlitzDashForce, 0);
-				CurrentState.GravDefyTime = 24;
+				CurrentState.GravDefyTime = 20;
 				if (!CurrentState.bFacingRight)
 					CurrentState.Velocity.X *= -1;
 
@@ -3128,7 +3128,7 @@ bool ABTCharacterBase::BlitzCancel()
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
 				TurnAroundCheck();
 				CurrentState.Velocity = FVector2D(-.85f * BlitzDashForce, 0);
-				CurrentState.GravDefyTime = 24;
+				CurrentState.GravDefyTime = 20;
 				if (!CurrentState.bFacingRight)
 					CurrentState.Velocity.X *= -1;
 

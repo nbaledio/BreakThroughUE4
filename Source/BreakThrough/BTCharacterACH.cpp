@@ -265,8 +265,10 @@ void ABTCharacterACH::AnimationEvents()
 	{
 		if (CurrentState.AnimFrameIndex == 5)
 			SmearMesh->SetMorphTarget(TEXT("ACH_jB_00"), 1);
-		else
+		else if (CurrentState.AnimFrameIndex == 6)
 			SmearMesh->SetMorphTarget(TEXT("ACH_jB_01"), 1);
+		else
+			SmearMesh->SetMorphTarget(TEXT("ACH_jB_02"), 1);
 	}
 	else
 	{
@@ -704,6 +706,7 @@ void ABTCharacterACH::ResetSmear()
 	SmearMesh->SetMorphTarget(TEXT("ACH_jH_01"), 0);
 	SmearMesh->SetMorphTarget(TEXT("ACH_jB_00"), 0);
 	SmearMesh->SetMorphTarget(TEXT("ACH_jB_01"), 0);
+	SmearMesh->SetMorphTarget(TEXT("ACH_jB_02"), 0);
 }
 
 void ABTCharacterACH::DrawSmear()
@@ -960,6 +963,7 @@ void ABTCharacterACH::DrawSmear()
 			if (CurrentState.AnimFrameIndex == 7)
 			{
 				EmitFrameIndex.Y = 1;
+				SmearFrameIndex = FVector(1);
 			}
 			else if (CurrentState.AnimFrameIndex == 8)
 			{
