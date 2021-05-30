@@ -161,6 +161,10 @@ public:
 		bool bCheckFriends; //whether to check if this projectile is hitting projectiles from the same owner
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		bool bCheckHitByOwner; //whether to check if this projectile is being hit by the owner
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		bool bHoriPositionRelative = false; //whether relative horizontal position to target has impact on knockback calculation
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		bool bVertPositionRelative = false; //whether relative vertical position to target has impact on knockback calculation
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		FVector2D SurfaceBounds = FVector2D(0);

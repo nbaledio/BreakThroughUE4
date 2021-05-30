@@ -51,8 +51,6 @@ public:
 protected:
 	virtual bool NonKnockdownLanding() override; //transitions triggered by touching the ground while not in a hitstun animation
 
-	virtual bool ActiveTransitions() override; //Animation transitions triggered by player input
-
 	virtual bool ConditionalTransitions() override; //Animation transitions triggered by fulfilling some condition within certain animations
 
 	virtual bool PassiveTransitions() override; //Transitions that occur without the influence of outside factors or player input
@@ -70,6 +68,12 @@ protected:
 	virtual void ResetSmear() override;
 
 	virtual void DrawSmear() override;
+
+	virtual bool NormalAttacks() override;
+
+	virtual bool SpecialAttacks() override;
+
+	virtual bool SuperAttacks() override;
 
 	FVector EffectColor = FVector(.85, .1, 1);
 
@@ -130,4 +134,9 @@ protected:
 		TArray<FAnimationFrame> Normal2H;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
 		TArray<FAnimationFrame> Normal2B;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> Normal6L;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
+		TArray<FAnimationFrame> Normal6B;
 };

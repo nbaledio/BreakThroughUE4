@@ -1822,9 +1822,17 @@ bool ABTCharacterBase::NonKnockdownLanding()
 bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player input and character state
 {
 	//Attack transitions supersede all others
+	if (BlitzCancel())
+		return true;
 
-	if (HCF())
-		UE_LOG(LogTemp, Warning, TEXT("HCF"));
+	if (SuperAttacks())
+		return true;
+
+	if (SpecialAttacks())
+		return true;
+
+	if (NormalAttacks())
+		return true;
 
 	if (CurrentState.bIsAirborne && (CurrentState.CurrentAnimFrame.Invincibility == FaceDown || CurrentState.CurrentAnimFrame.Invincibility == FaceUp || IsCurrentAnimation(WallStick)) 
 		&& !IsCurrentAnimation(WallBounce) && !IsCurrentAnimation(GroundBounce) && CurrentState.HitStun == 0 && CurrentState.ShatteredTime == 0)
@@ -1867,7 +1875,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			}
 			CurrentState.Velocity.Y = 1.5f;
 			//make flash white and play chime
-			StatusMix = .5f;
+			StatusMix = .75f;
 			StatusColor = FVector(1);
 			CurrentState.SlowMoTime = 0;
 			CurrentState.StatusTimer = 10;
@@ -1882,7 +1890,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		if (CurrentState.LPressed > 0 || CurrentState.MPressed > 0 || CurrentState.HPressed > 0 || CurrentState.BPressed > 0) //press any attack button once hitstun has ended to recover from stagger
 		{
 			//make flash white and play chime
-			StatusMix = .5f;
+			StatusMix = .75f;
 			StatusColor = FVector(1);
 			CurrentState.StatusTimer = 10;
 			CurrentState.LPressed = 0;
@@ -2375,7 +2383,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		(Opponent->CurrentState.bIsGuarding && !Opponent->CurrentState.bIsAirborne && !Opponent->CurrentState.bIsCrouching && Hitbox.AttackHeight == Overhead)) && Hitbox.AttackHeight != Unblockable)
 	{
 		int32 BlockstunToApply;
-		FVector2D KnockbackToApply;
+		FVector2D KnockBackToApply;
 		if (Hitbox.BaseBlockStun == 0)
 			BlockstunToApply = Hitbox.BaseHitStun * .8f;
 		else
@@ -2383,17 +2391,17 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 
 		if (Opponent->CurrentState.bIsAirborne)
 		{
-			if (FMath::Abs(Hitbox.PotentialAirKnockBack.X) > FMath::Abs(Hitbox.PotentialAirKnockBack.Y))
-				KnockbackToApply = FVector2D(Hitbox.PotentialAirKnockBack.X, 1.f);
+			if (FMath::Abs(Hitbox.PotentialAirKnockBack.X) > FMath::Abs(Hitbox.PotentialAirKnockBack.Y) || Hitbox.PotentialAirKnockBack.X < 0)
+				KnockBackToApply = FVector2D(Hitbox.PotentialAirKnockBack.X, 1.f);
 			else
-				KnockbackToApply = FVector2D(.5f * (Hitbox.PotentialAirKnockBack.X + FMath::Abs(Hitbox.PotentialAirKnockBack.Y)), 1.f);
+				KnockBackToApply = FVector2D(.5f * (Hitbox.PotentialAirKnockBack.X + FMath::Abs(Hitbox.PotentialAirKnockBack.Y)), 1.f);
 		}
 		else
 		{
-			if (FMath::Abs(Hitbox.PotentialKnockBack.X) > FMath::Abs(Hitbox.PotentialKnockBack.Y))
-				KnockbackToApply = FVector2D(Hitbox.PotentialKnockBack.X, 0);
+			if (FMath::Abs(Hitbox.PotentialKnockBack.X) > FMath::Abs(Hitbox.PotentialKnockBack.Y) || Hitbox.PotentialKnockBack.X < 0)
+				KnockBackToApply = FVector2D(Hitbox.PotentialKnockBack.X, 0);
 			else
-				KnockbackToApply = FVector2D(.5f * (Hitbox.PotentialKnockBack.X + FMath::Abs(Hitbox.PotentialKnockBack.Y)), 0);
+				KnockBackToApply = FVector2D(.5f * (Hitbox.PotentialKnockBack.X + FMath::Abs(Hitbox.PotentialKnockBack.Y)), 0);
 		}
 
 		BlockstunToApply = FMath::Min(BlockstunToApply, 30);
@@ -2409,9 +2417,9 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			BlockstunToApply = FMath::Max(1, BlockstunToApply);
 
 			if (Opponent->CurrentState.bIsAirborne)
-				KnockbackToApply = FVector2D(-Opponent->CurrentState.Velocity.X, .5f);
+				KnockBackToApply = FVector2D(-Opponent->CurrentState.Velocity.X, .5f);
 			else
-				KnockbackToApply *= 0;
+				KnockBackToApply *= 0;
 
 			//reward opponent for blocking with exceptional timing
 			Opponent->CurrentState.Durability += 250;
@@ -2421,7 +2429,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 				Opponent->CurrentState.ResolveRecoverTimer = 180;
 
 			//make opponent flash white
-			Opponent->StatusMix = .5f;
+			Opponent->StatusMix = .75f;
 			Opponent->CurrentState.StatusTimer = 8;
 			Opponent->StatusColor = FVector(1);
 			UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
@@ -2502,17 +2510,37 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		Opponent->CurrentState.HitStop = FMath::Min((int32)Hitbox.BaseHitStop - 2, 24);
 		CurrentState.HitStop = FMath::Min((int32)Hitbox.BaseHitStop - 2, 24);
 
-		if (Opponent->CurrentState.bTouchingWall && KnockbackToApply.X >= 0)
+		if (KnockBackToApply.X > 0)
+			KnockBackToApply.X = FMath::Max(1.8f, KnockBackToApply.X);
+
+		if (Opponent->CurrentState.bTouchingWall && KnockBackToApply.X > 0)
 		{
 			if (!(Hitbox.AttackProperties & IsSuper) && !(Hitbox.AttackProperties & IsSpecial))
-				CurrentState.KnockBack = FVector2D(.75f * KnockbackToApply.X, 0);
+				CurrentState.KnockBack = FVector2D(.95f * KnockBackToApply.X, 0);
+
+			if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+				CurrentState.KnockBack *= FVector2D(-1, 1);
+			else if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+			{
+			}
+			else if (CurrentState.bFacingRight)
+			{
+				CurrentState.KnockBack *= FVector2D(-1, 1);
+			}
 		}
 		else
 		{
-			if (KnockbackToApply.X < 0)
-				Opponent->CurrentState.KnockBack = FVector2D(.5f * KnockbackToApply.X, KnockbackToApply.Y);
-			else
-				Opponent->CurrentState.KnockBack = KnockbackToApply;
+			Opponent->CurrentState.KnockBack = KnockBackToApply;
+
+			if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+				Opponent->CurrentState.KnockBack *= FVector2D(-1, 1);
+			else if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+			{
+			}
+			else if (CurrentState.bFacingRight)
+			{
+				Opponent->CurrentState.KnockBack *= FVector2D(-1, 1);
+			}
 		}
 
 		//increase ResolvePulse
@@ -2689,7 +2717,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	//apply certain modifiers based on circumstances around the hit
 	if (Hitbox.AttackHeight < Throw)
 	{
-		if ((Opponent->CurrentState.bArmorActive || Opponent->CurrentState.bCounterHitState || 
+		if ((Opponent->CurrentState.bArmorActive || Opponent->CurrentState.bCounterHitState ||
 			IsCurrentAnimation(AirResoluteCounter) || IsCurrentAnimation(ResoluteCounter)) && Hitbox.AttackProperties & Shatter)
 		{
 			//Opponent's penalty for getting shattered
@@ -2852,9 +2880,9 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		if (Opponent->CurrentState.bTouchingWall) //if opponent is against a wall, character has to move back instead albeit with less magnitude
 		{
 			if (FMath::Abs(Hitbox.PotentialKnockBack.X) > FMath::Abs(Hitbox.PotentialKnockBack.Y))
-				WallPushBack = .5f * FMath::Abs(Hitbox.PotentialKnockBack.X);
+				WallPushBack = .85f * FMath::Abs(Hitbox.PotentialKnockBack.X);
 			else
-				WallPushBack = .25f * (FMath::Abs(Hitbox.PotentialKnockBack.X) + FMath::Abs(Hitbox.PotentialKnockBack.Y));
+				WallPushBack = .425f * (FMath::Abs(Hitbox.PotentialKnockBack.X) + FMath::Abs(Hitbox.PotentialKnockBack.Y));
 		}
 
 		if (Opponent->CurrentState.ComboTimer > 180) //will not experience pushback during first three seconds of a combo
@@ -2877,17 +2905,17 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			else
 			{
 				if (Opponent->CurrentState.ComboTimer < 300)
-					PushBack = 1.05f;
-				else if (Opponent->CurrentState.ComboTimer < 420)
-					PushBack = 1.1f;
-				else if (Opponent->CurrentState.ComboTimer < 540)
-					PushBack = 1.15f;
-				else if (Opponent->CurrentState.ComboTimer < 720)
-					PushBack = 1.2f;
-				else if (Opponent->CurrentState.ComboTimer < 900)
 					PushBack = 1.25f;
-				else
+				else if (Opponent->CurrentState.ComboTimer < 420)
 					PushBack = 1.35f;
+				else if (Opponent->CurrentState.ComboTimer < 540)
+					PushBack = 1.45f;
+				else if (Opponent->CurrentState.ComboTimer < 720)
+					PushBack = 1.55f;
+				else if (Opponent->CurrentState.ComboTimer < 900)
+					PushBack = 1.65f;
+				else
+					PushBack = 1.75f;
 			}
 		}
 		else if (!CurrentState.bIsAirborne)
@@ -3061,7 +3089,7 @@ void ABTCharacterBase::SaveFXStates()
 
 bool ABTCharacterBase::BlitzCancel()
 {
-	if (CurrentState.AvailableActions & AcceptMove && CurrentState.LPressed > 0 && CurrentState.BPressed > 0 && FMath::Abs(CurrentState.LPressed - CurrentState.BPressed) <= 3)
+	if (CurrentState.AvailableActions & AcceptMove && !CurrentState.bIsCrouching && CurrentState.LPressed > 0 && CurrentState.BPressed > 0 && FMath::Abs(CurrentState.LPressed - CurrentState.BPressed) <= 3)
 	{
 		if (CurrentState.Dir4 == DirInputTime)
 			bBackThrow = true;
@@ -3329,11 +3357,11 @@ void ABTCharacterBase::ProcessBlitz()
 
 				//Opponent successfully guarded the attack
 				int32 BlockstunToApply = 18;
-				FVector2D KnockbackToApply = FVector2D(2, 0);
+				FVector2D KnockBackToApply = FVector2D(2, 0);
 
 				if (Opponent->CurrentState.bIsAirborne)
 				{
-					KnockbackToApply.Y = 1.f;
+					KnockBackToApply.Y = 1.f;
 				}
 
 				if (Opponent->CurrentState.JustDefense >= 0) //if the opponent Instant Blocked the attack
@@ -3342,7 +3370,7 @@ void ABTCharacterBase::ProcessBlitz()
 					BlockstunToApply = BlockstunToApply * 2 / 3;
 
 					BlockstunToApply = FMath::Max(1, BlockstunToApply);
-					KnockbackToApply *= 0;
+					KnockBackToApply *= 0;
 					
 					//reward opponent for blocking with exceptional timing
 					Opponent->CurrentState.Durability += 250;
@@ -3350,7 +3378,7 @@ void ABTCharacterBase::ProcessBlitz()
 					Opponent->CurrentState.JustDefense = 0;
 
 					//make opponent flash white
-					Opponent->StatusMix = .5f;
+					Opponent->StatusMix = .75f;
 					Opponent->CurrentState.StatusTimer = 8;
 					Opponent->StatusColor = FVector(1);
 					UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
@@ -3366,13 +3394,13 @@ void ABTCharacterBase::ProcessBlitz()
 				Opponent->CurrentState.HitStop = 8;
 				CurrentState.HitStop = 8;
 
-				if (Opponent->CurrentState.bTouchingWall && KnockbackToApply.X >= 0)
+				if (Opponent->CurrentState.bTouchingWall && KnockBackToApply.X >= 0)
 				{
-					CurrentState.KnockBack = FVector2D(.75f * KnockbackToApply.X, 0);
+					CurrentState.KnockBack = FVector2D(.75f * KnockBackToApply.X, 0);
 				}
 				else
 				{
-					Opponent->CurrentState.KnockBack = KnockbackToApply;
+					Opponent->CurrentState.KnockBack = KnockBackToApply;
 				}
 
 				//update opponent's animation to guarding

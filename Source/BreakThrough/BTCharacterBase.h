@@ -601,6 +601,12 @@ protected:
 
 	bool BlitzCancel();
 
+	virtual bool NormalAttacks() { return false; };
+
+	virtual bool SpecialAttacks() { return false; };
+
+	virtual bool SuperAttacks() { return false; };
+
 	bool QCF();
 
 	bool QCB();
