@@ -762,6 +762,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
 		TArray<FAnimationFrame> AirThrowAttempt;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
+		TArray<FAnimationFrame> NormalThrow;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
+		TArray<FAnimationFrame> NormalAirThrow;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
 		TArray<FAnimationFrame> ResoluteCounter;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
 		TArray<FAnimationFrame> AirResoluteCounter;

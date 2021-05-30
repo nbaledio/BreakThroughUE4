@@ -485,23 +485,6 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 	{
 		KnockBackToApply = Hitbox.PotentialKnockBack;
 	}
-	
-	if (bHoriPositionRelative)
-	{
-		if (CurrentState.Position.X > Owner->Opponent->CurrentState.Position.X)
-			KnockBackToApply *= FVector2D(-1, 1);
-		else if (CurrentState.Position.X < Owner->Opponent->CurrentState.Position.X)
-		{
-		}
-		else if (CurrentState.bFacingRight)
-		{
-			KnockBackToApply *= FVector2D(-1, 1);
-		}
-	}
-	else if (CurrentState.bFacingRight)
-	{
-		KnockBackToApply *= FVector2D(-1, 1);
-	}
 
 	if (bVertPositionRelative)
 	{
@@ -643,6 +626,23 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 	Owner->CurrentState.AvailableActions = Hitbox.PotentialActions;
 
 	//Apply knockback to opponent
+	if (bHoriPositionRelative)
+	{
+		if (CurrentState.Position.X > Owner->Opponent->CurrentState.Position.X)
+			KnockBackToApply *= FVector2D(-1, 1);
+		else if (CurrentState.Position.X < Owner->Opponent->CurrentState.Position.X)
+		{
+		}
+		else if (!CurrentState.bFacingRight)
+		{
+			KnockBackToApply *= FVector2D(-1, 1);
+		}
+	}
+	else if (!CurrentState.bFacingRight)
+	{
+		KnockBackToApply *= FVector2D(-1, 1);
+	}
+
 	Owner->Opponent->CurrentState.KnockBack = KnockBackToApply;
 
 	//place and play hit effect
@@ -802,12 +802,12 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			else if (CurrentState.Position.X < Owner->Opponent->CurrentState.Position.X)
 			{
 			}
-			else if (CurrentState.bFacingRight)
+			else if (!CurrentState.bFacingRight)
 			{
 				Owner->Opponent->CurrentState.KnockBack *= FVector2D(-1, 1);
 			}
 		}
-		else if (CurrentState.bFacingRight)
+		else if (!CurrentState.bFacingRight)
 		{
 			Owner->Opponent->CurrentState.KnockBack *= FVector2D(-1, 1);
 		}
