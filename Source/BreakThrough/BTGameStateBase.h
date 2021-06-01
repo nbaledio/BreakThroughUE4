@@ -81,6 +81,9 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Characters")
     TArray<TSubclassOf<class ABTCharacterBase>> CharacterBlueprints;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HUD")
+        TSubclassOf<ARoundManager> RoundManagerBlueprint;
+
     void SpawnCharacters();
 
     void SpawnRoundManager();

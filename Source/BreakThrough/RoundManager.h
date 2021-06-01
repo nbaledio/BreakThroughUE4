@@ -5,6 +5,9 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "BTCharacterBase.h"
+#include "HUDVisuals.h"
+#include "Blueprint/UserWidget.h"
+#include "UObject/ConstructorHelpers.h"
 #include "RoundManager.generated.h"
 
 /**
@@ -28,6 +31,8 @@ public:
 	ABTCharacterBase* Player2Base;
 	FCharacterState* Player1State;
 	FCharacterState* Player2State;
+	//HUD Widget
+	UHUDVisuals* HUD;
 	void UpdateTimer();
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -53,6 +58,8 @@ private:
 	bool gameActive;
 	bool lockInputs;
 	bool suddenDeath;
+
+	TSubclassOf<class UHUDVisuals> HUDWidgetClass;
 
 	//Functions
 	void ResetPositions();

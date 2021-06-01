@@ -158,7 +158,7 @@ void ABTGameStateBase::SpawnCharacters()
 void ABTGameStateBase::SpawnRoundManager() 
 {
     FActorSpawnParameters SpawnParams;
-    gs.RoundManagerState = GetWorld()->SpawnActor<ARoundManager>(FVector(0), FRotator(0), SpawnParams);
+    gs.RoundManagerState = GetWorld()->SpawnActor<ARoundManager>(RoundManagerBlueprint, FVector(0), FRotator(0), SpawnParams);
 }
 
 void ABTGameStateBase::TickGameState()
