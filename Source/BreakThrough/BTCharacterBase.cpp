@@ -340,7 +340,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 		if (CurrentState.Position.Y <= 0)
 			CurrentState.Position.Y = 0;
 		
-		if (CurrentState.Position.Y > 0)
+		if (CurrentState.Position.Y > 0 || CurrentState.Velocity.Y > 0)
 			CurrentState.bIsAirborne = true;
 
 		if (CurrentState.Position.X <= -1000 + .5f * PushboxWidth)
@@ -354,7 +354,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 
 		if (CurrentState.GravDefyTime > 0)
 		{
-			if (CurrentState.GravDefyTime == 1 && !CurrentState.bTouchingOpponent)
+			if (CurrentState.GravDefyTime == 1)
 			{
 				CurrentState.Velocity.X *= .55f;
 			}
@@ -403,16 +403,7 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 		{
 			if (CurrentState.CurrentAnimFrame.Invincibility != Intangible && Opponent->CurrentState.CurrentAnimFrame.Invincibility != Intangible && FMath::Abs(Opponent->CurrentState.Position.X - CurrentState.Position.X) <= .5f * Opponent->PushboxWidth + .5f * PushboxWidth)
 			{
-				if ((!CurrentState.bIsAirborne && !Opponent->CurrentState.bIsAirborne) ||
-					((!CurrentState.bIsAirborne && !IsCurrentAnimation(KnockDownFaceDown) && !IsCurrentAnimation(KnockDownFaceUp) && !IsCurrentAnimation(WakeUpFaceUp) && !IsCurrentAnimation(WakeUpFaceDown)
-						&& Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.Velocity.Y <= 0) && ((CurrentState.bIsCrouching && CrouchingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset) ||
-							(!CurrentState.bIsCrouching && StandingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset)) &&
-						(FMath::Abs(Opponent->CurrentState.Velocity.X) == Opponent->BlitzDashForce)) ||
-					((CurrentState.bIsAirborne && !Opponent->CurrentState.bIsAirborne && CurrentState.Velocity.Y <= 0
-						&& !Opponent->IsCurrentAnimation(Opponent->KnockDownFaceDown) && !Opponent->IsCurrentAnimation(Opponent->KnockDownFaceUp) && !Opponent->IsCurrentAnimation(Opponent->WakeUpFaceUp) && !Opponent->IsCurrentAnimation(Opponent->WakeUpFaceDown)) &&
-						((Opponent->CurrentState.bIsCrouching && Opponent->CrouchingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset) ||
-							(!Opponent->CurrentState.bIsCrouching && Opponent->StandingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset)) &&
-						(FMath::Abs(CurrentState.Velocity.X) == BlitzDashForce)))//both on the ground or someone is airdashing
+				if (!CurrentState.bIsAirborne && !Opponent->CurrentState.bIsAirborne) //both on the ground
 				{
 					if (CurrentState.bTouchingWall)
 					{
@@ -526,6 +517,21 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 							else
 								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 						}
+						else if (FMath::Abs(Opponent->CurrentState.Velocity.X) >= .5f * Opponent->BlitzDashForce)
+						{
+							float MoveDistance = .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth - FMath::Abs(Opponent->CurrentState.Position.X - CurrentState.Position.X));
+
+							if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+							{
+								CurrentState.Position.X -= MoveDistance;
+								Opponent->CurrentState.Position.X += MoveDistance;
+							}
+							else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+							{
+								CurrentState.Position.X += MoveDistance;
+								Opponent->CurrentState.Position.X -= MoveDistance;
+							}
+						}
 						else if (Opponent->CurrentState.Position.X < CurrentState.Position.X)
 						{
 							Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
@@ -612,6 +618,21 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 							else
 								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+						}
+						else if (FMath::Abs(CurrentState.Velocity.X) >= .5f * BlitzDashForce)
+						{
+							float MoveDistance = .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth - FMath::Abs(Opponent->CurrentState.Position.X - CurrentState.Position.X));
+
+							if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+							{
+								CurrentState.Position.X -= MoveDistance;
+								Opponent->CurrentState.Position.X += MoveDistance;
+							}
+							else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+							{
+								CurrentState.Position.X += MoveDistance;
+								Opponent->CurrentState.Position.X -= MoveDistance;
+							}
 						}
 						else if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
 						{
@@ -1034,10 +1055,9 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 			}
 			else //if a character is not in a hit state, they will land on their feet
 			{
-				TurnAroundCheck();
-
 				if (CurrentState.LandingLag > 4 || IsCurrentAnimation(DeflectedAir)) //landing lag puts character in a recovery state when landing
 				{
+					TurnAroundCheck();
 					if (IsCurrentAnimation(DeflectedAir))
 						CurrentState.LandingLag = 10;
 
@@ -1050,6 +1070,7 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 				}
 				else if (CurrentState.BlockStun > 0)
 				{
+					TurnAroundCheck();
 					CurrentState.BlockStun += 4; //Add to blockstun when transitioning from air to ground
 
 					return EnterNewAnimation(GuardLo);
@@ -1359,7 +1380,7 @@ void ABTCharacterBase::GravityCalculation()
 {
 	if (CurrentState.bIsAirborne && CurrentState.GravDefyTime == 0 && !CurrentState.CurrentAnimFrame.bLockPosition) //apply gravity while character is airborne and not defying gravity
 	{
-		float GravCalc = Weight * -12.f / 60.f;
+		float GravCalc = Weight * -12 / 60;
 
 		if (IsCurrentAnimation(WallStick) || CurrentState.ShatteredTime > 0)
 			GravCalc *= .75f;
@@ -1596,7 +1617,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		{
 			CurrentState.AirJump = InputTime;
 			if (CurrentState.HitStop > 0)
-				CurrentState.AirJump *= 2;
+				CurrentState.AirJump += CurrentState.HitStop;
 		}
 		
 
@@ -1833,9 +1854,9 @@ bool ABTCharacterBase::NonKnockdownLanding()
 	if (IsCurrentAnimation(WallStick))
 		return EnterNewAnimation(Crumple, 2);
 
+	TurnAroundCheck();
 	CurrentState.LandingLag = 4;
 	CurrentState.Velocity.X *= .75f;
-
 	return EnterNewAnimation(StandUp);
 }
 
@@ -3163,7 +3184,7 @@ bool ABTCharacterBase::BlitzCancel()
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
 				TurnAroundCheck();
 				CurrentState.Velocity = FVector2D(BlitzDashForce, 0);
-				CurrentState.GravDefyTime = 20;
+				CurrentState.GravDefyTime = 24;
 				if (!CurrentState.bFacingRight)
 					CurrentState.Velocity.X *= -1;
 
@@ -3198,7 +3219,7 @@ bool ABTCharacterBase::BlitzCancel()
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
 				TurnAroundCheck();
 				CurrentState.Velocity = FVector2D(-.85f * BlitzDashForce, 0);
-				CurrentState.GravDefyTime = 20;
+				CurrentState.GravDefyTime = 24;
 				if (!CurrentState.bFacingRight)
 					CurrentState.Velocity.X *= -1;
 
