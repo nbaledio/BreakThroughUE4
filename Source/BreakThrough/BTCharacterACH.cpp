@@ -930,12 +930,14 @@ bool ABTCharacterACH::NormalAttacks()
 				{
 					CurrentState.LPressed = 0;
 					CurrentState.MoveList |= n6L;
+					TurnAroundCheck();
 					return EnterNewAnimation(Normal6L);
 				}
 				if(CurrentState.BPressed > 0 && (CurrentState.MoveList & n6B) == 0)
 				{
 					CurrentState.BPressed = 0;
 					CurrentState.MoveList |= n6B;
+					TurnAroundCheck();
 					return EnterNewAnimation(Normal6B);
 				}
 			}
@@ -988,6 +990,7 @@ bool ABTCharacterACH::NormalAttacks()
 				{
 					CurrentState.BPressed = 0;
 					CurrentState.MoveList |= n2B;
+					TurnAroundCheck();
 					return EnterNewAnimation(Normal2B);
 				}
 			}
@@ -997,6 +1000,7 @@ bool ABTCharacterACH::NormalAttacks()
 				{
 					CurrentState.HPressed = 0;
 					CurrentState.MoveList |= n2H;
+					TurnAroundCheck();
 					return EnterNewAnimation(Normal2H);
 				}
 			}
@@ -1006,12 +1010,14 @@ bool ABTCharacterACH::NormalAttacks()
 				{
 					CurrentState.MPressed = 0;
 					CurrentState.MoveList |= n2M;
+					TurnAroundCheck();
 					return EnterNewAnimation(Normal2M);
 				}
 			}
 			if (CurrentState.LPressed > 0 && (CurrentState.AvailableActions & AcceptLight))
 			{
 				CurrentState.LPressed = 0;
+				TurnAroundCheck();
 				return EnterNewAnimation(Normal2L);
 			}
 		}
@@ -1023,12 +1029,14 @@ bool ABTCharacterACH::NormalAttacks()
 				{
 					CurrentState.BPressed = 0;
 					CurrentState.MoveList |= n6B;
+					TurnAroundCheck();
 					return EnterNewAnimation(Normal6B);
 				}
 				if ((CurrentState.MoveList & n5B) == 0)
 				{
 					CurrentState.BPressed = 0;
 					CurrentState.MoveList |= n5B;
+					TurnAroundCheck();
 					return EnterNewAnimation(Normal5B);
 				}
 			}
@@ -1038,6 +1046,7 @@ bool ABTCharacterACH::NormalAttacks()
 				{
 					CurrentState.HPressed = 0;
 					CurrentState.MoveList |= n5H;
+					TurnAroundCheck();
 					return EnterNewAnimation(Normal5H);
 				}
 			}
@@ -1047,6 +1056,7 @@ bool ABTCharacterACH::NormalAttacks()
 				{
 					CurrentState.MPressed = 0;
 					CurrentState.MoveList |= n5M;
+					TurnAroundCheck();
 					return EnterNewAnimation(Normal5M);
 				}
 			}
@@ -1056,10 +1066,12 @@ bool ABTCharacterACH::NormalAttacks()
 				{
 					CurrentState.LPressed = 0;
 					CurrentState.MoveList |= n6L;
+					TurnAroundCheck();
 					return EnterNewAnimation(Normal6L);
 				}
 
 				CurrentState.LPressed = 0;
+				TurnAroundCheck();
 				return EnterNewAnimation(Normal5L);
 			}
 		}

@@ -601,6 +601,8 @@ protected:
 
 	bool BlitzCancel();
 
+	bool TurnAroundCheck();
+
 	virtual bool NormalAttacks() { return false; };
 
 	virtual bool SpecialAttacks() { return false; };
@@ -861,8 +863,6 @@ private:
 
 	//Take in information from CurrentAnimFrame
 	void ProcessAnimationFrame();
-
-	bool TurnAroundCheck();
 
 	bool TriggerTurnAround();
 

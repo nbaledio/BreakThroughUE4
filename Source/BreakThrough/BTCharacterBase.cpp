@@ -3591,11 +3591,14 @@ void ABTCharacterBase::HitAnimation()
 		}
 		else if (CurrentState.bIsAirborne || CurrentState.KnockBack.Y != 0)
 		{
-			CurrentState.bIsAirborne = true;
-			if (CurrentState.CharacterHitState & CanKnockAway)
+			if (CurrentState.KnockBack.Y < 0 && !CurrentState.bIsAirborne && CurrentState.CharacterHitState & CanGroundBounce)
+				EnterNewAnimation(GroundBounce);
+			else if (CurrentState.CharacterHitState & CanKnockAway)
 				EnterNewAnimation(KnockAway);
 			else
 				EnterNewAnimation(HitstunAir);
+
+			CurrentState.bIsAirborne = true;
 		}
 		else if (!CurrentState.bIsAirborne) //ground only hit states
 		{
