@@ -635,11 +635,11 @@ protected:
 
 	bool bShowSmear;
 
-	/* Affects how quickly the character falls to the ground (See below for values per weight class)
-		Featherweight = .95 
-		Lightweight = .98
+	/* Affects how quickly the character falls to the ground (See below for values per weight class) 
+		Featherweight = .95
+		Lightweight = .97
 		Middleweight = 1
-		Heavyweight = 1.03  */
+		Heavyweight = 1.05  */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float Weight = 1;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")

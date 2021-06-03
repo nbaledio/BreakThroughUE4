@@ -791,7 +791,7 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		CurrentState.HitStop = Hitbox.BaseHitStop - 2;
 
 		if (KnockBackToApply.X > 0)
-			KnockBackToApply.X = FMath::Max(1.8f, KnockBackToApply.X);
+			KnockBackToApply.X = FMath::Max(1.75f, KnockBackToApply.X);
 
 		Owner->Opponent->CurrentState.KnockBack = KnockBackToApply;
 
