@@ -658,7 +658,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float MaxRunSpeed = 5; //Caps Velocity upon hitting an opponent with an attack
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float BlitzDashForce = 2;
+		float AirDashForce = 4;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		uint8 AirDashDuration = 16;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		uint8 MaxJumps = 2;
 	//x dictates horizontal acceleration, z dictates vertical acceleration. y should never be changed or touched
@@ -726,6 +728,10 @@ public:
 		TArray<FAnimationFrame> AirDashForward;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> AirDashBackward;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
+		TArray<FAnimationFrame> BlitzDashForward;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
+		TArray<FAnimationFrame> BlitzDashBackward;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> AirDashForwardOut;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
