@@ -310,7 +310,10 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 		if (CurrentState.SlowMoTime % 2 == 0) //animation speed is halved and stun values decrease at half speed while in slow motion
 		{
 			if (CurrentState.HitStun > 0 && !IsCurrentAnimation(Sweep) && !IsCurrentAnimation(Crumple) && !IsCurrentAnimation(Tumble) && !IsCurrentAnimation(GroundBounce) && !IsCurrentAnimation(WallBounce))
+			{
 				CurrentState.HitStun--;
+				UE_LOG(LogTemp, Warning, TEXT("Player Hitstun: %d"), CurrentState.HitStun);
+			}
 			if (CurrentState.BlockStun > 0)
 				CurrentState.BlockStun--;
 			if (CurrentState.WallBounceTime > 0)
@@ -382,14 +385,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 	if (CurrentState.ShatteredTime > 0 && !CurrentState.CurrentAnimFrame.bSuperFlash && !CurrentState.CurrentAnimFrame.bCinematic)
 		CurrentState.ShatteredTime--;
 	if (CurrentState.SlowMoTime > 0 && !CurrentState.CurrentAnimFrame.bSuperFlash && !CurrentState.CurrentAnimFrame.bCinematic)
-		CurrentState.SlowMoTime--;
-
-	if (Opponent != nullptr)
-	{
-		if ((Opponent->CurrentState.HitStun == 0 && !Opponent->CurrentState.bIsAirborne && !Opponent->IsCurrentAnimation(Opponent->Stagger)) || 
-			(Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.CurrentAnimFrame.Invincibility != FaceDown && Opponent->CurrentState.CurrentAnimFrame.Invincibility != FaceUp))
-			CurrentState.ComboCount = 0;
-	}	
+		CurrentState.SlowMoTime--;	
 
 	SaveFXStates();
 	InputCountdown();
@@ -399,6 +395,14 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 {
 	if (Opponent != nullptr)
 	{
+		if ((Opponent->CurrentState.HitStun == 0 && !Opponent->CurrentState.bIsAirborne && !Opponent->IsCurrentAnimation(Opponent->Stagger)) ||
+			(Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.CurrentAnimFrame.Invincibility != FaceDown && Opponent->CurrentState.CurrentAnimFrame.Invincibility != FaceUp))
+			CurrentState.ComboCount = 0;
+
+		if ((CurrentState.HitStun == 0 && !CurrentState.bIsAirborne && !IsCurrentAnimation(Stagger)) ||
+			(CurrentState.bIsAirborne && CurrentState.CurrentAnimFrame.Invincibility != FaceDown && CurrentState.CurrentAnimFrame.Invincibility != FaceUp))
+			Opponent->CurrentState.ComboCount = 0;
+
 		if (!CurrentState.CurrentAnimFrame.bCinematic && !Opponent->CurrentState.CurrentAnimFrame.bCinematic)
 		{
 			if (CurrentState.CurrentAnimFrame.Invincibility != Intangible && Opponent->CurrentState.CurrentAnimFrame.Invincibility != Intangible && FMath::Abs(Opponent->CurrentState.Position.X - CurrentState.Position.X) <= .5f * Opponent->PushboxWidth + .5f * PushboxWidth)

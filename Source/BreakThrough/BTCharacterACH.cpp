@@ -89,7 +89,7 @@ bool ABTCharacterACH::ExitTimeTransitions()
 		return EnterNewAnimation(MidJump);
 
 	if (IsCurrentAnimation(Normal5B) || IsCurrentAnimation(Normal5H) || IsCurrentAnimation(Normal5M) || IsCurrentAnimation(Normal5L) || IsCurrentAnimation(Normal2B) || IsCurrentAnimation(Normal2H) ||
-		IsCurrentAnimation(Normal6L) || IsCurrentAnimation(Normal6B))
+		IsCurrentAnimation(Normal6L) || IsCurrentAnimation(Normal6M) || IsCurrentAnimation(Normal6B))
 		return EnterNewAnimation(IdleStand);
 
 	if (IsCurrentAnimation(Normal2M) || IsCurrentAnimation(Normal2L))
@@ -926,19 +926,26 @@ bool ABTCharacterACH::NormalAttacks()
 		{
 			if (CurrentState.Dir6 == DirInputTime)
 			{
-				if (CurrentState.LPressed > 0 && (CurrentState.MoveList & n6L) == 0)
-				{
-					CurrentState.LPressed = 0;
-					CurrentState.MoveList |= n6L;
-					TurnAroundCheck();
-					return EnterNewAnimation(Normal6L);
-				}
 				if(CurrentState.BPressed > 0 && (CurrentState.MoveList & n6B) == 0)
 				{
 					CurrentState.BPressed = 0;
 					CurrentState.MoveList |= n6B;
 					TurnAroundCheck();
 					return EnterNewAnimation(Normal6B);
+				}
+				if (CurrentState.MPressed > 0 && (CurrentState.MoveList & n6M) == 0)
+				{
+					CurrentState.MPressed = 0;
+					CurrentState.MoveList |= n6M;
+					TurnAroundCheck();
+					return EnterNewAnimation(Normal6M);
+				}
+				if (CurrentState.LPressed > 0 && (CurrentState.MoveList & n6L) == 0)
+				{
+					CurrentState.LPressed = 0;
+					CurrentState.MoveList |= n6L;
+					TurnAroundCheck();
+					return EnterNewAnimation(Normal6L);
 				}
 			}
 		}
@@ -1052,6 +1059,13 @@ bool ABTCharacterACH::NormalAttacks()
 			}
 			if (CurrentState.MPressed > 0 && (CurrentState.AvailableActions & AcceptMedium))
 			{
+				if (CurrentState.Dir6 == DirInputTime && (CurrentState.MoveList & n6M) == 0)
+				{
+					CurrentState.MPressed = 0;
+					CurrentState.MoveList |= n6M;
+					TurnAroundCheck();
+					return EnterNewAnimation(Normal6M);
+				}
 				if ((CurrentState.MoveList & n5M) == 0)
 				{
 					CurrentState.MPressed = 0;
