@@ -2037,7 +2037,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 
 	if (IsCurrentAnimation(Stagger) && CurrentState.HitStun == 0)
 	{
-		if (CurrentState.LPressed > 0 || CurrentState.MPressed > 0 || CurrentState.HPressed > 0 || CurrentState.BPressed > 0) //press any attack button once hitstun has ended to recover from stagger
+		if (CurrentState.bIsLDown || CurrentState.bIsMDown || CurrentState.bIsHDown || CurrentState.bIsBDown) //press any attack button once hitstun has ended to recover from stagger
 		{
 			//make flash white and play chime
 			StatusMix = .75f;

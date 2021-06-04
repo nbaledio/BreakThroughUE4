@@ -669,7 +669,7 @@ protected:
 		FVector2D JumpForce;
 
 	//number of frames that an input is active for
-		uint8 InputTime = 8;
+		uint8 InputTime = 3;
 		uint8 DirInputTime = 12;
 
 public:
