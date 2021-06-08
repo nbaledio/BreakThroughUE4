@@ -9,9 +9,22 @@ ARoundManager::ARoundManager()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false; //Gamestate will update this
-	static ConstructorHelpers::FClassFinder<UHUDVisuals> HUDWidget(TEXT("/Game/UI/Blueprints/HUD"));
-	if (!ensure(HUDWidget.Class != nullptr)) return;
+
+	//Create and add HUD widget
+	static ConstructorHelpers::FClassFinder<UHUDVisuals> HUDWidget(TEXT("/Game/UI/Blueprints/HUD_Resolve"));
 	HUDWidgetClass = HUDWidget.Class;
+
+	Transform = CreateDefaultSubobject<USceneComponent>(TEXT("Transform"));
+	RootComponent = Transform;
+
+	MainCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Main Camera"));
+	MainCamera->SetupAttachment(RootComponent);
+
+	HUDWidgetComponent = CreateDefaultSubobject<UWidgetComponent>("UpperHUD");
+	HUDWidgetComponent->SetupAttachment(MainCamera);
+
+	//Possess the default player
+	AutoPossessPlayer = EAutoReceiveInput::Player0;
 }
 
 // Called when the game starts or when spawned
@@ -19,9 +32,10 @@ void ARoundManager::BeginPlay()
 {
 	Super::BeginPlay();
 	//Create HUD and add it to camera
-	HUD = CreateWidget<UHUDVisuals>(GetWorld()->GetGameInstance(), HUDWidgetClass);
-	HUD->AddToViewport(0);
-	//HUD->RoundManager = this;
+	LowerHUD = CreateWidget<UHUDVisuals>(GetWorld()->GetGameInstance(), HUDWidgetClass);
+	LowerHUD->AddToViewport(0);
+	UpperHUD = Cast<UHUDVisuals>(HUDWidgetComponent->GetUserWidgetObject());
+
 	/*Assume 60 FPS. Change number if a longer/short in game second is desired
 	60 * (Real world seconds length) = Number of frames to check*/
 	gameTime = 60;
@@ -36,12 +50,14 @@ void ARoundManager::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);;
 }
 
+void ARoundManager::UpdateCameraPosition(FVector Position) 
+{
+
+}
+
 //Update function to be used by GameState
 void ARoundManager::UpdateTimer()
 {
-	//Update HUD
-	HUD->UpdateGraphics(roundTimer, Player1State->Health, Player1Base->MaxHealth, Player1State->Resolve, Player1State->Durability, Player2State->Health, Player2Base->MaxHealth, Player2State->Resolve, Player1State->Durability);
-
 	if (gameActive)
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("GameActive"));
@@ -58,6 +74,9 @@ void ARoundManager::UpdateTimer()
 		//Check if a win condition is met
 		DetermineWinMethod();
 	}
+	//Update HUD
+	UpperHUD->UpdateUpperHUD(roundTimer, Player1State->Health, Player1Base->MaxHealth, Player2State->Health, Player2Base->MaxHealth);
+	LowerHUD->UpdateLowerHUD(Player1State->Resolve, Player1State->Durability, Player2State->Resolve, Player1State->Durability);
 }
 
 void ARoundManager::ResetPositions()

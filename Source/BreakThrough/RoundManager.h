@@ -8,6 +8,9 @@
 #include "HUDVisuals.h"
 #include "Blueprint/UserWidget.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Math/Vector.h"
+#include "Camera/CameraComponent.h"
+#include "Components/WidgetComponent.h"
 #include "RoundManager.generated.h"
 
 /**
@@ -26,14 +29,29 @@ class BREAKTHROUGH_API ARoundManager : public APawn
 public:
 	// Sets default values for this actor's properties
 	ARoundManager();
+
+	//Components
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+		USceneComponent* Transform;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+		UCameraComponent* MainCamera;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UWidgetComponent* HUDWidgetComponent;
+
 	//References for character variables
 	ABTCharacterBase* Player1Base;
 	ABTCharacterBase* Player2Base;
 	FCharacterState* Player1State;
 	FCharacterState* Player2State;
-	//HUD Widget
-	UHUDVisuals* HUD;
+
+	//HUD Widgets
+	UHUDVisuals* UpperHUD;
+	UHUDVisuals* LowerHUD;
+
+	//Functions
+	void UpdateCameraPosition(FVector Position);
 	void UpdateTimer();
+
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
@@ -67,5 +85,4 @@ private:
 	void RoundStop();
 	void ResetGame();
 	void DetermineWinMethod();
-
 };
