@@ -13,10 +13,6 @@
 #include "Components/WidgetComponent.h"
 #include "RoundManager.generated.h"
 
-/**
--Add A camera manager at some point
- **/
-
 enum RoundData
 {
 	frameNumber,
@@ -49,7 +45,7 @@ public:
 	UHUDVisuals* LowerHUD;
 
 	//Functions
-	void UpdateCameraPosition(FVector Position);
+	void UpdateCameraPosition(FVector Position, FRotator Rotation);
 	void UpdateTimer();
 
 	// Called every frame
@@ -69,6 +65,11 @@ private:
 	int32 maxRounds;
 
 	int32 gameTime;
+
+	float yOffset;
+	float zPosMax;
+	float zPosMin;
+	float zPos;
 
 	FVector2D P1startPosition;
 	FVector2D P2startPosition;

@@ -8,9 +8,6 @@
 #include "Components/ProgressBar.h"
 #include "HUDVisuals.generated.h"
 
-/**
- * 
- */
 UCLASS(Abstract)
 class BREAKTHROUGH_API UHUDVisuals : public UUserWidget
 {
@@ -38,5 +35,4 @@ public:
 	void UpdateGraphics(int32 time, int32 P1Health, int32 P1MaxHealth, int32 P1Resolve, int32 P1Durability, int32 P2Health, int32 P2MaxHealth, int32 P2Resolve, int32 P2Durability);
 	void UpdateUpperHUD(int32 time, int32 P1Health, int32 P1MaxHealth, int32 P2Health, int32 P2MaxHealth);
 	void UpdateLowerHUD(int32 P1Resolve, int32 P1Durability, int32 P2Resolve, int32 P2Durability);
-
 };

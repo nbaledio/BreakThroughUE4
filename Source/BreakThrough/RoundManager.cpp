@@ -31,7 +31,11 @@ ARoundManager::ARoundManager()
 void ARoundManager::BeginPlay()
 {
 	Super::BeginPlay();
-	//Create HUD and add it to camera
+	yOffset = 105.0f;
+	zPosMax = 2700.0f;
+	zPosMin = 2200.0f;
+	zPos = 2200.0f;
+	//Create HUDs and add it to camera/world space
 	LowerHUD = CreateWidget<UHUDVisuals>(GetWorld()->GetGameInstance(), HUDWidgetClass);
 	LowerHUD->AddToViewport(0);
 	UpperHUD = Cast<UHUDVisuals>(HUDWidgetComponent->GetUserWidgetObject());
@@ -50,9 +54,10 @@ void ARoundManager::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);;
 }
 
-void ARoundManager::UpdateCameraPosition(FVector Position) 
+void ARoundManager::UpdateCameraPosition(FVector Position, FRotator Rotation) 
 {
-
+	MainCamera->SetRelativeLocation(Position);
+	MainCamera->SetRelativeRotation(Rotation);
 }
 
 //Update function to be used by GameState
@@ -74,6 +79,26 @@ void ARoundManager::UpdateTimer()
 		//Check if a win condition is met
 		DetermineWinMethod();
 	}
+
+	//Update camera position
+	if (abs(Player1State->Position.X - Player2State->Position.X) > 250.0f) 
+	{
+		if (zPos < zPosMax) 
+		{
+			zPos += 25.0f;
+		}
+	}
+	else 
+	{
+		if (zPos > zPosMin)
+		{
+			zPos -= 25.0f;
+		}
+	}
+
+
+	UpdateCameraPosition(FVector((Player1State->Position.X + Player2State->Position.X) / 2, zPos, (Player1State->Position.Y + Player2State->Position.Y) / 2 + yOffset), FRotator(0.0f, -90.0f, 0.0f));
+
 	//Update HUD
 	UpperHUD->UpdateUpperHUD(roundTimer, Player1State->Health, Player1Base->MaxHealth, Player2State->Health, Player2Base->MaxHealth);
 	LowerHUD->UpdateLowerHUD(Player1State->Resolve, Player1State->Durability, Player2State->Resolve, Player1State->Durability);
