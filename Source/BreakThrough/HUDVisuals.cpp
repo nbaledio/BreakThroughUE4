@@ -25,7 +25,6 @@ void UHUDVisuals::UpdateUpperHUD(int32 time, int32 P1Health, int32 P1MaxHealth, 
 };
 void UHUDVisuals::UpdateLowerHUD(int32 P1Resolve, int32 P1Durability, int32 P2Resolve, int32 P2Durability)
 {
-	UE_LOG(LogTemp, Warning, TEXT("%f"), ((static_cast<float>(P2Resolve) * 1000.0f + static_cast<float>(P2Durability)) / 4000.0f));
-	P1ResolveBar->SetPercent(static_cast<float>((static_cast<float>(P1Resolve) * 1000.0f + static_cast<float>(P1Durability)) / 4000.0f));
-	P2ResolveBar->SetPercent(static_cast<float>((static_cast<float>(P2Resolve) * 1000.0f + static_cast<float>(P2Durability)) / 4000.0f));
+	P1ResolveBar->SetPercent(static_cast<float>(((static_cast<float>(P1Resolve) * 1000.0f + static_cast<float>(P1Durability)) - 1000.0f) / 4000.0f));
+	P2ResolveBar->SetPercent(static_cast<float>(((static_cast<float>(P2Resolve) * 1000.0f + static_cast<float>(P2Durability)) - 1000.0f) / 4000.0f));
 };

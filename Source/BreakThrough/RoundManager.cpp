@@ -101,7 +101,7 @@ void ARoundManager::UpdateTimer()
 
 	//Update HUD
 	UpperHUD->UpdateUpperHUD(roundTimer, Player1State->Health, Player1Base->MaxHealth, Player2State->Health, Player2Base->MaxHealth);
-	LowerHUD->UpdateLowerHUD(Player1State->Resolve, Player1State->Durability, Player2State->Resolve, Player1State->Durability);
+	LowerHUD->UpdateLowerHUD(Player1State->Resolve, Player1State->Durability, Player2State->Resolve, Player2State->Durability);
 }
 
 void ARoundManager::ResetPositions()
