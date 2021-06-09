@@ -14,10 +14,8 @@ void BTGameState::Init()
             CharacterStates[1] = Player[1]->CurrentState;
         }
     }
-    RoundManagerState->Player1Base = Player[0]; //set players for RoundManager
-    RoundManagerState->Player1State = &CharacterStates[0];
-    RoundManagerState->Player2Base = Player[1];
-    RoundManagerState->Player2State = &CharacterStates[1];
+    RoundManager->Player1Base = Player[0]; //set players for RoundManager
+    RoundManager->Player2Base = Player[1];
     FrameNumber = 0;
     SaveGameState();//copy the initial character states to this structure
 }
@@ -64,7 +62,7 @@ void BTGameState::Update(int inputs[], int disconnect_flags)
             Player[0]->PushboxSolver();
     }
 
-    RoundManagerState->UpdateTimer();
+    RoundManager->UpdateTimer();
     SaveGameState();
 }
 
@@ -79,6 +77,7 @@ void BTGameState::LoadGameState()
     }
 
     //load roundmanager state
+    RoundManager->CurrentState = RoundManagerState;
 }
 
 void BTGameState::SaveGameState()
@@ -92,6 +91,7 @@ void BTGameState::SaveGameState()
     }
 
     //save roundmanager state
+    RoundManagerState = RoundManager->CurrentState;
 }
 
 void BTGameState::DrawFrame() //call at the end of BTGameState Tick
@@ -103,4 +103,5 @@ void BTGameState::DrawFrame() //call at the end of BTGameState Tick
     }
 
     //also draw round manager, ui, etc.
+    RoundManager->DrawScreen();
 }

@@ -638,7 +638,7 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 			KnockBackToApply *= FVector2D(-1, 1);
 		}
 	}
-	else if (CurrentState.bFacingRight)
+	else if (!CurrentState.bFacingRight)
 	{
 		KnockBackToApply *= FVector2D(-1, 1);
 	}

@@ -17,7 +17,7 @@ ARoundManager::ARoundManager()
 	Transform = CreateDefaultSubobject<USceneComponent>(TEXT("Transform"));
 	RootComponent = Transform;
 
-	MainCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Main Camera"));
+	MainCamera = CreateDefaultSubobject<UCineCameraComponent>(TEXT("Main Camera"));
 	MainCamera->SetupAttachment(RootComponent);
 
 	HUDWidgetComponent = CreateDefaultSubobject<UWidgetComponent>("UpperHUD");
@@ -33,8 +33,8 @@ void ARoundManager::BeginPlay()
 	Super::BeginPlay();
 	yOffset = 105.0f;
 	zPosMax = 2700.0f;
-	zPosMin = 2200.0f;
-	zPos = 2200.0f;
+	zPosMin = 2100.0f;
+	zPos = 2100.0f;
 	//Create HUDs and add it to camera/world space
 	LowerHUD = CreateWidget<UHUDVisuals>(GetWorld()->GetGameInstance(), HUDWidgetClass);
 	LowerHUD->AddToViewport(0);
@@ -81,7 +81,7 @@ void ARoundManager::UpdateTimer()
 	}
 
 	//Update camera position
-	if (abs(Player1State->Position.X - Player2State->Position.X) > 250.0f) 
+	if (abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X) > 250.0f)
 	{
 		if (zPos < zPosMax) 
 		{
@@ -97,21 +97,28 @@ void ARoundManager::UpdateTimer()
 	}
 
 
-	UpdateCameraPosition(FVector((Player1State->Position.X + Player2State->Position.X) / 2, zPos, (Player1State->Position.Y + Player2State->Position.Y) / 2 + yOffset), FRotator(0.0f, -90.0f, 0.0f));
+	UpdateCameraPosition(FVector((Player1Base->CurrentState.Position.X + Player2Base->CurrentState.Position.X) / 2, zPos, (Player1Base->CurrentState.Position.Y + Player2Base->CurrentState.Position.Y) / 2 + yOffset), FRotator(0.0f, -90.0f, 0.0f));
 
+	
+}
+
+void ARoundManager::DrawScreen()
+{
 	//Update HUD
-	UpperHUD->UpdateUpperHUD(roundTimer, Player1State->Health, Player1Base->MaxHealth, Player2State->Health, Player2Base->MaxHealth);
-	LowerHUD->UpdateLowerHUD(Player1State->Resolve, Player1State->Durability, Player2State->Resolve, Player1State->Durability);
+	UpperHUD->UpdateUpperHUD(roundTimer, Player1Base->CurrentState.Health, Player1Base->MaxHealth, Player2Base->CurrentState.Health, Player2Base->MaxHealth);
+	LowerHUD->UpdateLowerHUD(Player1Base->CurrentState.Resolve, Player1Base->CurrentState.Durability, Player2Base->CurrentState.Resolve, Player2Base->CurrentState.Durability);
+
+	//update camera/transform position from here
 }
 
 void ARoundManager::ResetPositions()
 {
 	roundCount++;
 	roundTimer = 99;
-	Player1State->Position = P1startPosition;
-	Player1State->Health = Player1Base->MaxHealth;
-	Player2State->Position = P2startPosition;
-	Player2State->Health = Player2Base->MaxHealth;
+	Player1Base->CurrentState.Position = P1startPosition;
+	Player1Base->CurrentState.Health = Player1Base->MaxHealth;
+	Player2Base->CurrentState.Position = P2startPosition;
+	Player2Base->CurrentState.Health = Player2Base->MaxHealth;
 }
 
 void ARoundManager::RoundStart()
@@ -131,17 +138,17 @@ void ARoundManager::ResetGame()
 	roundCount = 0;
 	p1Wins = 0;
 	p2Wins = 0;
-	Player1State->Resolve = 4;
-	Player1State->Durability = 100;
-	Player2State->Resolve = 4;
-	Player2State->Durability = 100;
+	Player1Base->CurrentState.Resolve = 4;
+	Player1Base->CurrentState.Durability = 100;
+	Player2Base->CurrentState.Resolve = 4;
+	Player2Base->CurrentState.Durability = 100;
 	ResetPositions();
 }
 
 //Used to check if a win condition has been met 
 void ARoundManager::DetermineWinMethod()
 {
-	if (!suddenDeath && roundTimer <= 0 && Player1State->Health > 0 && Player2State->Health > 0 && Player1State->Health == Player2State->Health)
+	if (!suddenDeath && roundTimer <= 0 && Player1Base->CurrentState.Health > 0 && Player2Base->CurrentState.Health > 0 && Player1Base->CurrentState.Health == Player2Base->CurrentState.Health)
 	{
 		RoundStop();
 		suddenDeath = true;
@@ -149,13 +156,13 @@ void ARoundManager::DetermineWinMethod()
 		//UE_LOG(LogTemp, Warning, TEXT("Sudden Death"));
 		RoundStart();
 	}
-	else if (!suddenDeath && roundTimer <= 0 && Player1State->Health > 0 && Player2State->Health > 0 && Player1State->Health != Player2State->Health)
+	else if (!suddenDeath && roundTimer <= 0 && Player1Base->CurrentState.Health > 0 && Player2Base->CurrentState.Health > 0 && Player1Base->CurrentState.Health != Player2Base->CurrentState.Health)
 	{
 		RoundStop();
 		//Play Time Up Animation
 		//UE_LOG(LogTemp, Warning, TEXT("Time Out"));
 		//Increment win count
-		if (Player1State->Health > Player2State->Health)
+		if (Player1Base->CurrentState.Health > Player2Base->CurrentState.Health)
 		{
 			p1Wins++;
 			//UE_LOG(LogTemp, Warning, TEXT("P1 Wins"));
@@ -166,13 +173,14 @@ void ARoundManager::DetermineWinMethod()
 			//UE_LOG(LogTemp, Warning, TEXT("P2 Wins"));
 		}
 	}
-	else if ((Player1State->Health == Player1Base->MaxHealth && Player2State->Health <= 0) || (Player2State->Health == Player2Base->MaxHealth && Player1State->Health <= 0))
+	else if ((Player1Base->CurrentState.Health == Player1Base->MaxHealth && Player2Base->CurrentState.Health <= 0) || 
+		(Player2Base->CurrentState.Health == Player2Base->MaxHealth && Player1Base->CurrentState.Health <= 0))
 	{
 		RoundStop();
 		//Play Perfect KO Animation
 		UE_LOG(LogTemp, Warning, TEXT("Perfect"));
 		//Increment win count
-		if (Player2State->Health <= 0)
+		if (Player2Base->CurrentState.Health <= 0)
 		{
 			p1Wins++;
 			//UE_LOG(LogTemp, Warning, TEXT("P1 Wins"));
@@ -183,13 +191,13 @@ void ARoundManager::DetermineWinMethod()
 			//UE_LOG(LogTemp, Warning, TEXT("P2 Wins"));
 		}
 	}
-	else if ((Player1State->Health > 0 && Player2State->Health <= 0) || (Player2State->Health > 0 && Player1State->Health <= 0))
+	else if ((Player1Base->CurrentState.Health > 0 && Player2Base->CurrentState.Health <= 0) || (Player2Base->CurrentState.Health > 0 && Player1Base->CurrentState.Health <= 0))
 	{
 		RoundStop();
 		//Play BreakDown Animation
 		//UE_LOG(LogTemp, Warning, TEXT("Breakdown"));
 		//Increment win count
-		if (Player2State->Health <= 0)
+		if (Player2Base->CurrentState.Health <= 0)
 		{
 			p1Wins++;
 			//UE_LOG(LogTemp, Warning, TEXT("P1 Wins"));
@@ -200,7 +208,7 @@ void ARoundManager::DetermineWinMethod()
 			//UE_LOG(LogTemp, Warning, TEXT("P2 Wins"));
 		}
 	}
-	else if (Player1State->Health <= 0 && Player2State->Health <= 0)
+	else if (Player1Base->CurrentState.Health <= 0 && Player2Base->CurrentState.Health <= 0)
 	{
 		RoundStop();
 		//Play Double KO Animation

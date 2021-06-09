@@ -20,6 +20,7 @@ struct BTGameState
 public:
 	int FrameNumber;
 	ABTCharacterBase* Player[2];
+	ARoundManager* RoundManager;
 	FCharacterState CharacterStates[2];
-	ARoundManager* RoundManagerState;
+	FRoundManagerState RoundManagerState;
 };

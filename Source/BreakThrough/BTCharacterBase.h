@@ -85,7 +85,7 @@ enum AttackProperties
 	ForceCrouch = (1 << 15),
 	ComboThrow = (1 << 16), //Throws with this flag can hit opponents even if they are in hitstun
 	AntiAir = (1 << 17),
-	DisableBurst = (1 << 18),
+	NoPushBack = (1 << 18),
 	ReflectProjectile = (1 << 19),
 	IsSpecial = (1 << 20),
 	IsSuper = (1 << 21),
@@ -96,6 +96,7 @@ enum AttackProperties
 	LowerBodyHit = (1 << 26),
 	ForceStand = (1 << 27),
 	IsUpwardSlash = (1 << 28),
+	DisbaleBurst = (1 << 29),
 };
 
 class ABTProjectileBase;
