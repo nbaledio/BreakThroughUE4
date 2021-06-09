@@ -3,6 +3,7 @@
 #pragma once
 
 #include "BTCharacterBase.h"
+#include "RoundManager.h"
 
 /**
  * 
@@ -20,5 +21,5 @@ public:
 	int FrameNumber;
 	ABTCharacterBase* Player[2];
 	FCharacterState CharacterStates[2];
-	//RoundManagerState;
+	ARoundManager* RoundManagerState;
 };
