@@ -62,7 +62,7 @@ void ABTCharacterBase::SuperFlashSolver() //Only play once from Player1
 		{
 			Opponent->CurrentState.HitStop++;
 			DepthOffset = 0;
-			Opponent->DepthOffset = 300;
+			Opponent->DepthOffset = 100;
 		}
 		else if (Opponent->CurrentState.CurrentAnimFrame.bSuperFlash)
 		{
@@ -1099,7 +1099,7 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 				CurrentState.CharacterHitState -= CanAirGroundBounce;
 
 			DepthOffset = 0;
-			Opponent->DepthOffset = 300;
+			Opponent->DepthOffset = 100;
 
 			CurrentState.Velocity.Y *= -1;
 			if (CurrentState.Velocity.Y < 3)
@@ -1170,7 +1170,7 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 	{
 		CurrentState.CharacterHitState -= CanMidScreenWallBounce;
 		DepthOffset = 0;
-		Opponent->DepthOffset = 300;
+		Opponent->DepthOffset = 100;
 		CurrentState.Velocity.X *= -.35f;
 		if (CurrentState.Velocity.Y < 1.5f)
 			CurrentState.Velocity.Y = 1.5f;
@@ -1253,7 +1253,7 @@ bool ABTCharacterBase::HitWall()
 			CurrentState.CharacterHitState -= CanMidScreenWallBounce;
 
 		DepthOffset = 0;
-		Opponent->DepthOffset = 300;
+		Opponent->DepthOffset = 100;
 		CurrentState.WallBounceTime = 0;
 		CurrentState.Velocity.X *= -.35f;
 		if (CurrentState.Velocity.Y < 1.5f)
@@ -1394,7 +1394,7 @@ void ABTCharacterBase::Jumping()
 {
 	RefreshMovelist();
 	DepthOffset = 0;
-	Opponent->DepthOffset = 300;
+	Opponent->DepthOffset = 100;
 
 	if (CurrentState.bIsRunning) //extra horizontal velocity only if jumping with a running start
 	{
@@ -2584,7 +2584,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 	if (!CurrentState.CurrentAnimFrame.bCinematic)
 	{
 		DepthOffset = 0;
-		Opponent->DepthOffset = 300;
+		Opponent->DepthOffset = 100;
 	}
 
 	if (!CurrentState.bIsAirborne && ((CurrentState.bFacingRight && CurrentState.Velocity.X > MaxRunSpeed) || (!CurrentState.bFacingRight && CurrentState.Velocity.X < -MaxRunSpeed)))
@@ -3281,7 +3281,7 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 		if (!CurrentState.CurrentAnimFrame.bCinematic)
 		{
 			DepthOffset = 0;
-			Opponent->DepthOffset = 300;
+			Opponent->DepthOffset = 100;
 		}
 		CurrentState.bAttackMadeContact = true;
 		AttackCalculation(Hitbox, Opponent->CurrentState.Position);
@@ -3594,7 +3594,7 @@ void ABTCharacterBase::ProcessBlitz()
 		else if (IsCurrentAnimation(BreakerBlitz))
 		{
 			DepthOffset = 0;
-			Opponent->DepthOffset = 300;
+			Opponent->DepthOffset = 100;
 			//Similar to normal hit behavior based on whether the opponent is guarding or not
 			if (Opponent->CurrentState.bIsGuarding)
 			{
