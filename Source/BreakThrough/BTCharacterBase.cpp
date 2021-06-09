@@ -41,6 +41,7 @@ void ABTCharacterBase::BeginPlay()
 	Super::BeginPlay();
 	LineThickness = 3.f;
 	CreateMaterials();
+	CreateVariables();
 	SpawnPBS();
 	SetColor(1);
 	EnterNewAnimation(IdleStand);
@@ -218,14 +219,16 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 		Guarding();
 		GravityCalculation();
 
-		if (CurrentState.AvailableActions & AcceptMove && CurrentInputs == 0) //Character is not inputting anything while in neutral
+		if (CurrentState.AvailableActions & AcceptMove && CurrentInputs == 0 && !IsCurrentAnimation(AirDashBackward) && !IsCurrentAnimation(AirDashForward)) //Character is not inputting anything while in neutral
 			CurrentState.Resolute = true; //Character with Resolute state will gain meter instead of being hit by a Blitz wave and will automatically counter normal throws
 		else
 			CurrentState.Resolute = false;
 	}
 
-	if (CurrentState.CurrentAnimFrame.Pose != nullptr)
+	if (CurrentState.CurrentAnimFrame.Pose != nullptr && CurrentState.PosePlayTime == 0)
 		BaseMesh->PlayAnimation(CurrentState.CurrentAnimFrame.Pose, false);
+
+	AnimationEvents(); // perform certain actions based on the current frame of animation
 
 	if (Opponent != nullptr)
 	{
@@ -239,6 +242,11 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 			for (ABTProjectileBase* Projectile : Projectiles)
 			{
 				Projectile->UpdateProjectile();
+			}
+
+			for (ABTVFXBase* Effect : SpecialVFX)
+			{
+				Effect->Update();
 			}
 		}
 	}
@@ -281,7 +289,7 @@ void ABTCharacterBase::VelocitySolver()
 	{
 		if (CurrentState.bTouchingOpponent) 
 		{
-			if ((CurrentState.bIsRunning && Opponent->CurrentState.bIsRunning) || ((CurrentState.bFacingRight && CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X < 0) || (!CurrentState.bFacingRight && CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X > 0) &&
+			if ((CurrentState.bIsRunning && Opponent->CurrentState.bIsRunning) || (((CurrentState.bFacingRight && CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X < 0) || (!CurrentState.bFacingRight && CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X > 0)) &&
 				CurrentState.AvailableActions & AcceptMove && Opponent->CurrentState.AvailableActions & AcceptMove)) //both characters stop moving if walking against each other
 			{
 					CurrentState.Velocity.X = 0;
@@ -302,8 +310,10 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 	{
 		if (CurrentState.SlowMoTime % 2 == 0) //animation speed is halved and stun values decrease at half speed while in slow motion
 		{
-			if (CurrentState.HitStun > 0 && !IsCurrentAnimation(Sweep) && !IsCurrentAnimation(Crumple) && !IsCurrentAnimation(Tumble))
+			if (CurrentState.HitStun > 0 && !IsCurrentAnimation(Sweep) && !IsCurrentAnimation(Crumple) && !IsCurrentAnimation(Tumble) && !IsCurrentAnimation(GroundBounce) && !IsCurrentAnimation(WallBounce))
+			{
 				CurrentState.HitStun--;
+			}
 			if (CurrentState.BlockStun > 0)
 				CurrentState.BlockStun--;
 			if (CurrentState.WallBounceTime > 0)
@@ -333,7 +343,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 		if (CurrentState.Position.Y <= 0)
 			CurrentState.Position.Y = 0;
 		
-		if (CurrentState.Position.Y > 0)
+		if (CurrentState.Position.Y > 0 || CurrentState.Velocity.Y > 0)
 			CurrentState.bIsAirborne = true;
 
 		if (CurrentState.Position.X <= -1000 + .5f * PushboxWidth)
@@ -347,11 +357,10 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 
 		if (CurrentState.GravDefyTime > 0)
 		{
-			if (CurrentState.GravDefyTime == 1)
-			{
-				CurrentState.Velocity.X *= .5f;
-			}
 			CurrentState.GravDefyTime--;
+
+			if (CurrentState.GravDefyTime == 0)
+				CurrentState.Velocity *= .55f;
 		}
 		BaseMesh->SetRelativeLocation(FVector(0));
 	}
@@ -375,14 +384,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 	if (CurrentState.ShatteredTime > 0 && !CurrentState.CurrentAnimFrame.bSuperFlash && !CurrentState.CurrentAnimFrame.bCinematic)
 		CurrentState.ShatteredTime--;
 	if (CurrentState.SlowMoTime > 0 && !CurrentState.CurrentAnimFrame.bSuperFlash && !CurrentState.CurrentAnimFrame.bCinematic)
-		CurrentState.SlowMoTime--;
-
-	if (Opponent != nullptr)
-	{
-		if ((Opponent->CurrentState.HitStun == 0 && !Opponent->CurrentState.bIsAirborne && !Opponent->IsCurrentAnimation(Opponent->Stagger)) || 
-			(Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.CurrentAnimFrame.Invincibility != FaceDown && Opponent->CurrentState.CurrentAnimFrame.Invincibility != FaceUp))
-			CurrentState.ComboCount = 0;
-	}	
+		CurrentState.SlowMoTime--;	
 
 	SaveFXStates();
 	InputCountdown();
@@ -392,6 +394,14 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 {
 	if (Opponent != nullptr)
 	{
+		if ((Opponent->CurrentState.HitStun == 0 && !Opponent->CurrentState.bIsAirborne && !Opponent->IsCurrentAnimation(Opponent->Stagger)) ||
+			(Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.CurrentAnimFrame.Invincibility != FaceDown && Opponent->CurrentState.CurrentAnimFrame.Invincibility != FaceUp))
+			CurrentState.ComboCount = 0;
+
+		if ((CurrentState.HitStun == 0 && !CurrentState.bIsAirborne && !IsCurrentAnimation(Stagger)) ||
+			(CurrentState.bIsAirborne && CurrentState.CurrentAnimFrame.Invincibility != FaceDown && CurrentState.CurrentAnimFrame.Invincibility != FaceUp))
+			Opponent->CurrentState.ComboCount = 0;
+
 		if (!CurrentState.CurrentAnimFrame.bCinematic && !Opponent->CurrentState.CurrentAnimFrame.bCinematic)
 		{
 			if (CurrentState.CurrentAnimFrame.Invincibility != Intangible && Opponent->CurrentState.CurrentAnimFrame.Invincibility != Intangible && FMath::Abs(Opponent->CurrentState.Position.X - CurrentState.Position.X) <= .5f * Opponent->PushboxWidth + .5f * PushboxWidth)
@@ -413,8 +423,8 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 							CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 					}
 					//when character is faster than opponent, and both are moving in the same direction or towards each other
-					else if (FMath::Abs(CurrentState.Velocity.X) > FMath::Abs(Opponent->CurrentState.Velocity.X) && 
-						((CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X < 0) || (CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X > 0) || (!CurrentState.bFacingRight && CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X > 0) || (CurrentState.bFacingRight && CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X < 0)))
+					/*else if (FMath::Abs(CurrentState.Velocity.X) > FMath::Abs(Opponent->CurrentState.Velocity.X) && CurrentState.SlowMoTime == 0 && Opponent->CurrentState.SlowMoTime == 0 &&
+						((CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X < 0) || (CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X > 0) || (!CurrentState.bFacingRight && Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X > 0) || (CurrentState.bFacingRight && !Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X < 0)))
 					{
 						if (CurrentState.Position.X < Opponent->CurrentState.Position.X && Opponent->CurrentState.bFacingRight)
 						{
@@ -442,9 +452,9 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 						}
 					}
 					//when opponent is faster than character, and both are moving in the same direction or towards each other
-					else if (FMath::Abs(CurrentState.Velocity.X) < FMath::Abs(Opponent->CurrentState.Velocity.X) && 
+					else if (FMath::Abs(CurrentState.Velocity.X) < FMath::Abs(Opponent->CurrentState.Velocity.X) && CurrentState.SlowMoTime == 0 && Opponent->CurrentState.SlowMoTime == 0 &&
 						((CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X < 0) || (CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X > 0) || 
-							(!CurrentState.bFacingRight && CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X > 0) || (CurrentState.bFacingRight && CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X < 0)))
+							(!CurrentState.bFacingRight && Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X > 0) || (CurrentState.bFacingRight && !Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X < 0)))
 					{
 						if (CurrentState.Position.X < Opponent->CurrentState.Position.X && CurrentState.bFacingRight)
 						{
@@ -470,7 +480,7 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 								Opponent->CurrentState.Velocity.X = 0;
 							}
 						}
-					}
+					}*/
 					else //if both characters have the same velocity or arent moving
 					{
 						float MoveDistance = .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth - FMath::Abs(Opponent->CurrentState.Position.X - CurrentState.Position.X));
@@ -485,12 +495,43 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 							CurrentState.Position.X += MoveDistance;
 							Opponent->CurrentState.Position.X -= MoveDistance;
 						}
+
+						if (CurrentState.Position.X <= -1000 + .5f * PushboxWidth)
+						{
+							HitWall();
+							CurrentState.Position.X = -1000 + .5f * PushboxWidth;
+							Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							Opponent->CurrentState.Velocity.X = 0;
+						}
+						else if (CurrentState.Position.X >= 1000 - .5f * PushboxWidth)
+						{
+							HitWall();
+							CurrentState.Position.X = 1000 - .5f * PushboxWidth;
+							Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							Opponent->CurrentState.Velocity.X = 0;
+						}
+
+						if (Opponent->CurrentState.Position.X >= 1000 - .5f * Opponent->PushboxWidth)
+						{
+							Opponent->HitWall();
+							Opponent->CurrentState.Position.X = -1000 + .5f * Opponent->PushboxWidth;
+							CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							CurrentState.Velocity.X = 0;
+						}
+						else if (Opponent->CurrentState.Position.X <= -1000 + .5f * Opponent->PushboxWidth)
+						{
+							Opponent->HitWall();
+							Opponent->CurrentState.Position.X = -1000 + .5f * Opponent->PushboxWidth;
+							CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							CurrentState.Velocity.X = 0;
+						}
 					}
 					CurrentState.bTouchingOpponent = true;
 					Opponent->CurrentState.bTouchingOpponent = true;
 				}
 				else if (!CurrentState.bIsAirborne && !IsCurrentAnimation(KnockDownFaceDown) && !IsCurrentAnimation(KnockDownFaceUp) 
-					&& Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.Velocity.Y < 0)
+					&& !IsCurrentAnimation(WakeUpFaceUp) && !IsCurrentAnimation(WakeUpFaceDown)
+					&& Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.Velocity.Y <= 0)
 				{
 					if ((CurrentState.bIsCrouching && CrouchingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset) ||
 						(!CurrentState.bIsCrouching && StandingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset)) //check if pushboxes intersect
@@ -508,6 +549,21 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 							else
 								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+						}
+						else if (FMath::Abs(Opponent->CurrentState.Velocity.X) >= 2)
+						{
+							float MoveDistance = .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth - FMath::Abs(Opponent->CurrentState.Position.X - CurrentState.Position.X));
+
+							if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+							{
+								CurrentState.Position.X -= MoveDistance;
+								Opponent->CurrentState.Position.X += MoveDistance;
+							}
+							else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+							{
+								CurrentState.Position.X += MoveDistance;
+								Opponent->CurrentState.Position.X -= MoveDistance;
+							}
 						}
 						else if (Opponent->CurrentState.Position.X < CurrentState.Position.X)
 						{
@@ -575,8 +631,9 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 						Opponent->CurrentState.bTouchingOpponent = true;
 					}
 				}
-				else if (CurrentState.bIsAirborne && !Opponent->CurrentState.bIsAirborne && CurrentState.Velocity.Y < 0
-						&& !Opponent->IsCurrentAnimation(Opponent->KnockDownFaceDown) && !Opponent->IsCurrentAnimation(Opponent->KnockDownFaceUp))
+				else if (CurrentState.bIsAirborne && !Opponent->CurrentState.bIsAirborne && CurrentState.Velocity.Y <= 0
+						&& !Opponent->IsCurrentAnimation(Opponent->KnockDownFaceDown) && !Opponent->IsCurrentAnimation(Opponent->KnockDownFaceUp) 
+						&& !Opponent->IsCurrentAnimation(Opponent->WakeUpFaceUp) && !Opponent->IsCurrentAnimation(Opponent->WakeUpFaceDown))
 				{
 					if ((Opponent->CurrentState.bIsCrouching && Opponent->CrouchingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset) ||
 						(!Opponent->CurrentState.bIsCrouching && Opponent->StandingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset)) //check if pushboxes intersect
@@ -595,16 +652,31 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 							else
 								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 						}
+						else if (FMath::Abs(CurrentState.Velocity.X) >= 2)
+						{
+							float MoveDistance = .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth - FMath::Abs(Opponent->CurrentState.Position.X - CurrentState.Position.X));
+
+							if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+							{
+								CurrentState.Position.X -= MoveDistance;
+								Opponent->CurrentState.Position.X += MoveDistance;
+							}
+							else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+							{
+								CurrentState.Position.X += MoveDistance;
+								Opponent->CurrentState.Position.X -= MoveDistance;
+							}
+						}
 						else if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
 						{
 							CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 
-								if (CurrentState.Position.X <= -1000 + .5f * PushboxWidth)
-								{
-									HitWall();
-									CurrentState.Position.X = -1000 + .5f * PushboxWidth;
-									Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								}
+							if (CurrentState.Position.X <= -1000 + .5f * PushboxWidth)
+							{
+								HitWall();
+								CurrentState.Position.X = -1000 + .5f * PushboxWidth;
+								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							}
 						}
 						else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
 						{
@@ -635,11 +707,11 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 									Opponent->HitWall();
 									Opponent->CurrentState.Position.X = -1000 + .5f * Opponent->PushboxWidth;
 									CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-									}
-
 								}
-								else
-								{
+
+							}
+							else
+							{
 								CurrentState.Position.X = Opponent->CurrentState.Position.X - .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 								Opponent->CurrentState.Position.X += .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 
@@ -682,59 +754,108 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 							else
 								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 						}
-						else if (Opponent->CurrentState.Position.X > CurrentState.Position.X)
+						//when character is faster than opponent, and both are moving in the same direction or towards each other
+						/*else if (FMath::Abs(CurrentState.Velocity.X) > FMath::Abs(Opponent->CurrentState.Velocity.X) && CurrentState.SlowMoTime == 0 && Opponent->CurrentState.SlowMoTime == 0 &&
+							((CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X < 0) || (CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X > 0) || (!CurrentState.bFacingRight && Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X > 0) || (CurrentState.bFacingRight && !Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X < 0)))
 						{
-							float CenterPoint = .5f * (CurrentState.Position.X + Opponent->CurrentState.Position.X);
-							Opponent->CurrentState.Position.X = CenterPoint + .5f * (Opponent->PushboxWidth);
-							CurrentState.Position.X = CenterPoint - .5f * (PushboxWidth);
-
-							if (Opponent->CurrentState.Position.X >= 1000 - .5f * Opponent->PushboxWidth)
+							if (CurrentState.Position.X < Opponent->CurrentState.Position.X && Opponent->CurrentState.bFacingRight)
 							{
-								Opponent->HitWall();
-								Opponent->CurrentState.Position.X = 1000 - .5f * Opponent->PushboxWidth;
-								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+								if (Opponent->CurrentState.Position.X >= 1000 - .5f * Opponent->PushboxWidth)
+								{
+									Opponent->HitWall();
+									Opponent->CurrentState.Position.X = -1000 + .5f * Opponent->PushboxWidth;
+									CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									CurrentState.Velocity.X = 0;
+								}
 							}
-							else if (CurrentState.Position.X <= -1000 + .5f * PushboxWidth)
+							else if (CurrentState.Position.X > Opponent->CurrentState.Position.X && !Opponent->CurrentState.bFacingRight)
+							{
+								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+								if (Opponent->CurrentState.Position.X <= -1000 + .5f * Opponent->PushboxWidth)
+								{
+									Opponent->HitWall();
+									Opponent->CurrentState.Position.X = -1000 + .5f * Opponent->PushboxWidth;
+									CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									CurrentState.Velocity.X = 0;
+								}
+							}
+						}
+						//when opponent is faster than character, and both are moving in the same direction or towards each other
+						else if (FMath::Abs(CurrentState.Velocity.X) < FMath::Abs(Opponent->CurrentState.Velocity.X) && CurrentState.SlowMoTime == 0 && Opponent->CurrentState.SlowMoTime == 0 &&
+							((CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X < 0) || (CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X > 0) ||
+								(!CurrentState.bFacingRight && Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X > 0) || (CurrentState.bFacingRight && !Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X < 0)))
+						{
+							if (CurrentState.Position.X < Opponent->CurrentState.Position.X && CurrentState.bFacingRight)
+							{
+								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+								if (CurrentState.Position.X <= -1000 + .5f * PushboxWidth)
+								{
+									HitWall();
+									CurrentState.Position.X = -1000 + .5f * PushboxWidth;
+									Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									Opponent->CurrentState.Velocity.X = 0;
+								}
+							}
+							else if (CurrentState.Position.X > Opponent->CurrentState.Position.X && !CurrentState.bFacingRight)
+							{
+								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+								if (CurrentState.Position.X >= 1000 - .5f * PushboxWidth)
+								{
+									HitWall();
+									CurrentState.Position.X = 1000 - .5f * PushboxWidth;
+									Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+									Opponent->CurrentState.Velocity.X = 0;
+								}
+							}
+						}*/
+						else
+						{
+							float MoveDistance = .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth - FMath::Abs(Opponent->CurrentState.Position.X - CurrentState.Position.X));
+
+							if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+							{
+								CurrentState.Position.X -= MoveDistance;
+								Opponent->CurrentState.Position.X += MoveDistance;
+							}
+							else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+							{
+								CurrentState.Position.X += MoveDistance;
+								Opponent->CurrentState.Position.X -= MoveDistance;
+							}
+
+							if (CurrentState.Position.X <= -1000 + .5f * PushboxWidth)
 							{
 								HitWall();
 								CurrentState.Position.X = -1000 + .5f * PushboxWidth;
 								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-							}
-						}
-						else if (Opponent->CurrentState.Position.X < CurrentState.Position.X)
-						{
-							float CenterPoint = .5f * (CurrentState.Position.X + Opponent->CurrentState.Position.X);
-							Opponent->CurrentState.Position.X = CenterPoint - .5f * (Opponent->PushboxWidth);
-							CurrentState.Position.X = CenterPoint + .5f * (PushboxWidth);
-
-							if (Opponent->CurrentState.Position.X <= -1000 + .5f * Opponent->PushboxWidth)
-							{
-								Opponent->HitWall();
-								Opponent->CurrentState.Position.X = -1000 + .5f * Opponent->PushboxWidth;
-								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								Opponent->CurrentState.Velocity.X = 0;
 							}
 							else if (CurrentState.Position.X >= 1000 - .5f * PushboxWidth)
 							{
 								HitWall();
 								CurrentState.Position.X = 1000 - .5f * PushboxWidth;
-								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								Opponent->CurrentState.Velocity.X = 0;
 							}
-						}
-						else
-						{
-							if (Opponent->CurrentState.Position.Y < CurrentState.Position.Y)
+
+							if (Opponent->CurrentState.Position.X >= 1000 - .5f * Opponent->PushboxWidth)
 							{
-								if (CurrentState.bFacingRight)
-									CurrentState.Position.X += .5f * Opponent->PushboxWidth;
-								else
-									CurrentState.Position.X -= .5f * Opponent->PushboxWidth;
+								Opponent->HitWall();
+								Opponent->CurrentState.Position.X = -1000 + .5f * Opponent->PushboxWidth;
+								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								CurrentState.Velocity.X = 0;
 							}
-							else if (Opponent->CurrentState.Position.Y > CurrentState.Position.Y)
+							else if (Opponent->CurrentState.Position.X <= -1000 + .5f * Opponent->PushboxWidth)
 							{
-								if (Opponent->CurrentState.bFacingRight)
-									Opponent->CurrentState.Position.X += .5f * PushboxWidth;
-								else
-									Opponent->CurrentState.Position.X -= .5f * PushboxWidth;
+								Opponent->HitWall();
+								Opponent->CurrentState.Position.X = -1000 + .5f * Opponent->PushboxWidth;
+								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								CurrentState.Velocity.X = 0;
 							}
 						}
 						CurrentState.bTouchingOpponent = true;
@@ -773,14 +894,14 @@ void ABTCharacterBase::DrawCharacter()
 		DynamicOutline->SetScalarParameterValue("StatusMix", 0);
 	}
 
-	if (CurrentState.bFacingRight)
+	FVector Scale = FVector(1);
+	if (!CurrentState.bFacingRight)
 	{
-		BaseMesh->SetRelativeScale3D(FVector(1, 1, 1));
+		Scale.X *= -1;
 	}
-	else
-	{
-		BaseMesh->SetRelativeScale3D(FVector(-1, 1, 1));
-	}
+
+	BaseMesh->SetRelativeScale3D(Scale);
+	SmearMesh->SetRelativeScale3D(Scale);
 
 	SetActorLocation(FVector(CurrentState.Position.X, GetActorLocation().Y, CurrentState.Position.Y));
 
@@ -808,6 +929,11 @@ void ABTCharacterBase::DrawCharacter()
 			for (ASigil* Sigil : Sigils)
 			{
 				Sigil->DrawSigil();
+			}
+
+			for (ABTVFXBase* Effect : SpecialVFX)
+			{
+				Effect->DrawEffect();
 			}
 		}
 	}
@@ -888,7 +1014,6 @@ void ABTCharacterBase::ProcessAnimationFrame()
 			CurrentState.LandingLag = CurrentState.CurrentAnimFrame.LandingLag + 4;
 
 	}
-	AnimationEvents(); // perform certain actions based on the current frame of animation
 }
 
 bool ABTCharacterBase::EnterNewAnimation(TArray<FAnimationFrame> Animation, int32 FrameNumber)
@@ -1012,10 +1137,9 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 			}
 			else //if a character is not in a hit state, they will land on their feet
 			{
-				TurnAroundCheck();
-
 				if (CurrentState.LandingLag > 4 || IsCurrentAnimation(DeflectedAir)) //landing lag puts character in a recovery state when landing
 				{
+					TurnAroundCheck();
 					if (IsCurrentAnimation(DeflectedAir))
 						CurrentState.LandingLag = 10;
 
@@ -1028,6 +1152,7 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 				}
 				else if (CurrentState.BlockStun > 0)
 				{
+					TurnAroundCheck();
 					CurrentState.BlockStun += 4; //Add to blockstun when transitioning from air to ground
 
 					return EnterNewAnimation(GuardLo);
@@ -1046,7 +1171,7 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 		CurrentState.CharacterHitState -= CanMidScreenWallBounce;
 		DepthOffset = 0;
 		Opponent->DepthOffset = 300;
-		CurrentState.Velocity.X *= -.5f;
+		CurrentState.Velocity.X *= -.35f;
 		if (CurrentState.Velocity.Y < 1.5f)
 			CurrentState.Velocity.Y = 1.5f;
 
@@ -1086,7 +1211,7 @@ bool ABTCharacterBase::HitWall()
 	{
 		//cause wall stick
 		CurrentState.WallBounceTime = 0;
-		uint8 WallStickHitStun = 30;
+		uint8 WallStickHitStun = 48;
 		
 		if (CurrentState.ComboTimer > 840) //14 seconds, special attacks have a minimum of 60% their base hitstun
 			WallStickHitStun *= .6f;
@@ -1130,7 +1255,7 @@ bool ABTCharacterBase::HitWall()
 		DepthOffset = 0;
 		Opponent->DepthOffset = 300;
 		CurrentState.WallBounceTime = 0;
-		CurrentState.Velocity.X *= -.5f;
+		CurrentState.Velocity.X *= -.35f;
 		if (CurrentState.Velocity.Y < 1.5f)
 			CurrentState.Velocity.Y = 1.5f;
 
@@ -1236,8 +1361,9 @@ void ABTCharacterBase::RunBraking()
 			}
 
 			//stop running if forward direction is no longer being held for run type characters and if animation has finished on dash type characters
-			if ((RunAcceleration > 0 && CurrentState.Dir6 < InputTime && CurrentState.Dir4 < InputTime && CurrentState.Dir9 < InputTime) || (!IsCurrentAnimation(RunStart) && !IsCurrentAnimation(RunCycle) && !IsCurrentAnimation(PreJump)))
+			if ((RunAcceleration > 0 && CurrentState.Dir6 < DirInputTime && CurrentState.Dir9 < DirInputTime) || (!IsCurrentAnimation(RunStart) && !IsCurrentAnimation(RunCycle) && !IsCurrentAnimation(PreJump)))
 			{
+				TurnAroundCheck();
 				CurrentState.bIsRunning = false;
 			}
 		}
@@ -1245,6 +1371,14 @@ void ABTCharacterBase::RunBraking()
 	
 	if (!CurrentState.bIsRunning && !CurrentState.bIsAirborne) //braking/friction to slow down character when not voluntarily accelerating
 	{
+		if ((CurrentState.bFacingRight && CurrentState.Velocity.X > MaxRunSpeed) || (!CurrentState.bFacingRight && CurrentState.Velocity.X < -MaxRunSpeed))
+		{
+			CurrentState.Velocity.X = MaxRunSpeed;
+
+			if (!CurrentState.bFacingRight)
+				CurrentState.Velocity.X *= -1;
+		}
+
 		if (FMath::Abs(CurrentState.Velocity.X) > 1 || CurrentState.SlowMoTime > 0)
 		{
 			CurrentState.Velocity.X *= .95f; //gradually come to stop
@@ -1312,9 +1446,9 @@ void ABTCharacterBase::Jumping()
 	else if (CurrentState.bBackwardJump) //if jumping back
 	{
 		if (CurrentState.bFacingRight)
-			CurrentState.Velocity.X -= JumpForce.X;
+			CurrentState.Velocity.X = -JumpForce.X;
 		else
-			CurrentState.Velocity.X += JumpForce.X;
+			CurrentState.Velocity.X = JumpForce.X;
 	}
 
 	CurrentState.bIsAirborne = true;
@@ -1329,7 +1463,7 @@ void ABTCharacterBase::GravityCalculation()
 {
 	if (CurrentState.bIsAirborne && CurrentState.GravDefyTime == 0 && !CurrentState.CurrentAnimFrame.bLockPosition) //apply gravity while character is airborne and not defying gravity
 	{
-		float GravCalc = Weight * -12.f / 60.f;
+		float GravCalc = Weight * -12 / 60;
 
 		if (IsCurrentAnimation(WallStick) || CurrentState.ShatteredTime > 0)
 			GravCalc *= .75f;
@@ -1348,24 +1482,24 @@ void ABTCharacterBase::ApplyKnockBack()
 		if (Opponent->CurrentState.ComboCount <= 8 || CurrentState.CharacterHitState & IsSuper || CurrentState.ShatteredTime > 0)
 			ComboGravity = 1;
 		else if (Opponent->CurrentState.ComboCount <= 12)
-			ComboGravity = .98;
+			ComboGravity = .99;
 		else if (Opponent->CurrentState.ComboCount <= 16)
-			ComboGravity = .95;
+			ComboGravity = .98;
 		else if (Opponent->CurrentState.ComboCount <= 20)
-			ComboGravity = .93;
+			ComboGravity = .97;
 		else if (Opponent->CurrentState.ComboCount <= 24)
-			ComboGravity = .9;
+			ComboGravity = .96;
 		else if (Opponent->CurrentState.ComboCount <= 30)
-			ComboGravity = .87;
+			ComboGravity = .95;
 		else
-			ComboGravity = .85f;
+			ComboGravity = .9f;
 	}
 
 	if (CurrentState.KnockBack != FVector2D(0, 0)) //apply any knockback
 	{
 		if (CurrentState.CurrentAnimFrame.Invincibility != OTG)
 		{
-			if (CurrentState.HitStun > 0 || CurrentState.BlockStun > 0 || IsCurrentAnimation(Deflected) || IsCurrentAnimation(DeflectedAir))
+			if (CurrentState.HitStun > 0 || CurrentState.BlockStun > 0 )//|| IsCurrentAnimation(Deflected) || IsCurrentAnimation(DeflectedAir))
 			{
 				if (CurrentState.KnockBack.Y > 0)
 					CurrentState.Velocity = FVector2D(CurrentState.KnockBack.X, ComboGravity * CurrentState.KnockBack.Y);
@@ -1383,11 +1517,11 @@ void ABTCharacterBase::ApplyKnockBack()
 
 				if (CurrentState.KnockBack.Y > 0)
 					CurrentState.Velocity.Y = CurrentState.KnockBack.Y;
-			}
 
-			if (CurrentState.bFacingRight)
-			{
-				CurrentState.Velocity *= FVector2D(-1, 1);
+				if (CurrentState.bFacingRight)
+				{
+					CurrentState.Velocity *= FVector2D(-1, 1);
+				}
 			}
 		}
 
@@ -1562,8 +1696,13 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 	}
 	else if (Inputs & INPUT_UP)
 	{
-		if (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir8 < DirInputTime - 1 && CurrentState.Dir9 < DirInputTime - 1 && CurrentState.bIsAirborne && !IsCurrentAnimation(FocusBlitz))
-			CurrentState.AirJump = DirInputTime;
+		if (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir8 < DirInputTime - 1 && CurrentState.Dir9 < DirInputTime - 1 )
+		{
+			CurrentState.AirJump = InputTime;
+			if (CurrentState.HitStop > 0)
+				CurrentState.AirJump += CurrentState.HitStop;
+		}
+		
 
 		if ((CurrentState.Position.X < Opponent->CurrentState.Position.X && Inputs & INPUT_RIGHT) || (CurrentState.Position.X > Opponent->CurrentState.Position.X && Inputs & INPUT_LEFT))
 		{
@@ -1582,17 +1721,17 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 	{
 		if (Inputs & INPUT_RIGHT)
 		{
-			if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+			if (CurrentState.bFacingRight)
 			{
-				if (((CurrentState.Dir6 < DirInputTime - 1 && CurrentState.Dir6 > 3) || (CurrentState.Dir9 < DirInputTime - 1 && CurrentState.Dir9 > 3)) && CurrentState.DoubleDir6 == 0)
+				if (((CurrentState.Dir6 < DirInputTime - 1 && CurrentState.Dir6 > DirInputTime/3) || (CurrentState.Dir9 < DirInputTime - 1 && CurrentState.Dir9 > DirInputTime/3)) && CurrentState.Resolute && CurrentState.DoubleDir6 == 0)
 				{
 					CurrentState.DoubleDir6 = DirInputTime;
 				}
 				CurrentState.Dir6 = DirInputTime;
 			}
-			else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+			else
 			{
-				if (((CurrentState.Dir4 < DirInputTime - 1 && CurrentState.Dir4 > 3) || (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir7 > 3)) && CurrentState.DoubleDir4 == 0)
+				if (((CurrentState.Dir4 < DirInputTime - 1 && CurrentState.Dir4 > DirInputTime/3) || (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir7 > DirInputTime/3)) && CurrentState.Resolute && CurrentState.DoubleDir4 == 0)
 				{
 					CurrentState.DoubleDir4 = DirInputTime;
 				}
@@ -1609,17 +1748,17 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		}
 		else
 		{
-			if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+			if (CurrentState.bFacingRight)
 			{
-				if (((CurrentState.Dir4 < DirInputTime - 1 && CurrentState.Dir4 > 3) || (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir7 > 3)) && CurrentState.DoubleDir4 == 0)
+				if (((CurrentState.Dir4 < DirInputTime - 1 && CurrentState.Dir4 > DirInputTime/3) || (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir7 > DirInputTime/3)) && CurrentState.Resolute && CurrentState.DoubleDir4 == 0)
 				{
 					CurrentState.DoubleDir4 = DirInputTime;
 				}
 				CurrentState.Dir4 = DirInputTime;
 			}
-			else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+			else
 			{
-				if (((CurrentState.Dir6 < DirInputTime - 1 && CurrentState.Dir6 > 3) || (CurrentState.Dir9 < DirInputTime - 1 && CurrentState.Dir9 > 3)) && CurrentState.DoubleDir6 == 0)
+				if (((CurrentState.Dir6 < DirInputTime - 1 && CurrentState.Dir6 > DirInputTime/3) || (CurrentState.Dir9 < DirInputTime - 1 && CurrentState.Dir9 > DirInputTime/3)) && CurrentState.Resolute && CurrentState.DoubleDir6 == 0)
 				{
 					CurrentState.DoubleDir6 = DirInputTime;
 				}
@@ -1641,18 +1780,18 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 {
 	if (Inputs & INPUT_LIGHT && !CurrentState.bIsLDown) //Light Attack Button
 	{
-		CurrentState.LPressed = InputTime;
+		CurrentState.LPressed = 2 * InputTime;
 
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.LPressed *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.LPressed += CurrentState.HitStop;
 		CurrentState.bIsLDown = true;
 	}
 	else if (!(Inputs & INPUT_LIGHT) && CurrentState.bIsLDown)
 	{
 		CurrentState.LReleased = InputTime;
 
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.LReleased *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.LReleased += CurrentState.HitStop;
 
 		CurrentState.bIsLDown = false;
 	}
@@ -1661,8 +1800,8 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	{
 		CurrentState.MPressed = InputTime;
 
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.MPressed *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.MPressed += CurrentState.HitStop;
 
 		CurrentState.bIsMDown = true;
 	}
@@ -1670,8 +1809,8 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	{
 		CurrentState.MReleased = InputTime;
 
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.MReleased *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.MReleased += CurrentState.HitStop;
 
 		CurrentState.bIsMDown = false;
 	}
@@ -1680,8 +1819,8 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	{
 		CurrentState.HPressed = InputTime;
 
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.HPressed *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.HPressed += CurrentState.HitStop;
 
 		CurrentState.bIsHDown = true;
 	}
@@ -1689,8 +1828,8 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	{
 		CurrentState.HReleased = InputTime;
 		
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.HReleased *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.HReleased += CurrentState.HitStop;
 
 		CurrentState.bIsHDown = false;
 	}
@@ -1699,8 +1838,8 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	{
 		CurrentState.BPressed = InputTime;
 
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.BPressed *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.BPressed += CurrentState.HitStop;
 
 		CurrentState.bIsBDown = true;
 	}
@@ -1708,8 +1847,8 @@ void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button input
 	{
 		CurrentState.BReleased = InputTime;
 
-		if (CurrentState.HitStop > InputTime)
-			CurrentState.BReleased *= 2;
+		if (CurrentState.HitStop > 0)
+			CurrentState.BReleased += CurrentState.HitStop;
 
 		CurrentState.bIsBDown = false;
 	}
@@ -1798,100 +1937,15 @@ bool ABTCharacterBase::NonKnockdownLanding()
 	if (IsCurrentAnimation(WallStick))
 		return EnterNewAnimation(Crumple, 2);
 
+	TurnAroundCheck();
 	CurrentState.LandingLag = 4;
 	CurrentState.Velocity.X *= .75f;
-	CurrentState.AvailableActions = AcceptAll - (AcceptMove + AcceptJump);
-
 	return EnterNewAnimation(StandUp);
 }
 
 bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player input and character state
 {
-	//Attack transitions supersede all others
-
-	if (HCF())
-		UE_LOG(LogTemp, Warning, TEXT("HCF"));
-
-	if (CurrentState.bIsAirborne && (CurrentState.CurrentAnimFrame.Invincibility == FaceDown || CurrentState.CurrentAnimFrame.Invincibility == FaceUp || IsCurrentAnimation(WallStick)) 
-		&& !IsCurrentAnimation(WallBounce) && !IsCurrentAnimation(GroundBounce) && CurrentState.HitStun == 0 && CurrentState.ShatteredTime == 0)
-	{
-		if (CurrentState.bIsLDown || CurrentState.bIsMDown || CurrentState.bIsHDown || CurrentState.bIsBDown) //hold any attack button down to air recover once able
-		{
-			if (CurrentState.Dir6 == DirInputTime) //can hold a direction as well to move in that direction while recovering
-			{
-				if (CurrentState.bFacingRight)
-				{
-					if (CurrentState.Velocity.X >= 0)
-						CurrentState.Velocity.X = 1.5;
-					else
-						CurrentState.Velocity.X = .5f;
-				}
-				else
-				{
-					if (CurrentState.Velocity.X <= 0)
-						CurrentState.Velocity.X = -1.5;
-					else
-						CurrentState.Velocity.X = -.5f;
-				}
-			}
-			else if (CurrentState.Dir4 == DirInputTime)
-			{
-				if (CurrentState.bFacingRight)
-				{
-					if (CurrentState.Velocity.X <= 0)
-						CurrentState.Velocity.X = -1.5;
-					else
-						CurrentState.Velocity.X = -.5f;
-				}
-				else
-				{
-					if (CurrentState.Velocity.X >= 0)
-						CurrentState.Velocity.X = 1.5;
-					else
-						CurrentState.Velocity.X = .5f;
-				}
-			}
-			CurrentState.Velocity.Y = 1.5f;
-			//make flash white and play chime
-			StatusMix = .5f;
-			StatusColor = FVector(.9);
-			CurrentState.SlowMoTime = 0;
-			CurrentState.StatusTimer = 10;
-			CurrentState.JumpsUsed = 0;
-			CurrentState.WallBounceTime = 0;
-			return EnterNewAnimation(AirRecovery);
-		}
-	}
-
-	if (IsCurrentAnimation(Stagger) && CurrentState.HitStun == 0)
-	{
-		if (CurrentState.LPressed > 0 || CurrentState.MPressed > 0 || CurrentState.HPressed > 0 || CurrentState.BPressed > 0) //press any attack button once hitstun has ended to recover from stagger
-		{
-			//make flash white and play chime
-			StatusMix = .5f;
-			StatusColor = FVector(.9);
-			CurrentState.StatusTimer = 10;
-			CurrentState.LPressed = 0;
-			CurrentState.MPressed = 0;
-			CurrentState.HPressed = 0;
-			CurrentState.BPressed = 0;
-			return EnterNewAnimation(IdleCrouch);
-		}
-	}
-
-	if (Opponent)
-	{
-		if ((CurrentState.AvailableActions & AcceptGuard) && CurrentState.bIsGuarding && !CurrentState.bIsAirborne && FMath::Abs(CurrentState.Position.X - Opponent->CurrentState.Position.X) <= Opponent->CurrentState.CurrentAnimFrame.AutoGuardProximity 
-			&& CurrentState.BlockStun == 0 && CurrentState.HitStun == 0)
-		{
-			if (CurrentState.bIsCrouching && !IsCurrentAnimation(GuardLoIn) && !IsCurrentAnimation(GuardLo))
-				return EnterNewAnimation(GuardLoIn);
-			else if (!CurrentState.bIsCrouching && !IsCurrentAnimation(GuardHiIn) && !IsCurrentAnimation(GuardHi))
-				return EnterNewAnimation(GuardHiIn);
-		}
-	}
-
-	if (CurrentState.AvailableActions & AcceptJump && ((!CurrentState.bIsAirborne && (CurrentState.Dir7 == DirInputTime || CurrentState.Dir8 == DirInputTime || CurrentState.Dir9 == DirInputTime)) || 
+	if (CurrentState.AvailableActions & AcceptJump && ((!CurrentState.bIsAirborne && (CurrentState.Dir7 == DirInputTime || CurrentState.Dir8 == DirInputTime || CurrentState.Dir9 == DirInputTime)) ||
 		CurrentState.AirJump > 0) && CurrentState.JumpsUsed < MaxJumps)
 	{
 		CurrentState.AirJump = 0;
@@ -1899,7 +1953,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		if (CurrentState.Dir9 > 0 && CurrentState.Dir9 > CurrentState.Dir7 && CurrentState.Dir9 > CurrentState.Dir8) //Most recent input is forward jump
 			CurrentState.bForwardJump = true;
 		else if (CurrentState.Dir7 > 0 && CurrentState.Dir7 > CurrentState.Dir9 && CurrentState.Dir7 > CurrentState.Dir8) //Most recent input is backward jump
-				CurrentState.bBackwardJump = true;
+			CurrentState.bBackwardJump = true;
 
 		if (!CurrentState.bIsAirborne)
 		{
@@ -1916,34 +1970,203 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		}
 	}
 
-	if (CurrentState.AvailableActions & AcceptMove && !CurrentState.bIsAirborne)
+	//Attack transitions supersede all but jump
+	if (BlitzCancel())
+		return true;
+
+	if (SuperAttacks())
+		return true;
+
+	if (SpecialAttacks())
+		return true;
+
+	if (NormalAttacks())
+		return true;
+
+	if (CurrentState.bIsAirborne && (CurrentState.CurrentAnimFrame.Invincibility == FaceDown || CurrentState.CurrentAnimFrame.Invincibility == FaceUp || IsCurrentAnimation(WallStick)) 
+		&& !IsCurrentAnimation(WallBounce) && !IsCurrentAnimation(GroundBounce) && CurrentState.HitStun == 0 && CurrentState.ShatteredTime == 0)
 	{
-		/*if (Taunt > 0)
-			return EnterNewAnimation(Taunt); */
-		if (CurrentState.bLose)
-			return EnterNewAnimation(TimeOverLose);
-
-		if (CurrentState.DoubleDir6 > 0)
+		if (CurrentState.bIsLDown || CurrentState.bIsMDown || CurrentState.bIsHDown || CurrentState.bIsBDown) //hold any attack button down to air recover once able
 		{
-			CurrentState.bIsRunning = true;
-			CurrentState.DoubleDir6 = 0;
-			if (RunStart.Num() > 0)
-				return EnterNewAnimation(RunStart);
-			else
-				return EnterNewAnimation(RunCycle);
+			if (CurrentState.Dir6 == DirInputTime) //can hold a direction as well to move in that direction while recovering
+			{
+				if (CurrentState.bFacingRight)
+				{
+					if (CurrentState.Velocity.X >= 0)
+						CurrentState.Velocity.X = 2;
+					else
+						CurrentState.Velocity.X = 1;
+				}
+				else
+				{
+					if (CurrentState.Velocity.X <= 0)
+						CurrentState.Velocity.X = -2;
+					else
+						CurrentState.Velocity.X = -1;
+				}
+			}
+			else if (CurrentState.Dir4 == DirInputTime)
+			{
+				if (CurrentState.bFacingRight)
+				{
+					if (CurrentState.Velocity.X <= 0)
+						CurrentState.Velocity.X = -2;
+					else
+						CurrentState.Velocity.X = -1;
+				}
+				else
+				{
+					if (CurrentState.Velocity.X >= 0)
+						CurrentState.Velocity.X = 2;
+					else
+						CurrentState.Velocity.X = 1;
+				}
+			}
+			CurrentState.Velocity.Y = 1.5f;
+			//make flash white and play chime
+			StatusMix = .75f;
+			StatusColor = FVector(1);
+			CurrentState.SlowMoTime = 0;
+			CurrentState.StatusTimer = 10;
+			CurrentState.JumpsUsed = 0;
+			CurrentState.WallBounceTime = 0;
+			return EnterNewAnimation(AirRecovery);
 		}
+	}
 
-		if ((IsCurrentAnimation(WalkBackward) && CurrentState.Dir4 < InputTime) || (IsCurrentAnimation(WalkForward) && CurrentState.Dir6 < InputTime))
+	if (IsCurrentAnimation(Stagger) && CurrentState.HitStun == 0)
+	{
+		if (CurrentState.bIsLDown || CurrentState.bIsMDown || CurrentState.bIsHDown || CurrentState.bIsBDown) //press any attack button once hitstun has ended to recover from stagger
 		{
-			CurrentState.Velocity.X = 0;
-			return EnterNewAnimation(IdleStand);
+			//make flash white and play chime
+			StatusMix = .75f;
+			StatusColor = FVector(1);
+			CurrentState.StatusTimer = 10;
+			return EnterNewAnimation(IdleCrouch);
 		}
+	}
 
-		if (CurrentState.Dir6 == DirInputTime && !IsCurrentAnimation(WalkForward))
-			return EnterNewAnimation(WalkForward);
+	if (Opponent)
+	{
+		if ((CurrentState.AvailableActions & AcceptGuard) && CurrentState.bIsGuarding && !CurrentState.bIsAirborne && FMath::Abs(CurrentState.Position.X - Opponent->CurrentState.Position.X) <= Opponent->CurrentState.CurrentAnimFrame.AutoGuardProximity 
+			&& CurrentState.BlockStun == 0 && CurrentState.HitStun == 0)
+		{
+			if (CurrentState.bIsCrouching && !IsCurrentAnimation(GuardLoIn) && !IsCurrentAnimation(GuardLo))
+				return EnterNewAnimation(GuardLoIn);
+			else if (!CurrentState.bIsCrouching && !IsCurrentAnimation(GuardHiIn) && !IsCurrentAnimation(GuardHi))
+				return EnterNewAnimation(GuardHiIn);
+		}
+	}
 
-		if (CurrentState.Dir4 == DirInputTime && !IsCurrentAnimation(WalkBackward))
-			return EnterNewAnimation(WalkBackward);
+	if (CurrentState.AvailableActions & AcceptMove)
+	{
+		if (!CurrentState.bIsAirborne)
+		{
+			/*if (Taunt > 0)
+				return EnterNewAnimation(Taunt); */
+			if (CurrentState.bLose)
+				return EnterNewAnimation(TimeOverLose);
+
+			if (CurrentState.DoubleDir6 > 0)
+			{
+				if (RunAcceleration > 0)
+					CurrentState.bIsRunning = true;
+				CurrentState.DoubleDir6 = 0;
+				if (RunStart.Num() > 0)
+					return EnterNewAnimation(RunStart);
+				else
+					return EnterNewAnimation(RunCycle);
+			}
+
+			if ((IsCurrentAnimation(WalkBackward) && CurrentState.Dir4 < DirInputTime) || (IsCurrentAnimation(WalkForward) && CurrentState.Dir6 < DirInputTime))
+			{
+				CurrentState.Velocity.X = 0;
+				return EnterNewAnimation(IdleStand);
+			}
+
+			if (CurrentState.Dir6 == DirInputTime && !IsCurrentAnimation(WalkForward))
+				return EnterNewAnimation(WalkForward);
+
+			if (CurrentState.Dir4 == DirInputTime && !IsCurrentAnimation(WalkBackward))
+				return EnterNewAnimation(WalkBackward);
+		}
+		else
+		{
+			if (AirDashForce > 0 && CurrentState.JumpsUsed < MaxJumps)
+			{
+				if (CurrentState.DoubleDir6 > 0)
+				{
+					CurrentState.DoubleDir6 = 0;
+					CurrentState.GravDefyTime = AirDashDuration;
+					CurrentState.Velocity = FVector2D(AirDashForce, 0);
+
+					if (!CurrentState.bFacingRight)
+						CurrentState.Velocity.X *= -1;
+
+					CurrentState.JumpsUsed++;
+
+					FRotator SigilRotation = FRotator(0, 0, 30);
+					if (CurrentState.bFacingRight)
+					{
+						SigilRotation.Pitch = -80;
+					}
+					else
+					{
+						SigilRotation.Pitch = 80;
+					}
+
+					FVector2D SigilPosition = CurrentState.Position;
+					if (CurrentState.bFacingRight)
+					{
+						SigilPosition += AirDashForwardOffset;
+					}
+					else
+					{
+						SigilPosition.X -= AirDashForwardOffset.X;
+						SigilPosition.Y += AirDashForwardOffset.Y;
+					}
+					Sigils[0]->Activate(SigilPosition, SigilRotation);
+					
+					return EnterNewAnimation(AirDashForward);
+				}
+
+				if (CurrentState.DoubleDir4 > 0)
+				{
+					CurrentState.DoubleDir4 = 0;
+					CurrentState.GravDefyTime = AirDashDuration;
+					CurrentState.Velocity = FVector2D(-.85 * AirDashForce, 0);
+
+					if (!CurrentState.bFacingRight)
+						CurrentState.Velocity.X *= -1;
+
+					CurrentState.JumpsUsed++;
+
+					FRotator SigilRotation = FRotator(0, 0, 30);
+					if (CurrentState.bFacingRight)
+					{
+						SigilRotation.Pitch = 80;
+					}
+					else
+					{
+						SigilRotation.Pitch = -80;
+					}
+
+					FVector2D SigilPosition = CurrentState.Position;
+					if (CurrentState.bFacingRight)
+					{
+						SigilPosition += AirDashBackOffset;
+					}
+					else
+					{
+						SigilPosition.X -= AirDashBackOffset.X;
+						SigilPosition.Y += AirDashBackOffset.Y;
+					}
+					Sigils[0]->Activate(SigilPosition, SigilRotation);
+
+					return EnterNewAnimation(AirDashBackward);
+				}
+			}
+		}
 	}
 
 	if (!CurrentState.bIsAirborne && CurrentState.AvailableActions & AcceptGuard)
@@ -1976,15 +2199,36 @@ bool ABTCharacterBase::ConditionalTransitions()
 			return true;
 	}
 
-	if (IsCurrentAnimation(AirDashForward) && CurrentState.GravDefyTime == 0)
+	if (CurrentState.bHitSuccess)
+	{
+		if (IsCurrentAnimation(ThrowAttempt))
+		{
+			CurrentState.HitStop = 20;
+			Opponent->CurrentState.HitStop = 20;
+			return EnterNewAnimation(NormalThrow);
+		}
+
+		if (IsCurrentAnimation(AirThrowAttempt))
+		{
+			CurrentState.HitStop = 20;
+			Opponent->CurrentState.HitStop = 20;
+			return EnterNewAnimation(NormalAirThrow);
+		}
+	}
+
+	if ((IsCurrentAnimation(AirDashForward) || IsCurrentAnimation(BlitzDashForward)) && CurrentState.GravDefyTime == 0)
+	{
 		return EnterNewAnimation(AirDashForwardOut);
-	if (IsCurrentAnimation(AirDashBackward) && CurrentState.GravDefyTime == 0)
+	}
+	if ((IsCurrentAnimation(AirDashBackward) || IsCurrentAnimation(BlitzDashBackward)) && CurrentState.GravDefyTime == 0)
+	{
 		return EnterNewAnimation(AirDashBackwardOut);
+	}
 	if (IsCurrentAnimation(MidJump) && CurrentState.Velocity.Y < 1.5f)
 		return EnterNewAnimation(JumpTransition);
 	if (IsCurrentAnimation(LaunchCycle) && CurrentState.Velocity.Y < 2)
 		return EnterNewAnimation(LaunchTransition);
-	if ((IsCurrentAnimation(RunStart) || IsCurrentAnimation(RunCycle)) && !CurrentState.bIsRunning)
+	if (IsCurrentAnimation(RunCycle) && !CurrentState.bIsRunning)
 		return EnterNewAnimation(Brake);
 	if ((IsCurrentAnimation(GuardHi) || IsCurrentAnimation(GuardHiHeavy) || IsCurrentAnimation(GuardHiVertical) || IsCurrentAnimation(GuardHiIn)) && CurrentState.BlockStun == 0 &&
 		(FMath::Abs(CurrentState.Position.X - Opponent->CurrentState.Position.X) > Opponent->CurrentState.CurrentAnimFrame.AutoGuardProximity || !CurrentState.bIsGuarding))
@@ -2057,6 +2301,9 @@ bool ABTCharacterBase::ExitTimeTransitions()
 		return EnterNewAnimation(LoseCycle);
 	}
 
+	if (IsCurrentAnimation(RunStart) && !CurrentState.bIsRunning)
+		return EnterNewAnimation(Brake);
+
 	if (IsCurrentAnimation(PreJump)) // Transition from PreJump frames to JumpAnimation
 	{
 		if (CurrentState.bForwardJump && ForwardJump.Num() > 0)
@@ -2068,12 +2315,12 @@ bool ABTCharacterBase::ExitTimeTransitions()
 	}
 
 	if (IsCurrentAnimation(NeutralJump) || IsCurrentAnimation(ForwardJump) || IsCurrentAnimation(BackwardJump) || IsCurrentAnimation(GuardAirOut) ||
-		IsCurrentAnimation(AirRecovery) || IsCurrentAnimation(DeflectedAir) || IsCurrentAnimation(ThrowEscapeAir) || IsCurrentAnimation(BlitzOutAir))
+		IsCurrentAnimation(DeflectedAir) || IsCurrentAnimation(ThrowEscapeAir) || IsCurrentAnimation(BlitzOutAir) || IsCurrentAnimation(AirThrowAttempt))
 	{
 		return EnterNewAnimation(MidJump);
 	}
 
-	if (IsCurrentAnimation(AirDashBackwardOut) || IsCurrentAnimation(AirDashForwardOut))
+	if (IsCurrentAnimation(AirDashBackwardOut) || IsCurrentAnimation(AirDashForwardOut) || IsCurrentAnimation(AirRecovery))
 	{
 		TurnAroundCheck();
 		return EnterNewAnimation(JumpTransition);
@@ -2100,7 +2347,7 @@ bool ABTCharacterBase::ExitTimeTransitions()
 	if (IsCurrentAnimation(StandUp) || IsCurrentAnimation(Brake) || IsCurrentAnimation(WakeUpFaceDown) || IsCurrentAnimation(WakeUpFaceUp) || IsCurrentAnimation(GuardHiOut) ||
 		IsCurrentAnimation(HitSLOut) || IsCurrentAnimation(HitSHOut) || IsCurrentAnimation(HitSLHeavyOut) || IsCurrentAnimation(HitSHHeavyOut) || IsCurrentAnimation(IdleStandBlink) ||
 		IsCurrentAnimation(StandIdleAction) || IsCurrentAnimation(Deflected) || IsCurrentAnimation(ThrowEscape) || IsCurrentAnimation(BlitzOutStanding) || IsCurrentAnimation(TurnAroundStand) ||
-		IsCurrentAnimation(ThrowAttempt) || IsCurrentAnimation(AirThrowAttempt))
+		IsCurrentAnimation(ThrowAttempt))
 		return EnterNewAnimation(IdleStand);
 
 	if (IsCurrentAnimation(CrouchDown) || IsCurrentAnimation(GuardLoOut) || IsCurrentAnimation(IdleCrouchBlink) || IsCurrentAnimation(CrouchIdleAction) ||
@@ -2152,107 +2399,113 @@ bool ABTCharacterBase::ExitTimeTransitions()
 
 void ABTCharacterBase::AnimationEvents()
 {
-	if (IsCurrentAnimation(FocusBlitz) || IsCurrentAnimation(BreakerBlitz))
+	if (CurrentState.HitStop == 0)
 	{
-		if (IsCurrentAnimation(FocusBlitz)) //Focus Blitz
+		if (IsCurrentAnimation(FocusBlitz) || IsCurrentAnimation(BreakerBlitz))
 		{
-			if (CurrentState.AnimFrameIndex == 1 && CurrentState.PosePlayTime == 0)
-				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 1);
-
-			if (CurrentState.AnimFrameIndex == 7 && CurrentState.PosePlayTime == 0)
-				BlitzImage->ActivateWave();
-
-			if (CurrentState.AnimFrameIndex == FocusBlitz.Num() - 1 && CurrentState.PosePlayTime == CurrentState.CurrentAnimFrame.PlayDuration - 1)
+			if (IsCurrentAnimation(FocusBlitz)) //Focus Blitz
 			{
-				CurrentState.bBlitzing = true;
+				if (CurrentState.AnimFrameIndex == 1 && CurrentState.PosePlayTime == 0)
+					BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 1);
 
-				//can hold direction to change velocity when exiting Focus Blitz
-				if (CurrentState.Dir2 == DirInputTime)
-					CurrentState.Velocity = FVector2D(0, -.25 * BlitzDashForce);
-				else if (CurrentState.Dir8 == DirInputTime)
-					CurrentState.Velocity = FVector2D(0, .35 * BlitzDashForce);
-				else if (CurrentState.Dir4 == DirInputTime)
-				{
-					CurrentState.Velocity = FVector2D(.35f * BlitzDashForce, 0);
-					if (CurrentState.bFacingRight)
-						CurrentState.Velocity.X *= -1;
-				}
-				else if (CurrentState.Dir6 == DirInputTime)
-				{
-					CurrentState.Velocity = FVector2D(.35f * BlitzDashForce, 0);
+				if (CurrentState.AnimFrameIndex == 7 && CurrentState.PosePlayTime == 0)
+					BlitzImage->ActivateWave();
 
-					if (!CurrentState.bFacingRight)
-						CurrentState.Velocity.X *= -1;
-				}
-				else if (CurrentState.Dir7 == DirInputTime)
+				if (CurrentState.AnimFrameIndex == FocusBlitz.Num() - 1 && CurrentState.PosePlayTime == CurrentState.CurrentAnimFrame.PlayDuration - 1)
 				{
-					CurrentState.Velocity = FVector2D(.35f * BlitzDashForce);
+					CurrentState.bBlitzing = true;
 
-					if (CurrentState.bFacingRight)
-						CurrentState.Velocity.X *= -1;
-				}
-				else if (CurrentState.Dir9 == DirInputTime)
-				{
-					CurrentState.Velocity = FVector2D(.35f * BlitzDashForce);
+					/*if (CurrentState.bIsAirborne)
+					{
+						//can hold direction to change velocity when exiting Focus Blitz
+						if (CurrentState.Dir2 == DirInputTime)
+							CurrentState.Velocity = FVector2D(0, -.25 * AirDashForce);
+						else if (CurrentState.Dir8 == DirInputTime)
+							CurrentState.Velocity = FVector2D(0, .35 * AirDashForce);
+						else if (CurrentState.Dir4 == DirInputTime)
+						{
+							CurrentState.Velocity = FVector2D(.35f * AirDashForce, 0);
+							if (CurrentState.bFacingRight)
+								CurrentState.Velocity.X *= -1;
+						}
+						else if (CurrentState.Dir6 == DirInputTime)
+						{
+							CurrentState.Velocity = FVector2D(.35f * AirDashForce, 0);
 
-					if (!CurrentState.bFacingRight)
-						CurrentState.Velocity.X *= -1;
-				}
-				else if (CurrentState.Dir1 == DirInputTime)
-				{
-					CurrentState.Velocity = FVector2D(-.25f * BlitzDashForce);
+							if (!CurrentState.bFacingRight)
+								CurrentState.Velocity.X *= -1;
+						}
+						else if (CurrentState.Dir7 == DirInputTime)
+						{
+							CurrentState.Velocity = FVector2D(.35f * AirDashForce);
 
-					if (!CurrentState.bFacingRight)
-						CurrentState.Velocity.X *= -1;
-				}
-				else if (CurrentState.Dir3 == DirInputTime)
-				{
-					CurrentState.Velocity = FVector2D(-.25f * BlitzDashForce);
+							if (CurrentState.bFacingRight)
+								CurrentState.Velocity.X *= -1;
+						}
+						else if (CurrentState.Dir9 == DirInputTime)
+						{
+							CurrentState.Velocity = FVector2D(.35f * AirDashForce);
 
-					if (CurrentState.bFacingRight)
-						CurrentState.Velocity.X *= -1;
+							if (!CurrentState.bFacingRight)
+								CurrentState.Velocity.X *= -1;
+						}
+						else if (CurrentState.Dir1 == DirInputTime)
+						{
+							CurrentState.Velocity = FVector2D(-.25f * AirDashForce);
+
+							if (!CurrentState.bFacingRight)
+								CurrentState.Velocity.X *= -1;
+						}
+						else if (CurrentState.Dir3 == DirInputTime)
+						{
+							CurrentState.Velocity = FVector2D(-.25f * AirDashForce);
+
+							if (CurrentState.bFacingRight)
+								CurrentState.Velocity.X *= -1;
+						}
+					}*/
 				}
 			}
+			else
+			{
+				if (CurrentState.AnimFrameIndex == 4 && CurrentState.PosePlayTime == 0)
+					BlitzImage->ActivateWave();
+
+				if (CurrentState.AnimFrameIndex == 5 && CurrentState.PosePlayTime == 0)
+					CurrentState.bBlitzing = true;
+			}
 		}
-		else
+		else if (IsCurrentAnimation(NeutralJump) || IsCurrentAnimation(ForwardJump) || IsCurrentAnimation(BackwardJump))
 		{
-			if (CurrentState.AnimFrameIndex == 4 && CurrentState.PosePlayTime == 0)
-				BlitzImage->ActivateWave();
-
-			if (CurrentState.AnimFrameIndex == 5 && CurrentState.PosePlayTime == 0)
-				CurrentState.bBlitzing = true;
+			if (CurrentState.PosePlayTime == 0 && CurrentState.AnimFrameIndex == 0) //Jump animation event
+			{
+				Jumping();
+			}
 		}
-	}
-	else if (IsCurrentAnimation(NeutralJump) || IsCurrentAnimation(ForwardJump) || IsCurrentAnimation(BackwardJump))
-	{
-		if (CurrentState.PosePlayTime == 0 && CurrentState.AnimFrameIndex == 0) //Jump animation event
+		else if (IsCurrentAnimation(WalkForward))
 		{
-			Jumping();
+			CurrentState.Velocity = FVector2D(WalkSpeed, 0);
+			CurrentState.ResolvePulse += .0075f;
+
+			if (!CurrentState.bFacingRight)
+				CurrentState.Velocity.X *= -1;
+
 		}
-	}
-	else if (IsCurrentAnimation(WalkForward))
-	{
-		CurrentState.Velocity = FVector2D(WalkSpeed, 0);
-		CurrentState.ResolvePulse += .0075f;
+		else if (IsCurrentAnimation(WalkBackward))
+		{
+			CurrentState.Velocity = FVector2D(WalkBackSpeed, 0);
+			CurrentState.ResolvePulse -= .008f;
 
-		if (!CurrentState.bFacingRight)
-			CurrentState.Velocity.X *= -1;
+			if (CurrentState.bFacingRight)
+				CurrentState.Velocity.X *= -1;
+		}
+		else if (IsCurrentAnimation(BackDash) && CurrentState.PosePlayTime == 0 && CurrentState.AnimFrameIndex == 0)
+		{
+			CurrentState.Velocity = BackDashForce;
 
-	}
-	else if (IsCurrentAnimation(WalkBackward))
-	{
-		CurrentState.Velocity = FVector2D(WalkBackSpeed, 0);
-		CurrentState.ResolvePulse -= .008f;
-
-		if (CurrentState.bFacingRight)
-			CurrentState.Velocity.X *= -1;
-	}
-	else if (IsCurrentAnimation(BackDash) && CurrentState.PosePlayTime == 0 && CurrentState.AnimFrameIndex == 0)
-	{
-		CurrentState.Velocity = BackDashForce;
-
-		if (CurrentState.bFacingRight)
-			CurrentState.Velocity.X *= -1;
+			if (CurrentState.bFacingRight)
+				CurrentState.Velocity.X *= -1;
+		}
 	}
 }
 
@@ -2318,6 +2571,10 @@ bool ABTCharacterBase::RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2
 	if (TL1.Y <= BR2.Y || TL2.Y <= BR1.Y)
 		return false;
 
+	FVector2D TL3 = FVector2D(FMath::Max(TL1.X, TL2.X), FMath::Max(TL1.Y, TL2.Y));
+	FVector2D BR3 = FVector2D(FMath::Min(BR1.X, BR2.X), FMath::Min(BR1.Y, BR2.Y));
+	
+	IntersectCenter = (TL3 + BR3) / 2; //record midpoint of area intersection for placing hit effect
 	return true;
 }
 
@@ -2358,7 +2615,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		(Opponent->CurrentState.bIsGuarding && !Opponent->CurrentState.bIsAirborne && !Opponent->CurrentState.bIsCrouching && Hitbox.AttackHeight == Overhead)) && Hitbox.AttackHeight != Unblockable)
 	{
 		int32 BlockstunToApply;
-		FVector2D KnockbackToApply;
+		FVector2D KnockBackToApply;
 		if (Hitbox.BaseBlockStun == 0)
 			BlockstunToApply = Hitbox.BaseHitStun * .8f;
 		else
@@ -2366,17 +2623,17 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 
 		if (Opponent->CurrentState.bIsAirborne)
 		{
-			if (FMath::Abs(Hitbox.PotentialAirKnockBack.X) > FMath::Abs(Hitbox.PotentialAirKnockBack.Y))
-				KnockbackToApply = FVector2D(Hitbox.PotentialAirKnockBack.X, 1.f);
+			if (FMath::Abs(Hitbox.PotentialAirKnockBack.X) > FMath::Abs(Hitbox.PotentialAirKnockBack.Y) || Hitbox.PotentialAirKnockBack.X < 0)
+				KnockBackToApply = FVector2D(Hitbox.PotentialAirKnockBack.X, 1.f);
 			else
-				KnockbackToApply = FVector2D(.5f * (Hitbox.PotentialAirKnockBack.X + FMath::Abs(Hitbox.PotentialAirKnockBack.Y)), 1.f);
+				KnockBackToApply = FVector2D(.5f * (Hitbox.PotentialAirKnockBack.X + FMath::Abs(Hitbox.PotentialAirKnockBack.Y)), 1.f);
 		}
 		else
 		{
-			if (FMath::Abs(Hitbox.PotentialKnockBack.X) > FMath::Abs(Hitbox.PotentialKnockBack.Y))
-				KnockbackToApply = FVector2D(Hitbox.PotentialKnockBack.X, 0);
+			if (FMath::Abs(Hitbox.PotentialKnockBack.X) > FMath::Abs(Hitbox.PotentialKnockBack.Y) || Hitbox.PotentialKnockBack.X < 0)
+				KnockBackToApply = FVector2D(Hitbox.PotentialKnockBack.X, 0);
 			else
-				KnockbackToApply = FVector2D(.5f * (Hitbox.PotentialKnockBack.X + FMath::Abs(Hitbox.PotentialKnockBack.Y)), 0);
+				KnockBackToApply = FVector2D(.5f * (Hitbox.PotentialKnockBack.X + FMath::Abs(Hitbox.PotentialKnockBack.Y)), 0);
 		}
 
 		BlockstunToApply = FMath::Min(BlockstunToApply, 30);
@@ -2392,9 +2649,9 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			BlockstunToApply = FMath::Max(1, BlockstunToApply);
 
 			if (Opponent->CurrentState.bIsAirborne)
-				KnockbackToApply = FVector2D(-Opponent->CurrentState.Velocity.X, .5f);
+				KnockBackToApply = FVector2D(-Opponent->CurrentState.Velocity.X, .5f);
 			else
-				KnockbackToApply *= 0;
+				KnockBackToApply *= 0;
 
 			//reward opponent for blocking with exceptional timing
 			Opponent->CurrentState.Durability += 250;
@@ -2404,7 +2661,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 				Opponent->CurrentState.ResolveRecoverTimer = 180;
 
 			//make opponent flash white
-			Opponent->StatusMix = .5f;
+			Opponent->StatusMix = .75f;
 			Opponent->CurrentState.StatusTimer = 8;
 			Opponent->StatusColor = FVector(1);
 			UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
@@ -2485,17 +2742,37 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		Opponent->CurrentState.HitStop = FMath::Min((int32)Hitbox.BaseHitStop - 2, 24);
 		CurrentState.HitStop = FMath::Min((int32)Hitbox.BaseHitStop - 2, 24);
 
-		if (Opponent->CurrentState.bTouchingWall && KnockbackToApply.X >= 0)
+		if (KnockBackToApply.X > 0)
+			KnockBackToApply.X = FMath::Max(1.75f, KnockBackToApply.X);
+
+		if (Opponent->CurrentState.bTouchingWall && KnockBackToApply.X > 0)
 		{
 			if (!(Hitbox.AttackProperties & IsSuper) && !(Hitbox.AttackProperties & IsSpecial))
-				CurrentState.KnockBack = FVector2D(.75f * KnockbackToApply.X, 0);
+				CurrentState.KnockBack = FVector2D(.95f * KnockBackToApply.X, 0);
+
+			if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+				CurrentState.KnockBack *= FVector2D(-1, 1);
+			else if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+			{
+			}
+			else if (!CurrentState.bFacingRight)
+			{
+				CurrentState.KnockBack *= FVector2D(-1, 1);
+			}
 		}
 		else
 		{
-			if (KnockbackToApply.X < 0)
-				Opponent->CurrentState.KnockBack = FVector2D(.5f * KnockbackToApply.X, KnockbackToApply.Y);
-			else
-				Opponent->CurrentState.KnockBack = KnockbackToApply;
+			Opponent->CurrentState.KnockBack = KnockBackToApply;
+
+			if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+				Opponent->CurrentState.KnockBack *= FVector2D(-1, 1);
+			else if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+			{
+			}
+			else if (CurrentState.bFacingRight)
+			{
+				Opponent->CurrentState.KnockBack *= FVector2D(-1, 1);
+			}
 		}
 
 		//increase ResolvePulse
@@ -2622,13 +2899,14 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	else
 		OpponentValor = Opponent->Valor100;
 
-	int32 DamageToApply = OpponentValor * CurrentState.SpecialProration * Hitbox.BaseDamage;
+	int32 DamageToApply = FMath::FloorToInt(OpponentValor * CurrentState.SpecialProration * Hitbox.BaseDamage);
 	uint8 HitStunToApply = Hitbox.BaseHitStun;
 	FVector2D KnockBackToApply;
 	uint8 HitStopToApply = Hitbox.BaseHitStop;
 
 	if (Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)
 	{
+		Hitbox.AttackProperties = None;
 		KnockBackToApply = FVector2D(1.1f * FMath::Abs(Hitbox.PotentialKnockBack.X), 3);
 	}
 	else if (Opponent->CurrentState.bIsAirborne)
@@ -2661,7 +2939,8 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	//apply certain modifiers based on circumstances around the hit
 	if (Hitbox.AttackHeight < Throw)
 	{
-		if ((Opponent->CurrentState.bArmorActive || Opponent->CurrentState.bCounterHitState) && Hitbox.AttackProperties & Shatter)
+		if ((Opponent->CurrentState.bArmorActive || Opponent->CurrentState.bCounterHitState ||
+			IsCurrentAnimation(AirResoluteCounter) || IsCurrentAnimation(ResoluteCounter)) && Hitbox.AttackProperties & Shatter)
 		{
 			//Opponent's penalty for getting shattered
 			Opponent->CurrentState.ShatteredTime = 120;
@@ -2724,8 +3003,8 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		
 	if (Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)
 	{
-		DamageToApply = (int32)(.3f * DamageToApply);
-		HitStunToApply = (uint8)(.3f * HitStunToApply);
+		DamageToApply = FMath::FloorToInt(3 * DamageToApply / 10);
+		HitStunToApply = FMath::FloorToInt(3 * HitStunToApply / 10);
 	}
 
 	//calculate proration to apply on subsequent hits in a combo
@@ -2736,7 +3015,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		if ((Opponent->CurrentState.bArmorActive || Opponent->CurrentState.bCounterHitState) && Hitbox.AttackProperties & Shatter)
 		{
 			CurrentState.SpecialProration *= 1.2f;
-			DamageToApply *= 1.2f;
+			DamageToApply += DamageToApply/5;
 		}
 		else if (Opponent->CurrentState.bCounterHitState)
 			CurrentState.SpecialProration *= 1.1f;
@@ -2745,30 +3024,30 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		CurrentState.SpecialProration *= Hitbox.ForcedProration; //forced proration is applied as long as the move is used in combo
 
 	//apply damage, damage is scaled by the number of hits in a combo
-	float ComboProration;
+	int32 ComboProration;
 	if (CurrentState.ComboCount < 3)
-		ComboProration = 1;
+		ComboProration = 10;
 	else if (CurrentState.ComboCount < 5)
-		ComboProration = .8f;
+		ComboProration = 8;
 	else if (CurrentState.ComboCount < 6)
-		ComboProration = .7f;
+		ComboProration = 7;
 	else if (CurrentState.ComboCount < 7)
-		ComboProration = .6f;
+		ComboProration = 6;
 	else if (CurrentState.ComboCount < 8)
-		ComboProration = .5f;
+		ComboProration = 5;
 	else if (CurrentState.ComboCount < 9)
-		ComboProration = .4f;
+		ComboProration = 4;
 	else if (CurrentState.ComboCount < 10)
-		ComboProration = .3f;
+		ComboProration = 3;
 	else if (CurrentState.ComboCount < 11)
-		ComboProration = .2f;
+		ComboProration = 2;
 	else
-		ComboProration = .1f;
+		ComboProration = 1;
 
-	DamageToApply *= ComboProration;
+	DamageToApply = FMath::FloorToInt(DamageToApply * ComboProration / 10);
 
 	if (Hitbox.AttackProperties & IsSuper)
-		DamageToApply = FMath::Max((int32)(OpponentValor * Hitbox.BaseDamage * .25f), DamageToApply); //Supers will always deal a minimum of 25% their base damage affected by valor
+		DamageToApply = FMath::Max(FMath::FloorToInt(OpponentValor * Hitbox.BaseDamage / 4), DamageToApply); //Supers will always deal a minimum of 25% their base damage affected by valor
 
 	DamageToApply = FMath::Max(1, DamageToApply); //non-super attacks will always deal a minimum of one damage
 
@@ -2780,13 +3059,13 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		if (Opponent->CurrentState.ComboTimer > 960 && !(Hitbox.AttackProperties & IsSpecial)) //16 seconds, normal attacks will only deal 1 frame of hitstun
 			HitStunToApply = 1;
 		else if (Opponent->CurrentState.ComboTimer > 840) //14 seconds, special attacks have a minimum of 60% their base hitstun
-			HitStunToApply *= .6f;
+			HitStunToApply *= 6/10;
 		else if (Opponent->CurrentState.ComboTimer > 600)//10 seconds
-			HitStunToApply *= .7f;
+			HitStunToApply *= 7/10;
 		else if (Opponent->CurrentState.ComboTimer > 420)//7 seconds
-			HitStunToApply *= .8f;
+			HitStunToApply *= 8/10;
 		else if (Opponent->CurrentState.ComboTimer > 300)//5 seconds
-			HitStunToApply *= .9f;
+			HitStunToApply *= 9/10;
 	}
 	Opponent->CurrentState.HitStun = HitStunToApply;
 	if (Opponent->CurrentState.bIsCrouching || Opponent->IsCurrentAnimation(Opponent->GuardLo) || Opponent->IsCurrentAnimation(Opponent->GuardLoHeavy)) //two extra frames of hitstun if hitting a crouching opponent
@@ -2798,7 +3077,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 	//meter gain for each character
 	if (Opponent->CurrentState.ShatteredTime == 0)
-		Opponent->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * FMath::Max(1.f, Opponent->CurrentState.ResolvePulse * .5f)), 1);
+		Opponent->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * FMath::Max(1.f, Opponent->CurrentState.ResolvePulse / 2)), 1);
 
 	/*if (CurrentState.ResolveRecoverTimer >= 180)
 		CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * 3), 1);*/
@@ -2813,6 +3092,15 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	CurrentState.AvailableActions = Hitbox.PotentialActions;
 
 	//Apply knockback to opponent
+	if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+		KnockBackToApply *= FVector2D(-1, 1);
+	else if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+	{
+	}
+	else if (CurrentState.bFacingRight)
+	{
+		KnockBackToApply *= FVector2D(-1, 1);
+	}
 	Opponent->CurrentState.KnockBack = KnockBackToApply;
 
 	//apply pushback to self when not using a special or super
@@ -2823,9 +3111,9 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		if (Opponent->CurrentState.bTouchingWall) //if opponent is against a wall, character has to move back instead albeit with less magnitude
 		{
 			if (FMath::Abs(Hitbox.PotentialKnockBack.X) > FMath::Abs(Hitbox.PotentialKnockBack.Y))
-				WallPushBack = .5f * FMath::Abs(Hitbox.PotentialKnockBack.X);
+				WallPushBack = .85f * FMath::Abs(Hitbox.PotentialKnockBack.X);
 			else
-				WallPushBack = .25f * (FMath::Abs(Hitbox.PotentialKnockBack.X) + FMath::Abs(Hitbox.PotentialKnockBack.Y));
+				WallPushBack = .425f * (FMath::Abs(Hitbox.PotentialKnockBack.X) + FMath::Abs(Hitbox.PotentialKnockBack.Y));
 		}
 
 		if (Opponent->CurrentState.ComboTimer > 180) //will not experience pushback during first three seconds of a combo
@@ -2848,17 +3136,17 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			else
 			{
 				if (Opponent->CurrentState.ComboTimer < 300)
-					PushBack = 1.05f;
-				else if (Opponent->CurrentState.ComboTimer < 420)
-					PushBack = 1.1f;
-				else if (Opponent->CurrentState.ComboTimer < 540)
-					PushBack = 1.15f;
-				else if (Opponent->CurrentState.ComboTimer < 720)
-					PushBack = 1.2f;
-				else if (Opponent->CurrentState.ComboTimer < 900)
 					PushBack = 1.25f;
-				else
+				else if (Opponent->CurrentState.ComboTimer < 420)
 					PushBack = 1.35f;
+				else if (Opponent->CurrentState.ComboTimer < 540)
+					PushBack = 1.45f;
+				else if (Opponent->CurrentState.ComboTimer < 720)
+					PushBack = 1.55f;
+				else if (Opponent->CurrentState.ComboTimer < 900)
+					PushBack = 1.65f;
+				else
+					PushBack = 1.75f;
 			}
 		}
 		else if (!CurrentState.bIsAirborne)
@@ -2868,6 +3156,21 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			CurrentState.KnockBack.X = WallPushBack;
 		else
 			CurrentState.KnockBack.X = PushBack;
+	}
+
+	//place and play hit effect
+		//place at midpoint between hitbox center and hurtbox center
+	if (!(Hitbox.AttackProperties & NoHitEffect))
+	{
+		if (Opponent)
+		{
+			if (SpecialVFX[0]->CurrentState.bIsActive)
+			{
+				Opponent->SpecialVFX[0]->Activate(IntersectCenter, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties);
+			}
+			else
+				SpecialVFX[0]->Activate(IntersectCenter, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties);
+		}
 	}
 }
 
@@ -3032,7 +3335,7 @@ void ABTCharacterBase::SaveFXStates()
 
 bool ABTCharacterBase::BlitzCancel()
 {
-	if (CurrentState.AvailableActions & AcceptMove && CurrentState.LPressed > 0 && CurrentState.BPressed > 0 && FMath::Abs(CurrentState.LPressed - CurrentState.BPressed) <= 3)
+	if (CurrentState.AvailableActions & AcceptMove && !CurrentState.bIsCrouching && CurrentState.LPressed > 0 && CurrentState.BPressed > 0 && FMath::Abs(CurrentState.LPressed - CurrentState.BPressed) <= 3)
 	{
 		if (CurrentState.Dir4 == DirInputTime)
 			bBackThrow = true;
@@ -3050,6 +3353,7 @@ bool ABTCharacterBase::BlitzCancel()
 	{
 		CurrentState.Resolve--;
 		CurrentState.Durability = 750;
+		CurrentState.LandingLag = 0;
 		CurrentState.MPressed = 0;
 		CurrentState.HPressed = 0;
 		CurrentState.ResolveRecoverTimer = 0;
@@ -3061,8 +3365,7 @@ bool ABTCharacterBase::BlitzCancel()
 			if (CurrentState.Dir6 == DirInputTime) //blitz air dash forward
 			{
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
-				TurnAroundCheck();
-				CurrentState.Velocity = FVector2D(BlitzDashForce, 0);
+				CurrentState.Velocity = FVector2D(4.25, 0);
 				CurrentState.GravDefyTime = 24;
 				if (!CurrentState.bFacingRight)
 					CurrentState.Velocity.X *= -1;
@@ -3091,13 +3394,12 @@ bool ABTCharacterBase::BlitzCancel()
 				}
 				Sigils[0]->Activate(SigilPosition, SigilRotation);
 
-				return EnterNewAnimation(AirDashForward);
+				return EnterNewAnimation(BlitzDashForward);
 			}
 			if (CurrentState.Dir4 == DirInputTime) //blitz air dash backward
 			{
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
-				TurnAroundCheck();
-				CurrentState.Velocity = FVector2D(-.85f * BlitzDashForce, 0);
+				CurrentState.Velocity = FVector2D(-4, 0);
 				CurrentState.GravDefyTime = 24;
 				if (!CurrentState.bFacingRight)
 					CurrentState.Velocity.X *= -1;
@@ -3126,13 +3428,13 @@ bool ABTCharacterBase::BlitzCancel()
 
 				CurrentState.bBlitzing = true;
 
-				return EnterNewAnimation(AirDashBackward);
+				return EnterNewAnimation(BlitzDashBackward);
 			}
 			if (CurrentState.Dir2 == DirInputTime) //blitz downward
 			{
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
 				TurnAroundCheck();
-				CurrentState.Velocity = FVector2D(0, -BlitzDashForce);
+				CurrentState.Velocity = FVector2D(0, -5);
 				CurrentState.GravDefyTime = 0;
 
 				CurrentState.bBlitzing = true;
@@ -3156,7 +3458,8 @@ bool ABTCharacterBase::BlitzCancel()
 			{
 				TurnAroundCheck();
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 2);
-				
+				CurrentState.BlockStun = 0;
+
 				CurrentState.Resolve--;
 
 				return EnterNewAnimation(BreakerBlitz);
@@ -3209,6 +3512,26 @@ void ABTCharacterBase::SpawnPBS() //spawn projectiles, blitz image, and sigils
 			BlitzImage = GetWorld()->SpawnActor<ABlitzImageBase>(BlitzImageBlueprint, GetActorLocation(), FRotator(0), SpawnParams);
 			BlitzImage->AssignOwner(this);
 			CurrentState.CurrentBlitzState.Add(BlitzImage->CurrentState);
+		}
+
+		if (HitFXBlueprint)
+		{
+			SpecialVFX.Add(GetWorld()->SpawnActor<ABTVFXBase>(HitFXBlueprint, GetActorLocation(), FRotator(0), SpawnParams));
+			if (SpecialVFX.Num() > 0)
+			{
+				SpecialVFX[0]->AssignOwner(this);
+				CurrentState.CurrentEffectStates.Add(SpecialVFX[0]->CurrentState);
+			}
+		}
+
+		if (GuardFXBlueprint)
+		{
+			SpecialVFX.Add(GetWorld()->SpawnActor<ABTVFXBase>(GuardFXBlueprint, GetActorLocation(), FRotator(0), SpawnParams));
+			if (SpecialVFX.Num() > 1)
+			{
+				SpecialVFX[1]->AssignOwner(this);
+				CurrentState.CurrentEffectStates.Add(SpecialVFX[1]->CurrentState);
+			}
 		}
 	}
 }
@@ -3267,14 +3590,6 @@ void ABTCharacterBase::ProcessBlitz()
 		{
 			Opponent->CurrentState.SlowMoTime = 85;
 			UE_LOG(LogTemp, Warning, TEXT("Focus Blitz Slow"));
-			/*if (Opponent->IsCurrentAnimation(Opponent->FocusBlitz)) //only way this happens is if both players FB within three frames of each other
-			{
-				CurrentState.SlowMoTime = 0;
-			}
-			else
-			{
-				Opponent->CurrentState.SlowMoTime = 85; 
-			}*/
 		}
 		else if (IsCurrentAnimation(BreakerBlitz))
 		{
@@ -3299,11 +3614,11 @@ void ABTCharacterBase::ProcessBlitz()
 
 				//Opponent successfully guarded the attack
 				int32 BlockstunToApply = 18;
-				FVector2D KnockbackToApply = FVector2D(2, 0);
+				FVector2D KnockBackToApply = FVector2D(2, 0);
 
 				if (Opponent->CurrentState.bIsAirborne)
 				{
-					KnockbackToApply.Y = 1.f;
+					KnockBackToApply.Y = 1.f;
 				}
 
 				if (Opponent->CurrentState.JustDefense >= 0) //if the opponent Instant Blocked the attack
@@ -3312,15 +3627,14 @@ void ABTCharacterBase::ProcessBlitz()
 					BlockstunToApply = BlockstunToApply * 2 / 3;
 
 					BlockstunToApply = FMath::Max(1, BlockstunToApply);
-					KnockbackToApply *= 0;
+					KnockBackToApply *= 0;
 					
 					//reward opponent for blocking with exceptional timing
 					Opponent->CurrentState.Durability += 250;
 					Opponent->CurrentState.ResolvePulse += 3;
-					Opponent->CurrentState.JustDefense = 0;
 
 					//make opponent flash white
-					Opponent->StatusMix = .5f;
+					Opponent->StatusMix = .75f;
 					Opponent->CurrentState.StatusTimer = 8;
 					Opponent->StatusColor = FVector(1);
 					UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
@@ -3336,14 +3650,16 @@ void ABTCharacterBase::ProcessBlitz()
 				Opponent->CurrentState.HitStop = 8;
 				CurrentState.HitStop = 8;
 
-				if (Opponent->CurrentState.bTouchingWall && KnockbackToApply.X >= 0)
+				if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+					KnockBackToApply *= FVector2D(-1, 1);
+				else if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
 				{
-					CurrentState.KnockBack = FVector2D(.75f * KnockbackToApply.X, 0);
 				}
-				else
+				else if (!CurrentState.bFacingRight)
 				{
-					Opponent->CurrentState.KnockBack = KnockbackToApply;
+					KnockBackToApply *= FVector2D(-1, 1);
 				}
+				Opponent->CurrentState.KnockBack = KnockBackToApply;
 
 				//update opponent's animation to guarding
 				if (CurrentState.bIsAirborne)
@@ -3369,7 +3685,7 @@ void ABTCharacterBase::ProcessBlitz()
 				Opponent->CurrentState.SlowMoTime = 18; //Slows opponent for .5 seconds
 				if (Opponent->CurrentState.bIsAirborne)
 				{
-					Opponent->CurrentState.KnockBack.Y = 1.5f;
+					Opponent->CurrentState.KnockBack = FVector2D(3.f, 2.25f);
 					Opponent->EnterNewAnimation(Opponent->DeflectedAir);
 				}
 				else
@@ -3475,11 +3791,14 @@ void ABTCharacterBase::HitAnimation()
 		}
 		else if (CurrentState.bIsAirborne || CurrentState.KnockBack.Y != 0)
 		{
-			CurrentState.bIsAirborne = true;
-			if (CurrentState.CharacterHitState & CanKnockAway)
+			if (CurrentState.KnockBack.Y < 0 && !CurrentState.bIsAirborne && CurrentState.CharacterHitState & CanGroundBounce)
+				EnterNewAnimation(GroundBounce);
+			else if (CurrentState.CharacterHitState & CanKnockAway)
 				EnterNewAnimation(KnockAway);
 			else
 				EnterNewAnimation(HitstunAir);
+
+			CurrentState.bIsAirborne = true;
 		}
 		else if (!CurrentState.bIsAirborne) //ground only hit states
 		{
@@ -3487,8 +3806,6 @@ void ABTCharacterBase::HitAnimation()
 				EnterNewAnimation(Crumple);
 			else if (CurrentState.CharacterHitState & CanStagger && !IsCurrentAnimation(Stagger))
 			{
-				if (CurrentState.HitStun < 30)
-					CurrentState.HitStun = 30;
 				EnterNewAnimation(Stagger);
 			}
 			else if (CurrentState.bIsCrouching)
@@ -3515,13 +3832,6 @@ void ABTCharacterBase::HitAnimation()
 						EnterNewAnimation(HitSHIn);
 				}
 			}
-		}
-
-		//place and play hit effect
-		//place at midpoint between hitbox center and hurtbox center
-		if (!(CurrentState.CharacterHitState & NoHitEffect))
-		{
-
 		}
 	}
 }
@@ -3614,11 +3924,8 @@ void ABTCharacterBase::DrawHurtbox(FHurtbox Box)
 void ABTCharacterBase::ResetSmear()
 {
 	bShowSmear = true;
-
-	FVector Scale = FVector(1);
-	if (!CurrentState.bFacingRight)
-		Scale.X *= -1;
-	SmearMesh->SetRelativeScale3D(Scale);
 }
 
 void ABTCharacterBase::DrawSmear() {}
+
+void ABTCharacterBase::CreateVariables() {}

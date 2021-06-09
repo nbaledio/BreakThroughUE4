@@ -8,6 +8,7 @@
 #include "BTProjectileBase.h"
 #include "Sigil.h"
 #include "BlitzImageBase.h"
+#include "BTVFXBase.h"
 #include "BreakThroughPlayerController.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundCue.h"
@@ -94,6 +95,7 @@ enum AttackProperties
 	IsHeavy = (1 << 25),
 	LowerBodyHit = (1 << 26),
 	ForceStand = (1 << 27),
+	IsUpwardSlash = (1 << 28),
 };
 
 class ABTProjectileBase;
@@ -103,6 +105,8 @@ struct FSigilState;
 class ABlitzImageBase;
 struct FBlitzState;
 class UAnimationFrame;
+class ABTVFXBase;
+struct FEffectState;
 
 USTRUCT(BlueprintType)
 struct FAnimationFrame
@@ -192,6 +196,7 @@ struct FCharacterState
 	TArray<FProjectileState> CurrentProjectileStates;
 	TArray<FSigilState> CurrentSigilStates;
 	TArray<FBlitzState> CurrentBlitzState;
+	TArray<FEffectState> CurrentEffectStates;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
 	uint8 AnimFrameIndex = 0;
@@ -302,6 +307,7 @@ struct FCharacterState
 	uint8 DoubleDir6 = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 DoubleDir4 = 0;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 AirJump = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
@@ -452,6 +458,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
 		TSubclassOf<class ABlitzImageBase> BlitzImageBlueprint;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
+		TSubclassOf<class ABTVFXBase> HitFXBlueprint;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
+		TSubclassOf<class ABTVFXBase> GuardFXBlueprint;
+
 	ABTCharacterBase* Opponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "State")
@@ -460,6 +472,8 @@ public:
 	TArray<ABTProjectileBase*> Projectiles;
 
 	TArray<ASigil*> Sigils;
+
+	TArray<ABTVFXBase*> SpecialVFX;
 
 	ABlitzImageBase* BlitzImage;
 
@@ -593,7 +607,17 @@ protected:
 
 	virtual void SpawnPBS(); //spawn in character's projectiles, blitz image, and sigils
 
+	virtual void CreateVariables();
+
 	bool BlitzCancel();
+
+	bool TurnAroundCheck();
+
+	virtual bool NormalAttacks() { return false; };
+
+	virtual bool SpecialAttacks() { return false; };
+
+	virtual bool SuperAttacks() { return false; };
 
 	bool QCF();
 
@@ -621,11 +645,13 @@ protected:
 
 	bool bShowSmear;
 
-	/* Affects how quickly the character falls to the ground (See below for values per weight class)
-		Featherweight = .95 
-		Lightweight = .98
+	FVector2D IntersectCenter;
+
+	/* Affects how quickly the character falls to the ground (See below for values per weight class) 
+		Featherweight = .95
+		Lightweight = .97
 		Middleweight = 1
-		Heavyweight = 1.03  */
+		Heavyweight = 1.05  */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float Weight = 1;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
@@ -644,7 +670,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float MaxRunSpeed = 5; //Caps Velocity upon hitting an opponent with an attack
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
-		float BlitzDashForce = 2;
+		float AirDashForce = 4;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		uint8 AirDashDuration = 16;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		uint8 MaxJumps = 2;
 	//x dictates horizontal acceleration, z dictates vertical acceleration. y should never be changed or touched
@@ -655,7 +683,7 @@ protected:
 		FVector2D JumpForce;
 
 	//number of frames that an input is active for
-		uint8 InputTime = 8;
+		uint8 InputTime = 3;
 		uint8 DirInputTime = 12;
 
 public:
@@ -713,6 +741,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> AirDashBackward;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
+		TArray<FAnimationFrame> BlitzDashForward;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
+		TArray<FAnimationFrame> BlitzDashBackward;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> AirDashForwardOut;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> AirDashBackwardOut;
@@ -749,6 +781,10 @@ public:
 		TArray<FAnimationFrame> ThrowAttempt;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
 		TArray<FAnimationFrame> AirThrowAttempt;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
+		TArray<FAnimationFrame> NormalThrow;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
+		TArray<FAnimationFrame> NormalAirThrow;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
 		TArray<FAnimationFrame> ResoluteCounter;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throws")
@@ -845,8 +881,6 @@ private:
 
 	//Take in information from CurrentAnimFrame
 	void ProcessAnimationFrame();
-
-	bool TurnAroundCheck();
 
 	bool TriggerTurnAround();
 

@@ -48,8 +48,6 @@ struct FTestHitbox
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Properties")
 		int32 ResolveDamage = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Properties")
-		int32 AttackLevel = 0;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Properties")
 		int32 AttackHeight = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Properties")
 		uint8 BaseHitStun = 0;
@@ -65,6 +63,8 @@ struct FTestHitbox
 		FVector2D PotentialKnockBack;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Properties")
 		FVector2D PotentialAirKnockBack;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Properties")
+		FVector2D PotentialCounterKnockBack;
 };
 
 UCLASS()

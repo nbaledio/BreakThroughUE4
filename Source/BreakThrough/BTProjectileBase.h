@@ -8,7 +8,6 @@
 #include "Sound/SoundCue.h"
 #include "BTProjectileBase.generated.h"
 
-//struct FHitbox;
 class ABTCharacterBase;
 
 USTRUCT(BlueprintType)
@@ -162,6 +161,10 @@ public:
 		bool bCheckFriends; //whether to check if this projectile is hitting projectiles from the same owner
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		bool bCheckHitByOwner; //whether to check if this projectile is being hit by the owner
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		bool bHoriPositionRelative = false; //whether relative horizontal position to target has impact on knockback calculation
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		bool bVertPositionRelative = false; //whether relative vertical position to target has impact on knockback calculation
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
 		FVector2D SurfaceBounds = FVector2D(0);
@@ -192,6 +195,8 @@ public:
 	virtual void UpdatePosition();
 
 	virtual void DrawProjectile();  //set material parameters from child class
+
+	virtual void CreateMaterials();
 
 protected:
 	// Called when the game starts or when spawned

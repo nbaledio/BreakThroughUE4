@@ -22,7 +22,7 @@ enum BreakThroughInputs
 	INPUT_TAUNT = (1 << 8),
 	INPUT_START = (1 << 9),
 	INPUT_SELECT = (1 << 10),
-	INPUT_LEFT_STICK_CLICK = (1 << 11),
+	INPUT_DASH = (1 << 11),
 	INPUT_RIGHT_STICK_CLICK = (1 << 12),
 	INPUT_LM_COMBO = INPUT_LIGHT + INPUT_MEDIUM,
 	INPUT_HB_COMBO = INPUT_HEAVY + INPUT_BREAK,
@@ -67,7 +67,7 @@ protected:
 		{ EKeys::Gamepad_LeftTrigger,       INPUT_MH_COMBO },
 		{ EKeys::Gamepad_Special_Right,     INPUT_START },
 		{ EKeys::Gamepad_Special_Left,      INPUT_SELECT },
-		{ EKeys::Gamepad_LeftThumbstick,    INPUT_LEFT_STICK_CLICK },
+		{ EKeys::Gamepad_LeftThumbstick,    INPUT_DASH},
 		{ EKeys::Gamepad_RightThumbstick,   INPUT_RIGHT_STICK_CLICK },
 		{ EKeys::S,							INPUT_DOWN },
 		{ EKeys::SpaceBar,					INPUT_UP },
@@ -84,7 +84,7 @@ protected:
 		{ EKeys::Semicolon,					INPUT_MH_COMBO },
 		{ EKeys::Escape,					INPUT_START },
 		{ EKeys::BackSpace,					INPUT_SELECT },
-		{ EKeys::Comma,						INPUT_LEFT_STICK_CLICK },
+		{ EKeys::Comma,						INPUT_DASH },
 		{ EKeys::Period,					INPUT_RIGHT_STICK_CLICK },
 	};
 

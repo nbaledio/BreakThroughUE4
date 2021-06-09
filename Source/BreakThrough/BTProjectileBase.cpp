@@ -39,6 +39,9 @@ void ABTProjectileBase::Activate(bool FacingRight)
 	CurrentState.bHitSuccess = false;
 	CurrentState.bAttackMadeContact = false;
 	CurrentState.bProjectileClash = false;
+
+	CurrentState.AnimFrameIndex = 0;
+	CurrentState.FramePlayTime = 0;
 }
 
 void ABTProjectileBase::HitDetection()
@@ -77,11 +80,12 @@ void ABTProjectileBase::HitDetection()
 									{
 										CurrentState.bProjectileClash = true;
 										Projectile->CurrentState.bProjectileClash = true;
-										if (CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & CanDeflect && !(Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Hitboxes[i].AttackProperties & CanDeflect) && !(Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Hitboxes[i].AttackProperties & IsSuper))
+										//trigger clash effect
+										if (CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & CanDeflect && !(Projectile->CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & CanDeflect) && !(Projectile->CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & IsSuper))
 										{
 											Projectile->CurrentState.bIsActive = false;
 										}
-										else if (!(CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & CanDeflect) && (Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Hitboxes[i].AttackProperties & CanDeflect) && !(CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & IsSuper))
+										else if (!(CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & CanDeflect) && (Projectile->CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & CanDeflect) && !(CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & IsSuper))
 										{
 											CurrentState.bIsActive = false;
 										}
@@ -277,6 +281,9 @@ void ABTProjectileBase::HitDetection()
 							}
 						}
 					}
+				}
+				else if (CurrentState.bReflected) //look for hit
+				{
 				}
 			}
 			if (bCheckFriends) //see if the hitbox hits any friendly projectile hitboxes
@@ -479,6 +486,13 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 		KnockBackToApply = Hitbox.PotentialKnockBack;
 	}
 
+	if (bVertPositionRelative)
+	{
+		if (CurrentState.Position.Y > Owner->Opponent->CurrentState.Position.Y)
+			Owner->Opponent->CurrentState.KnockBack.Y *= -1;
+	}
+
+
 	Owner->CurrentState.AvailableActions = Hitbox.PotentialActions;
 	Owner->Opponent->CurrentState.CharacterHitState = Hitbox.AttackProperties;
 	//apply certain modifiers based on circumstances around the hit
@@ -612,6 +626,23 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 	Owner->CurrentState.AvailableActions = Hitbox.PotentialActions;
 
 	//Apply knockback to opponent
+	if (bHoriPositionRelative)
+	{
+		if (CurrentState.Position.X > Owner->Opponent->CurrentState.Position.X)
+			KnockBackToApply *= FVector2D(-1, 1);
+		else if (CurrentState.Position.X < Owner->Opponent->CurrentState.Position.X)
+		{
+		}
+		else if (!CurrentState.bFacingRight)
+		{
+			KnockBackToApply *= FVector2D(-1, 1);
+		}
+	}
+	else if (CurrentState.bFacingRight)
+	{
+		KnockBackToApply *= FVector2D(-1, 1);
+	}
+
 	Owner->Opponent->CurrentState.KnockBack = KnockBackToApply;
 
 	//place and play hit effect
@@ -642,7 +673,7 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		(Owner->Opponent->CurrentState.bIsGuarding && !Owner->Opponent->CurrentState.bIsAirborne && !Owner->Opponent->CurrentState.bIsCrouching && Hitbox.AttackHeight == Overhead)) && Hitbox.AttackHeight != Unblockable)
 	{
 		int32 BlockstunToApply;
-		FVector2D KnockbackToApply;
+		FVector2D KnockBackToApply;
 		if (Hitbox.BaseBlockStun == 0)
 			BlockstunToApply = Hitbox.BaseHitStun * .8f;
 		else
@@ -650,17 +681,17 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 
 		if (Owner->Opponent->CurrentState.bIsAirborne)
 		{
-			if (FMath::Abs(Hitbox.PotentialAirKnockBack.X) > FMath::Abs(Hitbox.PotentialAirKnockBack.Y))
-				KnockbackToApply = FVector2D(Hitbox.PotentialAirKnockBack.X, .3f);
+			if (FMath::Abs(Hitbox.PotentialAirKnockBack.X) > FMath::Abs(Hitbox.PotentialAirKnockBack.Y) || Hitbox.PotentialAirKnockBack.X < 0)
+				KnockBackToApply = FVector2D(Hitbox.PotentialAirKnockBack.X, 1.f);
 			else
-				KnockbackToApply = FVector2D(.5f * (Hitbox.PotentialAirKnockBack.X + FMath::Abs(Hitbox.PotentialAirKnockBack.Y)), .3f);
+				KnockBackToApply = FVector2D(.5f * (Hitbox.PotentialAirKnockBack.X + FMath::Abs(Hitbox.PotentialAirKnockBack.Y)), 1.f);
 		}
 		else
 		{
-			if (FMath::Abs(Hitbox.PotentialKnockBack.X) > FMath::Abs(Hitbox.PotentialKnockBack.Y))
-				KnockbackToApply = FVector2D(Hitbox.PotentialKnockBack.X, .3f);
+			if (FMath::Abs(Hitbox.PotentialKnockBack.X) > FMath::Abs(Hitbox.PotentialKnockBack.Y) || Hitbox.PotentialKnockBack.X < 0)
+				KnockBackToApply = FVector2D(Hitbox.PotentialKnockBack.X, 0);
 			else
-				KnockbackToApply = FVector2D(.5f * (Hitbox.PotentialKnockBack.X + FMath::Abs(Hitbox.PotentialKnockBack.Y)), .3f);
+				KnockBackToApply = FVector2D(.5f * (Hitbox.PotentialKnockBack.X + FMath::Abs(Hitbox.PotentialKnockBack.Y)), 0);
 		}
 
 		BlockstunToApply = FMath::Min(BlockstunToApply, 30);
@@ -674,7 +705,7 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 				BlockstunToApply = BlockstunToApply * 2 / 3;
 
 			BlockstunToApply = FMath::Max(1, BlockstunToApply);
-			KnockbackToApply *= 0;
+			KnockBackToApply *= 0;
 			
 			//reward opponent for blocking with exceptional timing
 			Owner->Opponent->CurrentState.Durability += 250;
@@ -684,9 +715,9 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 				Owner->Opponent->CurrentState.ResolveRecoverTimer = 180;
 
 			//make opponent flash white
-			Owner->Opponent->StatusMix = 3;
+			Owner->Opponent->StatusMix = .75f;
 			Owner->Opponent->CurrentState.StatusTimer = 5;
-			Owner->Opponent->StatusColor = FVector(.9f, .9f, .9f);
+			Owner->Opponent->StatusColor = FVector(1);
 			UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
 		}
 		else
@@ -759,17 +790,32 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		Owner->Opponent->CurrentState.HitStop = Hitbox.BaseHitStop - 2;
 		CurrentState.HitStop = Hitbox.BaseHitStop - 2;
 
-		if (Owner->Opponent->CurrentState.bTouchingWall && KnockbackToApply.X >= 0)
+		if (KnockBackToApply.X > 0)
+			KnockBackToApply.X = FMath::Max(1.75f, KnockBackToApply.X);
+
+		Owner->Opponent->CurrentState.KnockBack = KnockBackToApply;
+
+		if (bHoriPositionRelative)
 		{
-			if (!(Hitbox.AttackProperties & IsSuper) && !(Hitbox.AttackProperties & IsSpecial))
-				Owner->CurrentState.KnockBack = FVector2D(.75f * KnockbackToApply.X, 0);
+			if (CurrentState.Position.X > Owner->Opponent->CurrentState.Position.X)
+				Owner->Opponent->CurrentState.KnockBack *= FVector2D(-1, 1);
+			else if (CurrentState.Position.X < Owner->Opponent->CurrentState.Position.X)
+			{
+			}
+			else if (!CurrentState.bFacingRight)
+			{
+				Owner->Opponent->CurrentState.KnockBack *= FVector2D(-1, 1);
+			}
 		}
-		else
+		else if (!CurrentState.bFacingRight)
 		{
-			if (KnockbackToApply.X < 0)
-				Owner->Opponent->CurrentState.KnockBack = FVector2D(.5f * KnockbackToApply.X, KnockbackToApply.Y);
-			else
-				Owner->Opponent->CurrentState.KnockBack = KnockbackToApply;
+			Owner->Opponent->CurrentState.KnockBack *= FVector2D(-1, 1);
+		}
+
+		if (bVertPositionRelative)
+		{
+			if (CurrentState.Position.Y > Owner->Opponent->CurrentState.Position.Y)
+				Owner->Opponent->CurrentState.KnockBack.Y *= -1;
 		}
 
 		//increase ResolvePulse
@@ -850,3 +896,5 @@ void ABTProjectileBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 	CurrentState.bHitSuccess = true;
 	AttackCalculation(Hitbox, Owner->Opponent->CurrentState.Position);
 }
+
+void ABTProjectileBase::CreateMaterials(){ }
