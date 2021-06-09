@@ -85,7 +85,7 @@ bool ABTCharacterACH::PassiveTransitions()
 
 bool ABTCharacterACH::ExitTimeTransitions()
 {
-	if (IsCurrentAnimation(NormalJB) || IsCurrentAnimation(NormalJH) || IsCurrentAnimation(NormalJM) || IsCurrentAnimation(NormalJL))
+	if (IsCurrentAnimation(NormalJB) || IsCurrentAnimation(NormalJH) || IsCurrentAnimation(NormalJM) || IsCurrentAnimation(NormalJL) || IsCurrentAnimation(TowerLeap))
 		return EnterNewAnimation(MidJump);
 
 	if (IsCurrentAnimation(Normal5B) || IsCurrentAnimation(Normal5H) || IsCurrentAnimation(Normal5M) || IsCurrentAnimation(Normal5L) || IsCurrentAnimation(Normal2B) || IsCurrentAnimation(Normal2H) ||
@@ -103,7 +103,7 @@ void ABTCharacterACH::AnimationEvents()
 	ABTCharacterBase::AnimationEvents();
 
 	//Add character specific animation logic here (adding more available actions based on current state, etc.)
-	/*if (CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0) //makes Achealis's special attacks able to cancel into other specials if her install is active
+	if (CurrentState.SpecialVariables[WCDuration] > 0 && CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0) //makes Achealis's special attacks able to cancel into other specials if her install is active
 	{
 		if (CurrentState.CurrentAnimFrame.Hitboxes[0].AttackProperties & IsSpecial)
 		{
@@ -112,7 +112,29 @@ void ABTCharacterACH::AnimationEvents()
 				CurrentState.CurrentAnimFrame.Hitboxes[i].PotentialActions |= AcceptSpecial;
 			}
 		}
-	}*/
+	}
+
+	if (IsCurrentAnimation(TowerLeap) && CurrentState.AnimFrameIndex == 4 && CurrentState.PosePlayTime == 0)
+	{
+		if (CurrentState.SpecialVariables[MTowerLeap])
+		{
+			CurrentState.Velocity = FVector2D(3.5, 3.5);
+		}
+		else
+		{
+			CurrentState.Velocity = FVector2D(2.35, 4.5);
+		}
+
+		if (CurrentState.Dir4 == DirInputTime)
+		{
+			CurrentState.Velocity.X -= 1;
+		}
+		else if (CurrentState.Dir6 == DirInputTime)
+			CurrentState.Velocity.X += .5;
+
+		if (!CurrentState.bFacingRight)
+			CurrentState.Velocity.X *= -1;
+	}
 
 	ResetSmear();
 
@@ -353,7 +375,7 @@ void ABTCharacterACH::SetColor(uint8 ColorID)
 		Sigils[1]->SigilColor = Sigils[0]->SigilColor;
 		Sigils[0]->EchoColor = FVector(1, .1f, 1);
 		Sigils[1]->EchoColor = Sigils[0]->EchoColor;
-		//BlitzImage->BlitzColor = FVector(.9f, .2f, .75f);
+		//BlitzImage->BlitzColor = FVector(1, .3f, 1);
 		break;
 
 	default:
@@ -1096,6 +1118,26 @@ bool ABTCharacterACH::NormalAttacks()
 bool ABTCharacterACH::SpecialAttacks()
 {
 	//Special Attacks
+	if (CurrentState.AvailableActions & AcceptSpecial)
+	{
+		if (!CurrentState.bIsAirborne)
+		{
+			if ((QCB() && (CurrentState.LPressed >= InputTime - 1  || CurrentState.MPressed >= InputTime - 1)) && !(CurrentState.MoveList & SpTowerLeap))
+			{
+				CurrentState.MoveList |= SpTowerLeap;
+
+				CurrentState.SpecialVariables[MTowerLeap] = (CurrentState.MPressed >= CurrentState.LPressed);
+
+				CurrentState.Dir2 = 0;
+				CurrentState.Dir1 = 0;
+				CurrentState.Dir4 = 0;
+				CurrentState.LPressed = 0;
+				CurrentState.MPressed = 0;
+				return EnterNewAnimation(TowerLeap);
+			}
+		}
+	}
+
 	return ABTCharacterBase::SpecialAttacks();
 }
 
@@ -1103,4 +1145,12 @@ bool ABTCharacterACH::SuperAttacks()
 {
 	//Break Triggers/Supers
 	return ABTCharacterBase::SuperAttacks();
+}
+
+void ABTCharacterACH::CreateVariables()
+{
+	for (uint8 i = 0; i < 4; i++)
+	{
+		CurrentState.SpecialVariables.Add(0);
+	}
 }

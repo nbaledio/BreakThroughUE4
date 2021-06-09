@@ -4,8 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Components/MaterialBillboardComponent.h"
 #include "BTVFXBase.generated.h"
+
+enum Interactions
+{
+	Hit = 0,
+	Guard,
+	Resolve,
+	Clash,
+	Deflect,
+};
 
 class ABTCharacterBase;
 
@@ -21,6 +29,8 @@ struct FEffectState
 
 	uint8 AnimFrameIndex; //can be used to denote where in the projectile's animation sequence we are (jump to specific numbers to transition to other animation states)
 	uint8 FramePlayTime = 0;
+	int32 HitProperties = 0;
+	uint8 Interaction = 0;
 
 	int32 HitStop;
 };
@@ -38,13 +48,16 @@ public:
 
 	FEffectState CurrentState;
 
-	virtual void Activate(FVector2D Location, bool bFacingRight);
+	virtual void Activate(FVector2D Location, bool bFacingRight, int32 HitInfo = 0, uint8 InteractType = 0);
 
 	virtual void Update();
 
 	virtual void DrawEffect();
 
 	virtual void CreateMaterials();
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Properties")
+		bool bAffectedBySlowMo;
 
 protected:
 	// Called when the game starts or when spawned
@@ -57,12 +70,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		USceneComponent* Transform;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		USkeletalMeshComponent* BaseMesh;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		UMaterialBillboardComponent* Billboard;
 
 public:	
 	// Called every frame

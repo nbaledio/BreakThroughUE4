@@ -41,6 +41,7 @@ void ABTCharacterBase::BeginPlay()
 	Super::BeginPlay();
 	LineThickness = 3.f;
 	CreateMaterials();
+	CreateVariables();
 	SpawnPBS();
 	SetColor(1);
 	EnterNewAnimation(IdleStand);
@@ -224,7 +225,7 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 			CurrentState.Resolute = false;
 	}
 
-	if (CurrentState.CurrentAnimFrame.Pose != nullptr)
+	if (CurrentState.CurrentAnimFrame.Pose != nullptr && CurrentState.PosePlayTime == 0)
 		BaseMesh->PlayAnimation(CurrentState.CurrentAnimFrame.Pose, false);
 
 	AnimationEvents(); // perform certain actions based on the current frame of animation
@@ -312,7 +313,6 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 			if (CurrentState.HitStun > 0 && !IsCurrentAnimation(Sweep) && !IsCurrentAnimation(Crumple) && !IsCurrentAnimation(Tumble) && !IsCurrentAnimation(GroundBounce) && !IsCurrentAnimation(WallBounce))
 			{
 				CurrentState.HitStun--;
-				UE_LOG(LogTemp, Warning, TEXT("Player Hitstun: %d"), CurrentState.HitStun);
 			}
 			if (CurrentState.BlockStun > 0)
 				CurrentState.BlockStun--;
@@ -755,7 +755,7 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 						}
 						//when character is faster than opponent, and both are moving in the same direction or towards each other
-						else if (FMath::Abs(CurrentState.Velocity.X) > FMath::Abs(Opponent->CurrentState.Velocity.X) && CurrentState.SlowMoTime == 0 && Opponent->CurrentState.SlowMoTime == 0 &&
+						/*else if (FMath::Abs(CurrentState.Velocity.X) > FMath::Abs(Opponent->CurrentState.Velocity.X) && CurrentState.SlowMoTime == 0 && Opponent->CurrentState.SlowMoTime == 0 &&
 							((CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X < 0) || (CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X > 0) || (!CurrentState.bFacingRight && Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X > 0) || (CurrentState.bFacingRight && !Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X < 0)))
 						{
 							if (CurrentState.Position.X < Opponent->CurrentState.Position.X && Opponent->CurrentState.bFacingRight)
@@ -812,7 +812,7 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 									Opponent->CurrentState.Velocity.X = 0;
 								}
 							}
-						}
+						}*/
 						else
 						{
 							float MoveDistance = .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth - FMath::Abs(Opponent->CurrentState.Position.X - CurrentState.Position.X));
@@ -2315,7 +2315,7 @@ bool ABTCharacterBase::ExitTimeTransitions()
 	}
 
 	if (IsCurrentAnimation(NeutralJump) || IsCurrentAnimation(ForwardJump) || IsCurrentAnimation(BackwardJump) || IsCurrentAnimation(GuardAirOut) ||
-		IsCurrentAnimation(DeflectedAir) || IsCurrentAnimation(ThrowEscapeAir) || IsCurrentAnimation(BlitzOutAir))
+		IsCurrentAnimation(DeflectedAir) || IsCurrentAnimation(ThrowEscapeAir) || IsCurrentAnimation(BlitzOutAir) || IsCurrentAnimation(AirThrowAttempt))
 	{
 		return EnterNewAnimation(MidJump);
 	}
@@ -2347,7 +2347,7 @@ bool ABTCharacterBase::ExitTimeTransitions()
 	if (IsCurrentAnimation(StandUp) || IsCurrentAnimation(Brake) || IsCurrentAnimation(WakeUpFaceDown) || IsCurrentAnimation(WakeUpFaceUp) || IsCurrentAnimation(GuardHiOut) ||
 		IsCurrentAnimation(HitSLOut) || IsCurrentAnimation(HitSHOut) || IsCurrentAnimation(HitSLHeavyOut) || IsCurrentAnimation(HitSHHeavyOut) || IsCurrentAnimation(IdleStandBlink) ||
 		IsCurrentAnimation(StandIdleAction) || IsCurrentAnimation(Deflected) || IsCurrentAnimation(ThrowEscape) || IsCurrentAnimation(BlitzOutStanding) || IsCurrentAnimation(TurnAroundStand) ||
-		IsCurrentAnimation(ThrowAttempt) || IsCurrentAnimation(AirThrowAttempt))
+		IsCurrentAnimation(ThrowAttempt))
 		return EnterNewAnimation(IdleStand);
 
 	if (IsCurrentAnimation(CrouchDown) || IsCurrentAnimation(GuardLoOut) || IsCurrentAnimation(IdleCrouchBlink) || IsCurrentAnimation(CrouchIdleAction) ||
@@ -2571,6 +2571,10 @@ bool ABTCharacterBase::RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2
 	if (TL1.Y <= BR2.Y || TL2.Y <= BR1.Y)
 		return false;
 
+	FVector2D TL3 = FVector2D(FMath::Max(TL1.X, TL2.X), FMath::Max(TL1.Y, TL2.Y));
+	FVector2D BR3 = FVector2D(FMath::Min(BR1.X, BR2.X), FMath::Min(BR1.Y, BR2.Y));
+	
+	IntersectCenter = (TL3 + BR3) / 2; //record midpoint of area intersection for placing hit effect
 	return true;
 }
 
@@ -2895,7 +2899,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	else
 		OpponentValor = Opponent->Valor100;
 
-	int32 DamageToApply = OpponentValor * CurrentState.SpecialProration * Hitbox.BaseDamage;
+	int32 DamageToApply = FMath::FloorToInt(OpponentValor * CurrentState.SpecialProration * Hitbox.BaseDamage);
 	uint8 HitStunToApply = Hitbox.BaseHitStun;
 	FVector2D KnockBackToApply;
 	uint8 HitStopToApply = Hitbox.BaseHitStop;
@@ -2999,8 +3003,8 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		
 	if (Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)
 	{
-		DamageToApply = (int32)(.3f * DamageToApply);
-		HitStunToApply = (uint8)(.3f * HitStunToApply);
+		DamageToApply = FMath::FloorToInt(3 * DamageToApply / 10);
+		HitStunToApply = FMath::FloorToInt(3 * HitStunToApply / 10);
 	}
 
 	//calculate proration to apply on subsequent hits in a combo
@@ -3011,7 +3015,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		if ((Opponent->CurrentState.bArmorActive || Opponent->CurrentState.bCounterHitState) && Hitbox.AttackProperties & Shatter)
 		{
 			CurrentState.SpecialProration *= 1.2f;
-			DamageToApply *= 1.2f;
+			DamageToApply += DamageToApply/5;
 		}
 		else if (Opponent->CurrentState.bCounterHitState)
 			CurrentState.SpecialProration *= 1.1f;
@@ -3020,30 +3024,30 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		CurrentState.SpecialProration *= Hitbox.ForcedProration; //forced proration is applied as long as the move is used in combo
 
 	//apply damage, damage is scaled by the number of hits in a combo
-	float ComboProration;
+	int32 ComboProration;
 	if (CurrentState.ComboCount < 3)
-		ComboProration = 1;
+		ComboProration = 10;
 	else if (CurrentState.ComboCount < 5)
-		ComboProration = .8f;
+		ComboProration = 8;
 	else if (CurrentState.ComboCount < 6)
-		ComboProration = .7f;
+		ComboProration = 7;
 	else if (CurrentState.ComboCount < 7)
-		ComboProration = .6f;
+		ComboProration = 6;
 	else if (CurrentState.ComboCount < 8)
-		ComboProration = .5f;
+		ComboProration = 5;
 	else if (CurrentState.ComboCount < 9)
-		ComboProration = .4f;
+		ComboProration = 4;
 	else if (CurrentState.ComboCount < 10)
-		ComboProration = .3f;
+		ComboProration = 3;
 	else if (CurrentState.ComboCount < 11)
-		ComboProration = .2f;
+		ComboProration = 2;
 	else
-		ComboProration = .1f;
+		ComboProration = 1;
 
-	DamageToApply *= ComboProration;
+	DamageToApply = FMath::FloorToInt(DamageToApply * ComboProration / 10);
 
 	if (Hitbox.AttackProperties & IsSuper)
-		DamageToApply = FMath::Max((int32)(OpponentValor * Hitbox.BaseDamage * .25f), DamageToApply); //Supers will always deal a minimum of 25% their base damage affected by valor
+		DamageToApply = FMath::Max(FMath::FloorToInt(OpponentValor * Hitbox.BaseDamage / 4), DamageToApply); //Supers will always deal a minimum of 25% their base damage affected by valor
 
 	DamageToApply = FMath::Max(1, DamageToApply); //non-super attacks will always deal a minimum of one damage
 
@@ -3055,13 +3059,13 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		if (Opponent->CurrentState.ComboTimer > 960 && !(Hitbox.AttackProperties & IsSpecial)) //16 seconds, normal attacks will only deal 1 frame of hitstun
 			HitStunToApply = 1;
 		else if (Opponent->CurrentState.ComboTimer > 840) //14 seconds, special attacks have a minimum of 60% their base hitstun
-			HitStunToApply *= .6f;
+			HitStunToApply *= 6/10;
 		else if (Opponent->CurrentState.ComboTimer > 600)//10 seconds
-			HitStunToApply *= .7f;
+			HitStunToApply *= 7/10;
 		else if (Opponent->CurrentState.ComboTimer > 420)//7 seconds
-			HitStunToApply *= .8f;
+			HitStunToApply *= 8/10;
 		else if (Opponent->CurrentState.ComboTimer > 300)//5 seconds
-			HitStunToApply *= .9f;
+			HitStunToApply *= 9/10;
 	}
 	Opponent->CurrentState.HitStun = HitStunToApply;
 	if (Opponent->CurrentState.bIsCrouching || Opponent->IsCurrentAnimation(Opponent->GuardLo) || Opponent->IsCurrentAnimation(Opponent->GuardLoHeavy)) //two extra frames of hitstun if hitting a crouching opponent
@@ -3073,7 +3077,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 	//meter gain for each character
 	if (Opponent->CurrentState.ShatteredTime == 0)
-		Opponent->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * FMath::Max(1.f, Opponent->CurrentState.ResolvePulse * .5f)), 1);
+		Opponent->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * FMath::Max(1.f, Opponent->CurrentState.ResolvePulse / 2)), 1);
 
 	/*if (CurrentState.ResolveRecoverTimer >= 180)
 		CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * 3), 1);*/
@@ -3093,7 +3097,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	else if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
 	{
 	}
-	else if (!CurrentState.bFacingRight)
+	else if (CurrentState.bFacingRight)
 	{
 		KnockBackToApply *= FVector2D(-1, 1);
 	}
@@ -3152,6 +3156,21 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			CurrentState.KnockBack.X = WallPushBack;
 		else
 			CurrentState.KnockBack.X = PushBack;
+	}
+
+	//place and play hit effect
+		//place at midpoint between hitbox center and hurtbox center
+	if (!(Hitbox.AttackProperties & NoHitEffect))
+	{
+		if (Opponent)
+		{
+			if (SpecialVFX[0]->CurrentState.bIsActive)
+			{
+				Opponent->SpecialVFX[0]->Activate(IntersectCenter, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties);
+			}
+			else
+				SpecialVFX[0]->Activate(IntersectCenter, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties);
+		}
 	}
 }
 
@@ -3346,7 +3365,6 @@ bool ABTCharacterBase::BlitzCancel()
 			if (CurrentState.Dir6 == DirInputTime) //blitz air dash forward
 			{
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
-				TurnAroundCheck();
 				CurrentState.Velocity = FVector2D(4.25, 0);
 				CurrentState.GravDefyTime = 24;
 				if (!CurrentState.bFacingRight)
@@ -3381,7 +3399,6 @@ bool ABTCharacterBase::BlitzCancel()
 			if (CurrentState.Dir4 == DirInputTime) //blitz air dash backward
 			{
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
-				TurnAroundCheck();
 				CurrentState.Velocity = FVector2D(-4, 0);
 				CurrentState.GravDefyTime = 24;
 				if (!CurrentState.bFacingRight)
@@ -3495,6 +3512,26 @@ void ABTCharacterBase::SpawnPBS() //spawn projectiles, blitz image, and sigils
 			BlitzImage = GetWorld()->SpawnActor<ABlitzImageBase>(BlitzImageBlueprint, GetActorLocation(), FRotator(0), SpawnParams);
 			BlitzImage->AssignOwner(this);
 			CurrentState.CurrentBlitzState.Add(BlitzImage->CurrentState);
+		}
+
+		if (HitFXBlueprint)
+		{
+			SpecialVFX.Add(GetWorld()->SpawnActor<ABTVFXBase>(HitFXBlueprint, GetActorLocation(), FRotator(0), SpawnParams));
+			if (SpecialVFX.Num() > 0)
+			{
+				SpecialVFX[0]->AssignOwner(this);
+				CurrentState.CurrentEffectStates.Add(SpecialVFX[0]->CurrentState);
+			}
+		}
+
+		if (GuardFXBlueprint)
+		{
+			SpecialVFX.Add(GetWorld()->SpawnActor<ABTVFXBase>(GuardFXBlueprint, GetActorLocation(), FRotator(0), SpawnParams));
+			if (SpecialVFX.Num() > 1)
+			{
+				SpecialVFX[1]->AssignOwner(this);
+				CurrentState.CurrentEffectStates.Add(SpecialVFX[1]->CurrentState);
+			}
 		}
 	}
 }
@@ -3796,13 +3833,6 @@ void ABTCharacterBase::HitAnimation()
 				}
 			}
 		}
-
-		//place and play hit effect
-		//place at midpoint between hitbox center and hurtbox center
-		if (!(CurrentState.CharacterHitState & NoHitEffect))
-		{
-
-		}
 	}
 }
 
@@ -3897,3 +3927,5 @@ void ABTCharacterBase::ResetSmear()
 }
 
 void ABTCharacterBase::DrawSmear() {}
+
+void ABTCharacterBase::CreateVariables() {}

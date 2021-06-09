@@ -95,6 +95,7 @@ enum AttackProperties
 	IsHeavy = (1 << 25),
 	LowerBodyHit = (1 << 26),
 	ForceStand = (1 << 27),
+	IsUpwardSlash = (1 << 28),
 };
 
 class ABTProjectileBase;
@@ -306,6 +307,7 @@ struct FCharacterState
 	uint8 DoubleDir6 = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 DoubleDir4 = 0;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 AirJump = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
@@ -456,6 +458,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
 		TSubclassOf<class ABlitzImageBase> BlitzImageBlueprint;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
+		TSubclassOf<class ABTVFXBase> HitFXBlueprint;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
+		TSubclassOf<class ABTVFXBase> GuardFXBlueprint;
+
 	ABTCharacterBase* Opponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "State")
@@ -599,6 +607,8 @@ protected:
 
 	virtual void SpawnPBS(); //spawn in character's projectiles, blitz image, and sigils
 
+	virtual void CreateVariables();
+
 	bool BlitzCancel();
 
 	bool TurnAroundCheck();
@@ -634,6 +644,8 @@ protected:
 	virtual void DrawSmear();
 
 	bool bShowSmear;
+
+	FVector2D IntersectCenter;
 
 	/* Affects how quickly the character falls to the ground (See below for values per weight class) 
 		Featherweight = .95

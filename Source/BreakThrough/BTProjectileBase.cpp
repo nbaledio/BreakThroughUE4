@@ -11,9 +11,6 @@ ABTProjectileBase::ABTProjectileBase()
 
 	Transform = CreateDefaultSubobject<USceneComponent>(TEXT("Transform"));
 	RootComponent = Transform;
-
-	BaseMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Base Mesh"));
-	BaseMesh->SetupAttachment(RootComponent);
 }
 
 // Called when the game starts or when spawned
@@ -84,11 +81,11 @@ void ABTProjectileBase::HitDetection()
 										CurrentState.bProjectileClash = true;
 										Projectile->CurrentState.bProjectileClash = true;
 										//trigger clash effect
-										if (CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & CanDeflect && !(Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Hitboxes[i].AttackProperties & CanDeflect) && !(Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Hitboxes[i].AttackProperties & IsSuper))
+										if (CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & CanDeflect && !(Projectile->CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & CanDeflect) && !(Projectile->CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & IsSuper))
 										{
 											Projectile->CurrentState.bIsActive = false;
 										}
-										else if (!(CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & CanDeflect) && (Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Hitboxes[i].AttackProperties & CanDeflect) && !(CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & IsSuper))
+										else if (!(CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & CanDeflect) && (Projectile->CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & CanDeflect) && !(CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & IsSuper))
 										{
 											CurrentState.bIsActive = false;
 										}
@@ -284,6 +281,9 @@ void ABTProjectileBase::HitDetection()
 							}
 						}
 					}
+				}
+				else if (CurrentState.bReflected) //look for hit
+				{
 				}
 			}
 			if (bCheckFriends) //see if the hitbox hits any friendly projectile hitboxes
@@ -638,7 +638,7 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 			KnockBackToApply *= FVector2D(-1, 1);
 		}
 	}
-	else if (!CurrentState.bFacingRight)
+	else if (CurrentState.bFacingRight)
 	{
 		KnockBackToApply *= FVector2D(-1, 1);
 	}

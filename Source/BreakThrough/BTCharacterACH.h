@@ -21,15 +21,23 @@ enum Moves  //keeps track of what moves have already been used in a string using
 	nJM = (1 << 9),
 	nJH = (1 << 10),
 	nJB = (1 << 11),
-	TowerLeap = (1 << 12), //need to keep track of which Specials Achealis has used since she can enter a state where she can cancel specials into each other
-	LevelHell = (1 << 13), 
-	HeavenClimber= (1 << 14),
-	GenesisEdge = (1 << 15),
-	Starfall = (1 << 16),
+	SpTowerLeap = (1 << 12), //need to keep track of which Specials Achealis has used since she can enter a state where she can cancel specials into each other
+	SpLevelHell = (1 << 13), 
+	SpHeavenClimber= (1 << 14),
+	SpGenesisEdge = (1 << 15),
+	SpStarfall = (1 << 16),
 	/*IsSlash = (1 << 17),
 	IsVertical = (1 << 18),
 	IsHorizontal = (1 << 19),
 	LowerBodyHit = (1 << 20),*/
+};
+
+enum ACHValues  //keeps track of index for Achealis' unique variables
+{
+	SpearGlow,
+	MTowerLeap,
+	WCActive,
+	WCDuration,
 };
 
 UCLASS()
@@ -74,6 +82,8 @@ protected:
 	virtual bool SpecialAttacks() override;
 
 	virtual bool SuperAttacks() override;
+
+	virtual void CreateVariables() override;
 
 	FVector EffectColor = FVector(.85, .1, 1);
 
@@ -141,4 +151,7 @@ protected:
 		TArray<FAnimationFrame> Normal6M;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "NormalAttacks")
 		TArray<FAnimationFrame> Normal6B;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SpecialAttacks")
+		TArray<FAnimationFrame> TowerLeap;
 };

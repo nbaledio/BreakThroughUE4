@@ -207,9 +207,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		USceneComponent* Transform;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		USkeletalMeshComponent* BaseMesh;
-
 	void AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter);
 
 	void ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter);
