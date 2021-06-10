@@ -32,9 +32,9 @@ void ABTHitFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInfo, ui
 		if (HitInfo & IsVertical)
 		{
 			if ((HitInfo & IsUpwardSlash))
-				Billboard->SetRelativeRotation(FRotator(FMath::RandRange(10, 55), 0, 90));
+				Billboard->SetRelativeRotation(FRotator(FMath::RandRange(40, 70), 0, 90));
 			else
-				Billboard->SetRelativeRotation(FRotator(FMath::RandRange(-110, -155), 0, 90));
+				Billboard->SetRelativeRotation(FRotator(FMath::RandRange(-130, -150), 0, 90));
 		}
 		else if (HitInfo & IsHorizontal)
 		{

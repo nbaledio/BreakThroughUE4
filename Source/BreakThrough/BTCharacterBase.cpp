@@ -2492,8 +2492,8 @@ bool ABTCharacterBase::RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2
 	if (TL1.Y <= BR2.Y || TL2.Y <= BR1.Y)
 		return false;
 
-	FVector2D TL3 = FVector2D(FMath::Max(TL1.X, TL2.X), FMath::Min(TL1.Y, TL2.Y));
-	FVector2D BR3 = FVector2D(FMath::Max(BR1.X, BR2.X), FMath::Min(BR1.Y, BR2.Y));
+	FVector2D TL3 = FVector2D(FMath::Max(TL1.X, TL2.X), FMath::Max(TL1.Y, TL2.Y));
+	FVector2D BR3 = FVector2D(FMath::Min(BR1.X, BR2.X), FMath::Min(BR1.Y, BR2.Y));
 	
 	IntersectCenter = (TL3 + BR3) / 2; //record midpoint of area intersection for placing hit effect
 	return true;
@@ -2816,7 +2816,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	Opponent->CurrentState.BlockStun = 0;
 	CurrentState.bHitSuccess = true;
 
-	if (Hitbox.AttackHeight < Throw && (Opponent->IsCurrentAnimation(Opponent->BackDash) || Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)) //treat opponent as if airborne if hitting them in crumple
+	if (Hitbox.AttackHeight < Throw && (Opponent->IsCurrentAnimation(Opponent->BackDash) || Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)) //treat opponent as if airborne if hitting them in backdash
 	{
 		Opponent->CurrentState.bIsAirborne = true;
 		Opponent->CurrentState.Position.Y += 1;
@@ -2882,10 +2882,10 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 		if (Opponent->IsCurrentAnimation(Opponent->Crumple))
 		{
-			if (Hitbox.PotentialAirKnockBack.Y <= 0)
+			if (Hitbox.PotentialKnockBack.Y == 0)
 				KnockBackToApply.Y = 2;
-			else
-				KnockBackToApply.Y = Hitbox.PotentialAirKnockBack.Y;
+			/*else
+				KnockBackToApply.Y = Hitbox.PotentialAirKnockBack.Y;*/
 		}
 	}
 
