@@ -61,19 +61,19 @@ void ABTCharacterBase::SuperFlashSolver() //Only play once from Player1
 		if (CurrentState.CurrentAnimFrame.bSuperFlash)
 		{
 			Opponent->CurrentState.HitStop++;
-			DepthOffset = 1;
+			DepthOffset = 0;
 			Opponent->DepthOffset = 100;
 		}
 		else if (Opponent->CurrentState.CurrentAnimFrame.bSuperFlash)
 		{
 			CurrentState.HitStop++;
 			DepthOffset = 300;
-			Opponent->DepthOffset = 1;
+			Opponent->DepthOffset = 0;
 		}
 		else if (Opponent->CurrentState.CurrentAnimFrame.bCinematic || CurrentState.CurrentAnimFrame.bCinematic)
 		{
-			DepthOffset = 1;
-			Opponent->DepthOffset = 1;
+			DepthOffset = 0;
+			Opponent->DepthOffset = 0;
 		}
 	}
 }
@@ -422,66 +422,7 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 						else
 							CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 					}
-					//when character is faster than opponent, and both are moving in the same direction or towards each other
-					else if (FMath::Abs(CurrentState.Velocity.X) > FMath::Abs(Opponent->CurrentState.Velocity.X) && CurrentState.SlowMoTime == 0 && Opponent->CurrentState.SlowMoTime == 0 &&
-						((CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X < 0) || (CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X > 0) || (!CurrentState.bFacingRight && Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X > 0) || (CurrentState.bFacingRight && !Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X < 0)))
-					{
-						if (CurrentState.Position.X < Opponent->CurrentState.Position.X && Opponent->CurrentState.bFacingRight)
-						{
-							Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-							if (Opponent->CurrentState.Position.X >= 1000 - .5f * Opponent->PushboxWidth)
-							{
-								Opponent->HitWall();
-								Opponent->CurrentState.Position.X = 1000 - .5f * Opponent->PushboxWidth;
-								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								CurrentState.Velocity.X = 0;
-							}
-						}
-						else if (CurrentState.Position.X > Opponent->CurrentState.Position.X && !Opponent->CurrentState.bFacingRight)
-						{
-							Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-							if (Opponent->CurrentState.Position.X <= -1000 + .5f * Opponent->PushboxWidth)
-							{
-								Opponent->HitWall();
-								Opponent->CurrentState.Position.X = -1000 + .5f * Opponent->PushboxWidth;
-								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								CurrentState.Velocity.X = 0;
-							}
-						}
-					}
-					//when opponent is faster than character, and both are moving in the same direction or towards each other
-					else if (FMath::Abs(CurrentState.Velocity.X) < FMath::Abs(Opponent->CurrentState.Velocity.X) && CurrentState.SlowMoTime == 0 && Opponent->CurrentState.SlowMoTime == 0 &&
-						((CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X < 0) || (CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X > 0) || 
-							(!CurrentState.bFacingRight && Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X > 0) || (CurrentState.bFacingRight && !Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X < 0)))
-					{
-						if (CurrentState.Position.X < Opponent->CurrentState.Position.X && CurrentState.bFacingRight)
-						{
-							CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-							if (CurrentState.Position.X <= -1000 + .5f * PushboxWidth)
-							{
-								HitWall();
-								CurrentState.Position.X = -1000 + .5f * PushboxWidth;
-								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								Opponent->CurrentState.Velocity.X = 0;
-							}
-						}
-						else if (CurrentState.Position.X > Opponent->CurrentState.Position.X && !CurrentState.bFacingRight)
-						{
-							CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-							if (CurrentState.Position.X >= 1000 - .5f * PushboxWidth)
-							{
-								HitWall();
-								CurrentState.Position.X = 1000 - .5f * PushboxWidth;
-								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-								Opponent->CurrentState.Velocity.X = 0;
-							}
-						}
-					}
-					else //if both characters have the same velocity or arent moving
+					else //if either character is moving and neither is against a wall
 					{
 						float MoveDistance = .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth - FMath::Abs(Opponent->CurrentState.Position.X - CurrentState.Position.X));
 
@@ -743,9 +684,9 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 						if (CurrentState.bTouchingWall)
 						{
 							if (CurrentState.bFacingRight)
-								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-							else
 								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							else
+								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 						}
 						else if (Opponent->CurrentState.bTouchingWall)
 						{
@@ -753,65 +694,6 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 							else
 								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-						}
-						//when character is faster than opponent, and both are moving in the same direction or towards each other
-						else if (FMath::Abs(CurrentState.Velocity.X) > FMath::Abs(Opponent->CurrentState.Velocity.X) && CurrentState.SlowMoTime == 0 && Opponent->CurrentState.SlowMoTime == 0 &&
-							((CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X < 0) || (CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X > 0) || (!CurrentState.bFacingRight && Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X > 0) || (CurrentState.bFacingRight && !Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X < 0)))
-						{
-							if (CurrentState.Position.X < Opponent->CurrentState.Position.X && Opponent->CurrentState.bFacingRight)
-							{
-								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-								if (Opponent->CurrentState.Position.X >= 1000 - .5f * Opponent->PushboxWidth)
-								{
-									Opponent->HitWall();
-									Opponent->CurrentState.Position.X = -1000 + .5f * Opponent->PushboxWidth;
-									CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-									CurrentState.Velocity.X = 0;
-								}
-							}
-							else if (CurrentState.Position.X > Opponent->CurrentState.Position.X && !Opponent->CurrentState.bFacingRight)
-							{
-								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-								if (Opponent->CurrentState.Position.X <= -1000 + .5f * Opponent->PushboxWidth)
-								{
-									Opponent->HitWall();
-									Opponent->CurrentState.Position.X = -1000 + .5f * Opponent->PushboxWidth;
-									CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-									CurrentState.Velocity.X = 0;
-								}
-							}
-						}
-						//when opponent is faster than character, and both are moving in the same direction or towards each other
-						else if (FMath::Abs(CurrentState.Velocity.X) < FMath::Abs(Opponent->CurrentState.Velocity.X) && CurrentState.SlowMoTime == 0 && Opponent->CurrentState.SlowMoTime == 0 &&
-							((CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X < 0) || (CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X > 0) ||
-								(!CurrentState.bFacingRight && Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X < 0 && Opponent->CurrentState.Velocity.X > 0) || (CurrentState.bFacingRight && !Opponent->CurrentState.bFacingRight && CurrentState.Velocity.X > 0 && Opponent->CurrentState.Velocity.X < 0)))
-						{
-							if (CurrentState.Position.X < Opponent->CurrentState.Position.X && CurrentState.bFacingRight)
-							{
-								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-								if (CurrentState.Position.X <= -1000 + .5f * PushboxWidth)
-								{
-									HitWall();
-									CurrentState.Position.X = -1000 + .5f * PushboxWidth;
-									Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-									Opponent->CurrentState.Velocity.X = 0;
-								}
-							}
-							else if (CurrentState.Position.X > Opponent->CurrentState.Position.X && !CurrentState.bFacingRight)
-							{
-								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-
-								if (CurrentState.Position.X >= 1000 - .5f * PushboxWidth)
-								{
-									HitWall();
-									CurrentState.Position.X = 1000 - .5f * PushboxWidth;
-									Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-									Opponent->CurrentState.Velocity.X = 0;
-								}
-							}
 						}
 						else
 						{
@@ -846,8 +728,8 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 							if (Opponent->CurrentState.Position.X >= 1000 - .5f * Opponent->PushboxWidth)
 							{
 								Opponent->HitWall();
-								Opponent->CurrentState.Position.X = -1000 + .5f * Opponent->PushboxWidth;
-								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+								Opponent->CurrentState.Position.X = 1000 - .5f * Opponent->PushboxWidth;
+								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 								CurrentState.Velocity.X = 0;
 							}
 							else if (Opponent->CurrentState.Position.X <= -1000 + .5f * Opponent->PushboxWidth)
@@ -1098,7 +980,7 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 			if (CurrentState.CharacterHitState & CanAirGroundBounce)
 				CurrentState.CharacterHitState -= CanAirGroundBounce;
 
-			DepthOffset = 1;
+			DepthOffset = 0;
 			Opponent->DepthOffset = 100;
 
 			CurrentState.Velocity.Y *= -1;
@@ -1169,7 +1051,7 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 	if (CurrentState.CharacterHitState & CanMidScreenWallBounce && CurrentState.WallBounceTime == 0 && CurrentState.bIsAirborne)
 	{
 		CurrentState.CharacterHitState -= CanMidScreenWallBounce;
-		DepthOffset = 1;
+		DepthOffset = 0;
 		Opponent->DepthOffset = 100;
 		CurrentState.Velocity.X *= -.35f;
 		if (CurrentState.Velocity.Y < 1.5f)
@@ -1252,7 +1134,7 @@ bool ABTCharacterBase::HitWall()
 		if (CurrentState.CharacterHitState & CanMidScreenWallBounce)
 			CurrentState.CharacterHitState -= CanMidScreenWallBounce;
 
-		DepthOffset = 1;
+		DepthOffset = 0;
 		Opponent->DepthOffset = 100;
 		CurrentState.WallBounceTime = 0;
 		CurrentState.Velocity.X *= -.35f;
@@ -1393,7 +1275,7 @@ void ABTCharacterBase::RunBraking()
 void ABTCharacterBase::Jumping()
 {
 	RefreshMovelist();
-	DepthOffset = 1;
+	DepthOffset = 0;
 	Opponent->DepthOffset = 100;
 
 	if (CurrentState.bIsRunning) //extra horizontal velocity only if jumping with a running start
@@ -1499,7 +1381,7 @@ void ABTCharacterBase::ApplyKnockBack()
 	{
 		if (CurrentState.CurrentAnimFrame.Invincibility != OTG)
 		{
-			if (CurrentState.HitStun > 0 || CurrentState.BlockStun > 0 )//|| IsCurrentAnimation(Deflected) || IsCurrentAnimation(DeflectedAir))
+			if (CurrentState.HitStun > 0 || CurrentState.BlockStun > 0 || CurrentState.CurrentAnimFrame.Invincibility == FaceUp || CurrentState.CurrentAnimFrame.Invincibility == FaceDown)//|| IsCurrentAnimation(Deflected) || IsCurrentAnimation(DeflectedAir))
 			{
 				if (CurrentState.KnockBack.Y > 0)
 					CurrentState.Velocity = FVector2D(CurrentState.KnockBack.X, ComboGravity * CurrentState.KnockBack.Y);
@@ -1510,7 +1392,7 @@ void ABTCharacterBase::ApplyKnockBack()
 			{
 				if ((CurrentState.Velocity.X > 0 && CurrentState.bFacingRight) || (CurrentState.Velocity.X < 0 && !CurrentState.bFacingRight))
 				{
-					CurrentState.Velocity.X = -(FMath::Abs(CurrentState.Velocity.X) - CurrentState.KnockBack.X);
+					CurrentState.Velocity.X = -(FMath::Abs(CurrentState.Velocity.X) - 1.1 * CurrentState.KnockBack.X);
 				}
 				else
 					CurrentState.Velocity.X = CurrentState.KnockBack.X;
@@ -1587,17 +1469,24 @@ void ABTCharacterBase::UpdateResolve()
 			
 			if (CurrentState.ResolveRecoverTimer < 240)
 			{
-				if (CurrentState.ResolveRecoverTimer < 180 || CurrentState.HitStun == 0) //can only reach stage two ResolveRecovery while not in hitstun
+				if (CurrentState.ResolveRecoverTimer < 180 || CurrentState.HitStun < 0) //can only reach stage two ResolveRecovery while not in hitstun
 					CurrentState.ResolveRecoverTimer++;
 
-				if (CurrentState.Resolute || (CurrentState.bIsRunning && ((CurrentState.bFacingRight && CurrentState.Position.X < Opponent->CurrentState.Position.X) || 
-					(!CurrentState.bFacingRight && CurrentState.Position.X > Opponent->CurrentState.Position.X)))) //being resolute or running toward opponent only aids up to the first stage Resolve Recovery
+				if (CurrentState.Resolute) //being resolute speeds up recovery in the first stage Resolve Recovery and is the only way to reach the second stage
 					CurrentState.ResolveRecoverTimer++;
 			}
 		}
 	}
 
-	if (CurrentState.Durability > 1000)
+	if (CurrentState.Durability <= 0)
+	{
+		if (CurrentState.Resolve > 0)
+		{
+			CurrentState.Resolve--;
+			CurrentState.Durability = 1000;
+		}
+	}
+	else if (CurrentState.Durability > 1000)
 	{
 		if (CurrentState.Resolve < 4)
 		{
@@ -1607,14 +1496,6 @@ void ABTCharacterBase::UpdateResolve()
 		else
 		{
 			CurrentState.Resolve = 4;
-			CurrentState.Durability = 1000;
-		}
-	}
-	else if (CurrentState.Durability < 0)
-	{
-		if (CurrentState.Resolve > 0)
-		{
-			CurrentState.Resolve--;
 			CurrentState.Durability = 1000;
 		}
 	}
@@ -2024,6 +1905,14 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			}
 			CurrentState.Velocity.Y = 1.5f;
 			//make flash white and play chime
+			CurrentState.LPressed = 0;
+			CurrentState.MPressed = 0;
+			CurrentState.HPressed = 0;
+			CurrentState.BPressed = 0;
+			CurrentState.LReleased = 0;
+			CurrentState.MReleased = 0;
+			CurrentState.HReleased = 0;
+			CurrentState.BReleased = 0;
 			StatusMix = .75f;
 			StatusColor = FVector(1);
 			CurrentState.SlowMoTime = 0;
@@ -2039,6 +1928,14 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		if (CurrentState.bIsLDown || CurrentState.bIsMDown || CurrentState.bIsHDown || CurrentState.bIsBDown) //press any attack button once hitstun has ended to recover from stagger
 		{
 			//make flash white and play chime
+			CurrentState.LPressed = 0;
+			CurrentState.MPressed = 0;
+			CurrentState.HPressed = 0;
+			CurrentState.BPressed = 0;
+			CurrentState.LReleased = 0;
+			CurrentState.MReleased = 0;
+			CurrentState.HReleased = 0;
+			CurrentState.BReleased = 0;
 			StatusMix = .75f;
 			StatusColor = FVector(1);
 			CurrentState.StatusTimer = 10;
@@ -2583,7 +2480,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 	Opponent->TurnAroundCheck();
 	if (!CurrentState.CurrentAnimFrame.bCinematic)
 	{
-		DepthOffset = 1;
+		DepthOffset = 0;
 		Opponent->DepthOffset = 100;
 	}
 
@@ -2668,7 +2565,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		}
 		else
 		{
-			Opponent->CurrentState.ResolveRecoverTimer = FMath::Max(0, (int32)Opponent->CurrentState.ResolveRecoverTimer - 24);
+			Opponent->CurrentState.ResolveRecoverTimer = FMath::Max(0, (int32)Opponent->CurrentState.ResolveRecoverTimer - 60);
 
 			//blocked hits chip away at durability
 			if (Opponent->CurrentState.Resolve > 0)
@@ -2677,7 +2574,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 				{
 					if (Hitbox.AttackProperties & AntiAir) //attacks with the anti air property must be Instant Blocked
 					{
-						Opponent->CurrentState.ResolvePulse *= .9f;
+						Opponent->CurrentState.ResolvePulse *= .75f;
 						AttackCalculation(Hitbox, HurtboxCenter);
 						return;
 					}
@@ -2745,20 +2642,23 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		if (KnockBackToApply.X > 0)
 			KnockBackToApply.X = FMath::Max(1.75f, KnockBackToApply.X);
 
-		if (Opponent->CurrentState.bTouchingWall && KnockBackToApply.X > 0)
+		if (Opponent->CurrentState.bTouchingWall)
 		{
-			if (!(Hitbox.AttackProperties & IsSuper) && !(Hitbox.AttackProperties & IsSpecial))
-				CurrentState.KnockBack = FVector2D(.95f * KnockBackToApply.X, 0);
+			if (!(Hitbox.AttackProperties & IsSuper) && !(Hitbox.AttackProperties & NoPushBack))
+			{
+				KnockBackToApply.X = FMath::Max(1.75f, KnockBackToApply.X);
+				CurrentState.KnockBack = FVector2D(.95 * KnockBackToApply.X, 0);
+			}
 
-			if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+			/*if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
 				CurrentState.KnockBack *= FVector2D(-1, 1);
-			else if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+			else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
 			{
 			}
-			else if (!CurrentState.bFacingRight)
+			else if (CurrentState.bFacingRight)
 			{
 				CurrentState.KnockBack *= FVector2D(-1, 1);
-			}
+			}*/
 		}
 		else
 		{
@@ -2813,11 +2713,26 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 
 		//place and play guard effect
 		//place at midpoint between hitbox center and hurtbox center
+		if (Opponent)
+		{
+			FVector2D ImpactPoint = FVector2D(Opponent->CurrentState.Position.X - .5 * Opponent->PushboxWidth, IntersectCenter.Y);
+
+			if (Opponent->CurrentState.bFacingRight)
+				ImpactPoint.X = Opponent->CurrentState.Position.X + .5 * Opponent->PushboxWidth;
+
+			if (SpecialVFX[1]->CurrentState.bIsActive)
+			{
+				Opponent->SpecialVFX[1]->Activate(ImpactPoint, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties, Guard);
+			}
+			else
+				SpecialVFX[1]->Activate(ImpactPoint, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties, Guard);
+		}
+
 	}
 	else if (Opponent->CurrentState.SlowMoTime == 0 && Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve > 0 && !(Hitbox.AttackProperties & Piercing) && !(Hitbox.AttackProperties & Shatter))
 	{
 		//armor hit
-		Opponent->CurrentState.ResolveRecoverTimer = FMath::Max(0, (int32)Opponent->CurrentState.ResolveRecoverTimer - 48);
+		Opponent->CurrentState.ResolveRecoverTimer = 0;
 		Opponent->CurrentState.ResolvePulse /= 2;
 		Opponent->CurrentState.Durability -= Hitbox.DurabilityDamage;
 		Opponent->CurrentState.Resolve -= Hitbox.ResolveDamage;
@@ -2840,6 +2755,24 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 
 		//place and play armor hit effect
 		//place at midpoint between hitbox center and hurtbox center
+		if (Opponent)
+		{
+			FVector2D ImpactPoint = FVector2D(Opponent->CurrentState.Position.X - .5 * Opponent->PushboxWidth, IntersectCenter.Y);
+			uint8 ResolveHitType = Resolve;
+
+			if (Hitbox.ResolveDamage > 0 || Hitbox.DurabilityDamage > 500)
+				ResolveHitType = HeavyResolve;
+
+			if (Opponent->CurrentState.bFacingRight)
+				ImpactPoint.X = Opponent->CurrentState.Position.X + .5 * Opponent->PushboxWidth;
+
+			if (SpecialVFX[1]->CurrentState.bIsActive)
+			{
+				Opponent->SpecialVFX[1]->Activate(ImpactPoint, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties, ResolveHitType);
+			}
+			else
+				SpecialVFX[1]->Activate(ImpactPoint, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties, ResolveHitType);
+		}
 	}
 	else //the attack hit the opponent
 	{
@@ -3111,9 +3044,9 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		if (Opponent->CurrentState.bTouchingWall) //if opponent is against a wall, character has to move back instead albeit with less magnitude
 		{
 			if (FMath::Abs(Hitbox.PotentialKnockBack.X) > FMath::Abs(Hitbox.PotentialKnockBack.Y))
-				WallPushBack = .85f * FMath::Abs(Hitbox.PotentialKnockBack.X);
+				WallPushBack = .98f * FMath::Abs(Hitbox.PotentialKnockBack.X);
 			else
-				WallPushBack = .425f * (FMath::Abs(Hitbox.PotentialKnockBack.X) + FMath::Abs(Hitbox.PotentialKnockBack.Y));
+				WallPushBack = .49f * (FMath::Abs(Hitbox.PotentialKnockBack.X) + FMath::Abs(Hitbox.PotentialKnockBack.Y));
 		}
 
 		if (Opponent->CurrentState.ComboTimer > 180) //will not experience pushback during first three seconds of a combo
@@ -3280,7 +3213,7 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 	{
 		if (!CurrentState.CurrentAnimFrame.bCinematic)
 		{
-			DepthOffset = 1;
+			DepthOffset = 0;
 			Opponent->DepthOffset = 100;
 		}
 		CurrentState.bAttackMadeContact = true;
@@ -3335,7 +3268,7 @@ void ABTCharacterBase::SaveFXStates()
 
 bool ABTCharacterBase::BlitzCancel()
 {
-	if (CurrentState.AvailableActions & AcceptMove && !CurrentState.bIsCrouching && CurrentState.LPressed > 0 && CurrentState.BPressed > 0 && FMath::Abs(CurrentState.LPressed - CurrentState.BPressed) <= 3)
+	if (CurrentState.AvailableActions & AcceptMove && !CurrentState.bIsCrouching && CurrentState.LPressed > 0 && CurrentState.BPressed > 0 && FMath::Abs(CurrentState.LPressed - CurrentState.BPressed) <= InputTime)
 	{
 		if (CurrentState.Dir4 == DirInputTime)
 			bBackThrow = true;
@@ -3349,7 +3282,7 @@ bool ABTCharacterBase::BlitzCancel()
 	}
 
 	if (((CurrentState.AvailableActions & AcceptBlitz && CurrentState.Resolve > 0) || (CurrentState.BlockStun > 0 && !CurrentState.bIsAirborne && CurrentState.Resolve > 1)) && CurrentState.SlowMoTime == 0 &&
-		CurrentState.MPressed > 0 && CurrentState.HPressed > 0 && FMath::Abs(CurrentState.MPressed - CurrentState.HPressed) <= 3) //Blitz cancel is performed by hitting M and H at the same time
+		CurrentState.MPressed > 0 && CurrentState.HPressed > 0 && FMath::Abs(CurrentState.MPressed - CurrentState.HPressed) <= InputTime) //Blitz cancel is performed by hitting M and H at the same time
 	{
 		CurrentState.Resolve--;
 		CurrentState.Durability = 750;
@@ -3593,7 +3526,7 @@ void ABTCharacterBase::ProcessBlitz()
 		}
 		else if (IsCurrentAnimation(BreakerBlitz))
 		{
-			DepthOffset = 1;
+			DepthOffset = 0;
 			Opponent->DepthOffset = 100;
 			//Similar to normal hit behavior based on whether the opponent is guarding or not
 			if (Opponent->CurrentState.bIsGuarding)

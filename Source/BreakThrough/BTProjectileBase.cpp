@@ -649,7 +649,15 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 	//place at midpoint between hitbox center and hurtbox center
 	if (!(Hitbox.AttackProperties & NoHitEffect))
 	{
-
+		if (Owner->Opponent)
+		{
+			if (Owner->SpecialVFX[0]->CurrentState.bIsActive)
+			{
+				Owner->Opponent->SpecialVFX[0]->Activate(Owner->IntersectCenter, Owner->Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties);
+			}
+			else
+				Owner->SpecialVFX[0]->Activate(Owner->IntersectCenter, Owner->Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties);
+		}
 	}
 }
 

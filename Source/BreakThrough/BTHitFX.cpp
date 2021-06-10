@@ -13,9 +13,6 @@ ABTHitFX::ABTHitFX()
 	Spark = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Spark"));
 	Spark->SetupAttachment(RootComponent);
 
-	Ring = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Ring"));
-	Ring->SetupAttachment(RootComponent);
-
 	Cross = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Cross"));
 	Cross->SetupAttachment(RootComponent);
 }
@@ -23,15 +20,8 @@ ABTHitFX::ABTHitFX()
 void ABTHitFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInfo, uint8 InteractType)
 {
 	ABTVFXBase::Activate(Location, bFacingRight, HitInfo, InteractType);
-	CurrentState.Position = Location;
-
-	if (HitInfo & IsSpecial)
-		Transform->SetRelativeScale3D(Transform->GetRelativeScale3D() * 1.75);
-	else if (HitInfo & IsHeavy)
-		Transform->SetRelativeScale3D(Transform->GetRelativeScale3D() * 1.35);
 
 	Billboard->SetRelativeRotation(FRotator(0, 0, 90));
-	//Transform->SetRelativeRotation(FRotator(0));
 
 	Spark->SetRelativeRotation(FRotator(FMath::RandRange(-60, 60), FMath::RandRange(-60, 60), 90));
 
@@ -41,10 +31,10 @@ void ABTHitFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInfo, ui
 	{
 		if (HitInfo & IsVertical)
 		{
-			//if ((HitInfo & IsUpwardSlash))
-				//Billboard->SetRelativeRotation(FRotator(FMath::RandRange(10, 55), 0, 90));
-			//else
-				Billboard->SetRelativeRotation(FRotator(FMath::RandRange(-100, -135), 0, 90));
+			if ((HitInfo & IsUpwardSlash))
+				Billboard->SetRelativeRotation(FRotator(FMath::RandRange(10, 55), 0, 90));
+			else
+				Billboard->SetRelativeRotation(FRotator(FMath::RandRange(-110, -155), 0, 90));
 		}
 		else if (HitInfo & IsHorizontal)
 		{
@@ -63,7 +53,6 @@ void ABTHitFX::CreateMaterials()
 	{
 		DynamicBillboardMaterial = UMaterialInstanceDynamic::Create(EffectMaterial, this);
 		DynamicSparkMaterial = UMaterialInstanceDynamic::Create(EffectMaterial, this);
-		DynamicRingMaterial = UMaterialInstanceDynamic::Create(EffectMaterial, this);
 		DynamicCrossMaterial = UMaterialInstanceDynamic::Create(EffectMaterial, this);
 
 		if (BillboardTexture)
@@ -74,7 +63,6 @@ void ABTHitFX::CreateMaterials()
 
 		if (RingCrossTexture)
 		{
-			DynamicRingMaterial->SetTextureParameterValue(FName("SpriteSheet"), RingCrossTexture);
 			DynamicCrossMaterial->SetTextureParameterValue(FName("SpriteSheet"), RingCrossTexture);
 		}
 	}
@@ -92,12 +80,6 @@ void ABTHitFX::CreateMaterials()
 		DynamicSparkMaterial->SetVectorParameterValue(FName("Color"), FVector(1));
 	}
 
-	if (DynamicRingMaterial && Ring)
-	{
-		Ring->SetMaterial(0, DynamicRingMaterial);
-		DynamicRingMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .05, 0));
-	}
-
 	if (DynamicCrossMaterial && Cross)
 	{
 		Cross->SetMaterial(0, DynamicCrossMaterial);
@@ -111,7 +93,26 @@ void ABTHitFX::Update()
 
 	if (CurrentState.bIsActive)
 	{
-			if (CurrentState.FramePlayTime == 2)
+		FVector Scale = FVector(.15);
+		if (!CurrentState.bFacingRight)
+			Scale.X *= -1;
+
+		if (CurrentState.HitProperties & IsSpecial)
+			Scale *= 1.75;
+		else if (CurrentState.HitProperties & IsHeavy)
+			Scale *= 1.35;
+
+		Transform->SetRelativeScale3D(Scale);
+
+		if (CurrentState.HitProperties & IsSpecial && CurrentState.AnimFrameIndex % 2 == 0)
+		{
+			if (CurrentState.FramePlayTime == 3)
+			{
+				CurrentState.AnimFrameIndex++;
+				CurrentState.FramePlayTime = 0;
+			}
+		}
+		else if (CurrentState.FramePlayTime == 2)
 			{
 				CurrentState.AnimFrameIndex++;
 				CurrentState.FramePlayTime = 0;
@@ -151,9 +152,6 @@ void ABTHitFX::DrawEffect()
 		else
 		{
 			DynamicSparkMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, 2 + CurrentState.AnimFrameIndex / 4, 0));
-
-			//Ring->SetVisibility(true);
-			//DynamicRingMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, CurrentState.AnimFrameIndex / 4, 0));
 		}
 
 		if (CurrentState.HitProperties & IsSpecial || CurrentState.HitProperties & IsSuper)
@@ -171,7 +169,6 @@ void ABTHitFX::DrawEffect()
 	{
 		Billboard->SetVisibility(false);
 		Spark->SetVisibility(false);
-		Ring->SetVisibility(false);
 		Cross->SetVisibility(false);
 	}
 }

@@ -510,6 +510,7 @@ public:
 	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
 	float DepthOffset;
 	float LineThickness; //0-1 during cinematics, 3 during normal gameplay or Lerp from (0,1) to 3 based on camera's distance from character
+	FVector2D IntersectCenter;
 
 	//Blitz Cancel
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
@@ -646,8 +647,6 @@ protected:
 
 	bool bShowSmear;
 
-	FVector2D IntersectCenter;
-
 	/* Affects how quickly the character falls to the ground (See below for values per weight class) 
 		Featherweight = .95
 		Lightweight = .97
@@ -684,7 +683,7 @@ protected:
 		FVector2D JumpForce;
 
 	//number of frames that an input is active for
-		uint8 InputTime = 3;
+		uint8 InputTime = 5;
 		uint8 DirInputTime = 12;
 
 public:

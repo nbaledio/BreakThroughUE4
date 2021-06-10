@@ -31,13 +31,7 @@ void ABTVFXBase::Tick(float DeltaTime)
 void ABTVFXBase::Activate(FVector2D Location, bool bFacingRight, int32 HitInfo, uint8 InteractType)
 {
 	CurrentState.Position = Location;
-
-	FVector Scale = FVector(.15);
-	if (!CurrentState.bFacingRight)
-		Scale.X *= -1;
-
-	Transform->SetRelativeScale3D(Scale);
-
+	CurrentState.bFacingRight = bFacingRight;
 	CurrentState.bIsActive = true;
 	CurrentState.AnimFrameIndex = 0;
 	CurrentState.FramePlayTime = 0;
@@ -84,6 +78,12 @@ void ABTVFXBase::DrawEffect()
 	if (CurrentState.bIsActive)
 	{
 		Transform->SetWorldLocation(FVector(CurrentState.Position.X, 0, CurrentState.Position.Y));
+
+		FVector Scale = FVector(.15);
+		if (!CurrentState.bFacingRight)
+			Scale.X *= -1;
+
+		Transform->SetRelativeScale3D(Scale);
 	}
 }
 
