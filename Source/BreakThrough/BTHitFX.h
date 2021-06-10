@@ -44,7 +44,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
 		UTexture* SparkTexture;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
-		UTexture* RingCrossTexture;
+		UTexture* CrossTexture00;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
+		UTexture* CrossTexture01;
 
 	UMaterialInstanceDynamic* DynamicBillboardMaterial;
 	UMaterialInstanceDynamic* DynamicSparkMaterial;

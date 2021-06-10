@@ -61,16 +61,15 @@ void ABTHitFX::CreateMaterials()
 		if (SparkTexture)
 			DynamicSparkMaterial->SetTextureParameterValue(FName("SpriteSheet"), SparkTexture);
 
-		if (RingCrossTexture)
+		if (CrossTexture00)
 		{
-			DynamicCrossMaterial->SetTextureParameterValue(FName("SpriteSheet"), RingCrossTexture);
+			DynamicCrossMaterial->SetTextureParameterValue(FName("SpriteSheet"), CrossTexture00);
 		}
 	}
 
 	if (DynamicBillboardMaterial && Billboard)
 	{
 		Billboard->SetMaterial(0, DynamicBillboardMaterial);
-		DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .25, 0));
 	}
 
 	if (DynamicSparkMaterial && Spark)
@@ -84,6 +83,7 @@ void ABTHitFX::CreateMaterials()
 	{
 		Cross->SetMaterial(0, DynamicCrossMaterial);
 		DynamicCrossMaterial->SetScalarParameterValue(FName("Emissivity"), 0);
+		DynamicCrossMaterial->SetVectorParameterValue(FName("RowsAndColumns"), FVector(2));
 	}
 }
 
@@ -143,9 +143,15 @@ void ABTHitFX::DrawEffect()
 		Spark->SetVisibility(true);
 
 		if (CurrentState.HitProperties & IsSlash)
+		{
 			DynamicBillboardMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, 2 + CurrentState.AnimFrameIndex / 4, 0));
+			DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .1, 0));
+		}
 		else
+		{
 			DynamicBillboardMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, CurrentState.AnimFrameIndex / 4, 0));
+			DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .25, 0));
+		}
 
 		if (!(CurrentState.HitProperties & IsSpecial) && !(CurrentState.HitProperties & IsHeavy) && !(CurrentState.HitProperties & IsSuper))
 			DynamicSparkMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, CurrentState.AnimFrameIndex / 4, 0));
@@ -158,7 +164,16 @@ void ABTHitFX::DrawEffect()
 		{
 			Cross->SetVisibility(true);
 
-			DynamicCrossMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, 2 + CurrentState.AnimFrameIndex / 4, 0));
+			if (CrossTexture00 && CurrentState.AnimFrameIndex < 4)
+			{
+				DynamicCrossMaterial->SetTextureParameterValue(FName("SpriteSheet"), CrossTexture00);
+				DynamicCrossMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 2, CurrentState.AnimFrameIndex / 2, 0));
+			}
+			else if (CrossTexture01)
+			{
+				DynamicCrossMaterial->SetTextureParameterValue(FName("SpriteSheet"), CrossTexture01);
+				DynamicCrossMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector((CurrentState.AnimFrameIndex - 4) % 2, (CurrentState.AnimFrameIndex - 4) / 2, 0));
+			}
 		}
 		else
 		{

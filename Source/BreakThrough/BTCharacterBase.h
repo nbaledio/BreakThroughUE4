@@ -453,6 +453,8 @@ public:
 
 	bool RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2D Size1, FVector2D Size2);
 
+	void HitboxViewer();
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
 		TSubclassOf<class ASigil> SigilBlueprint;
 
@@ -685,6 +687,7 @@ protected:
 	//number of frames that an input is active for
 		uint8 InputTime = 5;
 		uint8 DirInputTime = 12;
+		float StageBounds = 900;
 
 public:
 	//Idle Stance Animations
@@ -921,8 +924,6 @@ private:
 	void ProcessBlitz();
 
 	void ClashDetection();
-
-	void HitboxViewer();
 
 	void DrawHitbox(FHitbox Box);
 
