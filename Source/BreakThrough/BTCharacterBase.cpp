@@ -408,14 +408,14 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 			{
 				if (!CurrentState.bIsAirborne && !Opponent->CurrentState.bIsAirborne) //both on the ground
 				{
-					if (CurrentState.bTouchingWall)
+					if (CurrentState.bTouchingWall || ((CurrentState.Position.X <= -StageBounds + .5f * PushboxWidth && CurrentState.bFacingRight) || (CurrentState.Position.X >= StageBounds - .5f * PushboxWidth && !CurrentState.bFacingRight)))
 					{
 						if (CurrentState.bFacingRight)
 							Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 						else
 							Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 					}
-					else if (Opponent->CurrentState.bTouchingWall)
+					else if (Opponent->CurrentState.bTouchingWall || ((Opponent->CurrentState.Position.X <= -StageBounds + .5f * Opponent->PushboxWidth && Opponent->CurrentState.bFacingRight) || (Opponent->CurrentState.Position.X >= StageBounds - .5f * Opponent->PushboxWidth && !Opponent->CurrentState.bFacingRight)))
 					{
 						if (Opponent->CurrentState.bFacingRight)
 							CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
@@ -473,19 +473,27 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 					if ((CurrentState.bIsCrouching && CrouchingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset) ||
 						(!CurrentState.bIsCrouching && StandingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset)) //check if pushboxes intersect
 					{
-						if (CurrentState.bTouchingWall)
+						if ((Opponent->CurrentState.Position.X <= -StageBounds + .5f * Opponent->PushboxWidth && Opponent->CurrentState.bFacingRight) || (Opponent->CurrentState.Position.X >= StageBounds - .5f * Opponent->PushboxWidth && !Opponent->CurrentState.bFacingRight))
 						{
-							if (CurrentState.bFacingRight)
+							if (Opponent->CurrentState.Position.X < CurrentState.Position.X)
+								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							else if (Opponent->CurrentState.Position.X > CurrentState.Position.X)
+								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							else if (Opponent->CurrentState.bFacingRight)
+								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							else
+								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+						}
+						else if ((CurrentState.Position.X <= -StageBounds + .5f * PushboxWidth && CurrentState.bFacingRight) || (CurrentState.Position.X >= StageBounds - .5f * PushboxWidth && !CurrentState.bFacingRight))
+						{
+							if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							else if (CurrentState.bFacingRight)
 								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 							else
 								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-						}
-						else if (Opponent->CurrentState.bTouchingWall)
-						{
-							if (CurrentState.bFacingRight)
-								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-							else
-								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 						}
 						else if (FMath::Abs(Opponent->CurrentState.Velocity.X) >= 2)
 						{
@@ -575,19 +583,27 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 					if ((Opponent->CurrentState.bIsCrouching && Opponent->CrouchingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset) ||
 						(!Opponent->CurrentState.bIsCrouching && Opponent->StandingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset)) //check if pushboxes intersect
 					{
-						if (Opponent->CurrentState.bTouchingWall)
+						if ((CurrentState.Position.X <= -StageBounds + .5f * PushboxWidth && CurrentState.bFacingRight) || (CurrentState.Position.X >= StageBounds - .5f * PushboxWidth && !CurrentState.bFacingRight))
 						{
-							if (Opponent->CurrentState.bFacingRight)
+							if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							else if (CurrentState.bFacingRight)
+								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							else
+								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+						}
+						else if ((Opponent->CurrentState.Position.X <= -StageBounds + .5f * Opponent->PushboxWidth && Opponent->CurrentState.bFacingRight) || (Opponent->CurrentState.Position.X >= StageBounds - .5f * Opponent->PushboxWidth && !Opponent->CurrentState.bFacingRight))
+						{
+							if (Opponent->CurrentState.Position.X < CurrentState.Position.X)
+								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							else if (Opponent->CurrentState.Position.X > CurrentState.Position.X)
+								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							else if (Opponent->CurrentState.bFacingRight)
 								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 							else
 								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-						}
-						else if (CurrentState.bTouchingWall)
-						{
-							if (Opponent->CurrentState.bFacingRight)
-								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
-							else
-								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 						}
 						else if (FMath::Abs(CurrentState.Velocity.X) >= 2)
 						{
@@ -677,21 +693,29 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 						(Opponent->CurrentState.Position.Y > CurrentState.Position.Y && (Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset) - (CurrentState.Position.Y + AirPushboxVerticalOffset) <= CrouchingPushBoxHeight) ||
 						CurrentState.Position.Y + AirPushboxVerticalOffset == Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset)
 					{
-						if (CurrentState.bTouchingWall)
+						if (CurrentState.bTouchingWall || !(CurrentState.Position.X > -StageBounds + .5f * PushboxWidth && CurrentState.Position.X < StageBounds - .5f * PushboxWidth))
 						{
-							if (CurrentState.bFacingRight)
+							if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
+								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
+								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							else if (CurrentState.bFacingRight)
 								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 							else
 								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 						}
-						else if (Opponent->CurrentState.bTouchingWall)
+						else if (Opponent->CurrentState.bTouchingWall || !(Opponent->CurrentState.Position.X > -StageBounds + .5f * Opponent->PushboxWidth && Opponent->CurrentState.Position.X < StageBounds - .5f * Opponent->PushboxWidth))
 						{
-							if (Opponent->CurrentState.bFacingRight)
+							if (Opponent->CurrentState.Position.X < CurrentState.Position.X)
+								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							else if (Opponent->CurrentState.Position.X > CurrentState.Position.X)
+								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							else if (Opponent->CurrentState.bFacingRight)
 								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 							else
 								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 						}
-						else
+						else 
 						{
 							float MoveDistance = .5f * (.5f * Opponent->PushboxWidth + .5f * PushboxWidth - FMath::Abs(Opponent->CurrentState.Position.X - CurrentState.Position.X));
 
@@ -743,6 +767,11 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 				Opponent->CurrentState.bTouchingOpponent = false;
 			}
 		}
+		if (CurrentState.Position.X > -StageBounds + .5f * PushboxWidth && CurrentState.Position.X < StageBounds - .5f * PushboxWidth)
+			CurrentState.bTouchingWall = false;
+
+		if (Opponent->CurrentState.Position.X > -StageBounds + .5f * Opponent->PushboxWidth && Opponent->CurrentState.Position.X < StageBounds - .5f * Opponent->PushboxWidth)
+			Opponent->CurrentState.bTouchingWall = false;
 	}
 }
 
@@ -925,18 +954,15 @@ bool ABTCharacterBase::TurnAroundCheck()
 {
 	if (Opponent != nullptr)
 	{
-		if (!CurrentState.bTouchingWall)
+		if (Opponent->CurrentState.Position.X < CurrentState.Position.X - .5f * PushboxWidth && CurrentState.bFacingRight)
 		{
-			if (Opponent->CurrentState.Position.X < CurrentState.Position.X && CurrentState.bFacingRight)
-			{
-				CurrentState.bFacingRight = false;
-				return TriggerTurnAround();
-			}
-			else if (Opponent->CurrentState.Position.X > CurrentState.Position.X && !CurrentState.bFacingRight)
-			{
-				CurrentState.bFacingRight = true;
-				return TriggerTurnAround();
-			}
+			CurrentState.bFacingRight = false;
+			return TriggerTurnAround();
+		}
+		else if (Opponent->CurrentState.Position.X > CurrentState.Position.X + .5f * PushboxWidth && !CurrentState.bFacingRight)
+		{
+			CurrentState.bFacingRight = true;
+			return TriggerTurnAround();
 		}
 	}
 	return false;
@@ -1045,13 +1071,7 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 		CurrentState.CharacterHitState -= CanMidScreenWallBounce;
 		DepthOffset = 0;
 		Opponent->DepthOffset = 100;
-		if (FMath::Abs(CurrentState.Velocity.X) > 2)
-		{
-			if (CurrentState.Velocity.X < 0)
-				CurrentState.Velocity.X = FMath::Max(2., CurrentState.Velocity.X * -.35);
-			else
-				CurrentState.Velocity.X = FMath::Min(-2., CurrentState.Velocity.X * -.35);
-		}
+		CurrentState.Velocity.X *= -.35;
 		if (CurrentState.Velocity.Y < 2)
 			CurrentState.Velocity.Y = 2;
 
@@ -1137,13 +1157,8 @@ bool ABTCharacterBase::HitWall()
 		DepthOffset = 0;
 		Opponent->DepthOffset = 100;
 		CurrentState.WallBounceTime = 0;
-		if (FMath::Abs(CurrentState.Velocity.X) > 2)
-		{
-			if (CurrentState.Velocity.X < 0)
-				CurrentState.Velocity.X = FMath::Max(2., CurrentState.Velocity.X * -.35);
-			else
-				CurrentState.Velocity.X = FMath::Min(-2., CurrentState.Velocity.X * -.35);
-		}
+		CurrentState.Velocity.X *= -.35;
+		
 		if (CurrentState.Velocity.Y < 2)
 			CurrentState.Velocity.Y = 2;
 
@@ -1161,7 +1176,6 @@ bool ABTCharacterBase::HitWall()
 		return EnterNewAnimation(WallBounce);
 	}
 
-	CurrentState.Velocity.X = 0;
 	return false;
 }
 
@@ -1387,7 +1401,7 @@ void ABTCharacterBase::ApplyKnockBack()
 	{
 		if (CurrentState.CurrentAnimFrame.Invincibility != OTG)
 		{
-			if (CurrentState.HitStun > 0 || CurrentState.BlockStun > 0 || CurrentState.CurrentAnimFrame.Invincibility == FaceUp || CurrentState.CurrentAnimFrame.Invincibility == FaceDown)//|| IsCurrentAnimation(Deflected) || IsCurrentAnimation(DeflectedAir))
+			if (CurrentState.HitStun > 0 || CurrentState.BlockStun > 0 || CurrentState.CurrentAnimFrame.Invincibility == FaceUp || CurrentState.CurrentAnimFrame.Invincibility == FaceDown)
 			{
 				if (CurrentState.KnockBack.Y > 0)
 					CurrentState.Velocity = FVector2D(CurrentState.KnockBack.X, ComboGravity * CurrentState.KnockBack.Y);
@@ -2478,7 +2492,7 @@ bool ABTCharacterBase::RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2
 	if (TL1.Y <= BR2.Y || TL2.Y <= BR1.Y)
 		return false;
 
-	FVector2D TL3 = FVector2D(FMath::Min(TL1.X, TL2.X), FMath::Max(TL1.Y, TL2.Y));
+	FVector2D TL3 = FVector2D(FMath::Max(TL1.X, TL2.X), FMath::Min(TL1.Y, TL2.Y));
 	FVector2D BR3 = FVector2D(FMath::Max(BR1.X, BR2.X), FMath::Min(BR1.Y, BR2.Y));
 	
 	IntersectCenter = (TL3 + BR3) / 2; //record midpoint of area intersection for placing hit effect

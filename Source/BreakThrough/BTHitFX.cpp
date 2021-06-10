@@ -25,7 +25,7 @@ void ABTHitFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInfo, ui
 
 	Spark->SetRelativeRotation(FRotator(FMath::RandRange(-60, 60), FMath::RandRange(-60, 60), 90));
 
-	Cross->SetRelativeRotation(FRotator(FMath::RandRange(-180, 180), 0, 90));
+	Cross->SetRelativeRotation(FRotator(FMath::RandRange(-180, 180), FMath::RandRange(-60, 60), 90));
 
 	if (HitInfo & IsSlash)
 	{
@@ -42,6 +42,10 @@ void ABTHitFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInfo, ui
 		}
 		else
 			Billboard->SetRelativeRotation(FRotator(FMath::RandRange(-90, 90), 0, 90));
+	}
+	else
+	{
+		Billboard->SetRelativeRotation(FRotator(FMath::RandRange(-180, 180), 0, 90));
 	}
 }
 
