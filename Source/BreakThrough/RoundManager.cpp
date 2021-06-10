@@ -32,7 +32,7 @@ void ARoundManager::BeginPlay()
 {
 	Super::BeginPlay();
 	yOffset = 105.0f;
-	zPosMax = 2700.0f;
+	zPosMax = 2500.0f;
 	zPosMin = 2200.0f;
 	zPos = 2200.0f;
 	//Create HUDs and add it to camera/world space
