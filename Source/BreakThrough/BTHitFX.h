@@ -34,8 +34,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UStaticMeshComponent* Spark;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		UStaticMeshComponent* Ring;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UStaticMeshComponent* Cross;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
@@ -46,11 +44,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
 		UTexture* SparkTexture;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
-		UTexture* RingCrossTexture;
+		UTexture* CrossTexture00;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
+		UTexture* CrossTexture01;
 
 	UMaterialInstanceDynamic* DynamicBillboardMaterial;
 	UMaterialInstanceDynamic* DynamicSparkMaterial;
-	UMaterialInstanceDynamic* DynamicRingMaterial;
 	UMaterialInstanceDynamic* DynamicCrossMaterial;
 
 };

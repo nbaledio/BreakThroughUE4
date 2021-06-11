@@ -638,7 +638,7 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 			KnockBackToApply *= FVector2D(-1, 1);
 		}
 	}
-	else if (CurrentState.bFacingRight)
+	else if (!CurrentState.bFacingRight)
 	{
 		KnockBackToApply *= FVector2D(-1, 1);
 	}
@@ -649,7 +649,15 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 	//place at midpoint between hitbox center and hurtbox center
 	if (!(Hitbox.AttackProperties & NoHitEffect))
 	{
-
+		if (Owner->Opponent)
+		{
+			if (Owner->SpecialVFX[0]->CurrentState.bIsActive)
+			{
+				Owner->Opponent->SpecialVFX[0]->Activate(Owner->IntersectCenter, Owner->Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties);
+			}
+			else
+				Owner->SpecialVFX[0]->Activate(Owner->IntersectCenter, Owner->Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties);
+		}
 	}
 }
 
@@ -856,6 +864,20 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 
 		//place and play guard effect
 		//place at midpoint between hitbox center and hurtbox center
+		if (Owner->Opponent)
+		{
+			FVector2D ImpactPoint = FVector2D(Owner->Opponent->CurrentState.Position.X - .5 * Owner->Opponent->PushboxWidth, Owner->IntersectCenter.Y);
+
+			if (Owner->Opponent->CurrentState.bFacingRight)
+				ImpactPoint.X = Owner->Opponent->CurrentState.Position.X + .5 * Owner->Opponent->PushboxWidth;
+
+			if (Owner->SpecialVFX[1]->CurrentState.bIsActive)
+			{
+				Owner->Opponent->SpecialVFX[1]->Activate(ImpactPoint, Owner->Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties, Guard);
+			}
+			else
+				Owner->SpecialVFX[1]->Activate(ImpactPoint, Owner->Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties, Guard);
+		}
 	}
 	else if (Owner->Opponent->CurrentState.bArmorActive && Owner->Opponent->CurrentState.Resolve > 0 && !(Hitbox.AttackProperties & Piercing) && !(Hitbox.AttackProperties & Shatter))
 	{
@@ -882,6 +904,24 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 
 		//place and play armor hit effect
 		//place at midpoint between hitbox center and hurtbox center
+		if (Owner->Opponent)
+		{
+			FVector2D ImpactPoint = FVector2D(Owner->Opponent->CurrentState.Position.X - .5 * Owner->Opponent->PushboxWidth, Owner->IntersectCenter.Y);
+			uint8 ResolveHitType = Resolve;
+
+			if (Hitbox.ResolveDamage > 0 || Hitbox.DurabilityDamage > 500)
+				ResolveHitType = HeavyResolve;
+
+			if (Owner->Opponent->CurrentState.bFacingRight)
+				ImpactPoint.X = Owner->Opponent->CurrentState.Position.X + .5 * Owner->Opponent->PushboxWidth;
+
+			if (Owner->SpecialVFX[1]->CurrentState.bIsActive)
+			{
+				Owner->Opponent->SpecialVFX[1]->Activate(ImpactPoint, Owner->Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties, ResolveHitType);
+			}
+			else
+				Owner->SpecialVFX[1]->Activate(ImpactPoint, Owner->Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties, ResolveHitType);
+		}
 	}
 	else //the attack hit the opponent
 	{

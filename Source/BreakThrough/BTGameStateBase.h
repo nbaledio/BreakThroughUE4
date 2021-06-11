@@ -86,8 +86,6 @@ protected:
 
     void SpawnCharacters();
 
-    void SpawnRoundManager();
-
     virtual void TickGameState();
 
     //Run a single frame of the game.

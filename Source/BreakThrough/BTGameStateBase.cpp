@@ -146,20 +146,16 @@ void ABTGameStateBase::SpawnCharacters()
         //spawn specific characters based on persistent info
         //place characters on stage and update character state variables based on whether they should start on the left or right
         //set stage lighting defaults
+        gs.RoundManager = GetWorld()->SpawnActor<ARoundManager>(RoundManagerBlueprint, FVector(0), FRotator(0), SpawnParams);
+
         gs.Player[0] = GetWorld()->SpawnActor<ABTCharacterBase>(CharacterBlueprints[0], FVector(0), FRotator(0), SpawnParams);
         gs.Player[1] = GetWorld()->SpawnActor<ABTCharacterBase>(CharacterBlueprints[0], FVector(0), FRotator(0), SpawnParams);
         gs.Player[1]->CurrentState.bFacingRight = false;
         gs.Player[0]->CurrentState.Position = FVector2D(-75, gs.Player[0]->GetActorLocation().Z);
         gs.Player[1]->CurrentState.Position = FVector2D(75, gs.Player[1]->GetActorLocation().Z);
         gs.Player[0]->DepthOffset = 0;
-        gs.Player[1]->DepthOffset = 300;
+        gs.Player[1]->DepthOffset = 100;
     }
-}
-
-void ABTGameStateBase::SpawnRoundManager() 
-{
-    FActorSpawnParameters SpawnParams;
-    gs.RoundManagerState = GetWorld()->SpawnActor<ARoundManager>(RoundManagerBlueprint, FVector(0), FRotator(0), SpawnParams);
 }
 
 void ABTGameStateBase::TickGameState()

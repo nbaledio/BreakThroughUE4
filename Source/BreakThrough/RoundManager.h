@@ -9,13 +9,30 @@
 #include "Blueprint/UserWidget.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Math/Vector.h"
-#include "Camera/CameraComponent.h"
+#include "Runtime/CinematicCamera/Public/CineCameraComponent.h"
 #include "Components/WidgetComponent.h"
 #include "RoundManager.generated.h"
 
-enum RoundData
+USTRUCT(BlueprintType)
+struct FRoundManagerState
 {
-	frameNumber,
+	GENERATED_BODY()
+
+	FVector Position;
+	FVector CameraPosition;
+	FRotator CameraRotation;
+
+	uint8 FrameCount;
+	uint8 RoundCount;
+	uint8 RoundTimer;
+	uint8 P1Wins;
+	uint8 P2Wins;
+	uint8 MaxRounds;
+	uint8 UniversalHitStop;
+
+	bool bIsGameActive;
+	bool bLockInputs;
+	bool bSuddenDeath;
 };
 
 UCLASS()
@@ -30,15 +47,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		USceneComponent* Transform;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
-		UCameraComponent* MainCamera;
+		UCineCameraComponent* MainCamera;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UWidgetComponent* HUDWidgetComponent;
+
+	FRoundManagerState CurrentState;
 
 	//References for character variables
 	ABTCharacterBase* Player1Base;
 	ABTCharacterBase* Player2Base;
-	FCharacterState* Player1State;
-	FCharacterState* Player2State;
 
 	//HUD Widgets
 	UHUDVisuals* UpperHUD;
@@ -47,6 +64,7 @@ public:
 	//Functions
 	void UpdateCameraPosition(FVector Position, FRotator Rotation);
 	void UpdateTimer();
+	void DrawScreen();
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

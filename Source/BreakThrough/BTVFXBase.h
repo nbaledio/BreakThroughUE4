@@ -11,6 +11,7 @@ enum Interactions
 	Hit = 0,
 	Guard,
 	Resolve,
+	HeavyResolve,
 	Clash,
 	Deflect,
 };

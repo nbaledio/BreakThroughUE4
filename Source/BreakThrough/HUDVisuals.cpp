@@ -13,8 +13,8 @@ void UHUDVisuals::UpdateGraphics(int32 time, int32 P1Health, int32 P1MaxHealth, 
 	TimerText->SetText(FText::AsNumber(time));
 	P1HealthBar->SetPercent(static_cast<float>(P1Health) / static_cast<float>(P1MaxHealth));
 	P2HealthBar->SetPercent(static_cast<float>(P2Health) / static_cast<float>(P2MaxHealth));
-	P1ResolveBar->SetPercent(static_cast<float>(P1Resolve) * 1000.0f + static_cast<float>(P1Durability) / 4000.0f);
-	P2ResolveBar->SetPercent(static_cast<float>(P2Resolve) * 1000.0f + static_cast<float>(P2Durability) / 4000.0f);
+	P1ResolveBar->SetPercent((static_cast<float>(P1Resolve) - 1) * 1000.0f + static_cast<float>(P1Durability) / 4000.0f);
+	P2ResolveBar->SetPercent((static_cast<float>(P2Resolve) - 1) * 1000.0f + static_cast<float>(P2Durability) / 4000.0f);
 }
 
 void UHUDVisuals::UpdateUpperHUD(int32 time, int32 P1Health, int32 P1MaxHealth, int32 P2Health, int32 P2MaxHealth)
@@ -25,6 +25,7 @@ void UHUDVisuals::UpdateUpperHUD(int32 time, int32 P1Health, int32 P1MaxHealth, 
 };
 void UHUDVisuals::UpdateLowerHUD(int32 P1Resolve, int32 P1Durability, int32 P2Resolve, int32 P2Durability)
 {
-	P1ResolveBar->SetPercent(static_cast<float>(((static_cast<float>(P1Resolve) * 1000.0f + static_cast<float>(P1Durability)) - 1000.0f) / 4000.0f));
-	P2ResolveBar->SetPercent(static_cast<float>(((static_cast<float>(P2Resolve) * 1000.0f + static_cast<float>(P2Durability)) - 1000.0f) / 4000.0f));
+	UE_LOG(LogTemp, Warning, TEXT("%f"), ((static_cast<float>(P2Resolve) * 1000.0f + static_cast<float>(P2Durability)) / 4000.0f));
+	P1ResolveBar->SetPercent((static_cast<float>((static_cast<float>(P1Resolve) - 1) * 1000.0f + static_cast<float>(P1Durability)) / 4000.0f));
+	P2ResolveBar->SetPercent((static_cast<float>((static_cast<float>(P2Resolve) - 1) * 1000.0f + static_cast<float>(P2Durability)) / 4000.0f));
 };

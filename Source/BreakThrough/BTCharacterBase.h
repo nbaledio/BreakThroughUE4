@@ -85,7 +85,7 @@ enum AttackProperties
 	ForceCrouch = (1 << 15),
 	ComboThrow = (1 << 16), //Throws with this flag can hit opponents even if they are in hitstun
 	AntiAir = (1 << 17),
-	DisableBurst = (1 << 18),
+	NoPushBack = (1 << 18),
 	ReflectProjectile = (1 << 19),
 	IsSpecial = (1 << 20),
 	IsSuper = (1 << 21),
@@ -96,6 +96,7 @@ enum AttackProperties
 	LowerBodyHit = (1 << 26),
 	ForceStand = (1 << 27),
 	IsUpwardSlash = (1 << 28),
+	DisbaleBurst = (1 << 29),
 };
 
 class ABTProjectileBase;
@@ -452,6 +453,8 @@ public:
 
 	bool RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2D Size1, FVector2D Size2);
 
+	void HitboxViewer();
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
 		TSubclassOf<class ASigil> SigilBlueprint;
 
@@ -509,6 +512,7 @@ public:
 	float StatusMix; //.8f for armor hit (red), 3 for air recover and instant block (white)
 	float DepthOffset;
 	float LineThickness; //0-1 during cinematics, 3 during normal gameplay or Lerp from (0,1) to 3 based on camera's distance from character
+	FVector2D IntersectCenter;
 
 	//Blitz Cancel
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
@@ -645,8 +649,6 @@ protected:
 
 	bool bShowSmear;
 
-	FVector2D IntersectCenter;
-
 	/* Affects how quickly the character falls to the ground (See below for values per weight class) 
 		Featherweight = .95
 		Lightweight = .97
@@ -683,8 +685,9 @@ protected:
 		FVector2D JumpForce;
 
 	//number of frames that an input is active for
-		uint8 InputTime = 3;
+		uint8 InputTime = 5;
 		uint8 DirInputTime = 12;
+		float StageBounds = 900;
 
 public:
 	//Idle Stance Animations
@@ -921,8 +924,6 @@ private:
 	void ProcessBlitz();
 
 	void ClashDetection();
-
-	void HitboxViewer();
 
 	void DrawHitbox(FHitbox Box);
 

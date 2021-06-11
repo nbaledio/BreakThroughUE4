@@ -12,7 +12,6 @@ void ABTOfflineVSGameStateBase::BeginPlay()
     }
     
     SpawnCharacters();
-    SpawnRoundManager();
 
     gs.Init();
 }
