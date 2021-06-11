@@ -51,7 +51,7 @@ void ARoundManager::BeginPlay()
 // Called every frame
 void ARoundManager::Tick(float DeltaTime)
 {
-	Super::Tick(DeltaTime);;
+	Super::Tick(DeltaTime);
 }
 
 void ARoundManager::UpdateCameraPosition(FVector Position, FRotator Rotation) 
@@ -68,7 +68,9 @@ void ARoundManager::UpdateTimer()
 		//UE_LOG(LogTemp, Warning, TEXT("GameActive"));
 		if (!suddenDeath)
 		{
-			frameCount++;
+			if (Player1Base && Player2Base)
+				if (Player1Base->CurrentState.SlowMoTime % 2 == 0 && Player2Base->CurrentState.SlowMoTime % 2 == 0)
+					frameCount++;
 			//Check if one in-game second has passed and decrement timer
 			if (frameCount == gameTime && !suddenDeath)
 			{

@@ -67,7 +67,7 @@ void ABTCharacterBase::SuperFlashSolver() //Only play once from Player1
 		else if (Opponent->CurrentState.CurrentAnimFrame.bSuperFlash)
 		{
 			CurrentState.HitStop++;
-			DepthOffset = 300;
+			DepthOffset = 100;
 			Opponent->DepthOffset = 0;
 		}
 		else if (Opponent->CurrentState.CurrentAnimFrame.bCinematic || CurrentState.CurrentAnimFrame.bCinematic)

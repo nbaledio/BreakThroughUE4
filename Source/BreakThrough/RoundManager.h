@@ -28,6 +28,7 @@ struct FRoundManagerState
 	uint8 P1Wins;
 	uint8 P2Wins;
 	uint8 MaxRounds;
+	uint8 UniversalHitStop;
 
 	bool bIsGameActive;
 	bool bLockInputs;
