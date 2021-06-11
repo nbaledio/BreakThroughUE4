@@ -1312,7 +1312,6 @@ void ABTCharacterBase::Jumping()
 
 	if (CurrentState.bIsAirborne)
 	{
-		TurnAroundCheck();
 
 		if (Sigils.Num() > 0)
 		{
@@ -1339,7 +1338,7 @@ void ABTCharacterBase::Jumping()
 	}
 
 	if (CurrentState.bForwardJump) //if jumping forward
-	{
+	{		
 		if (CurrentState.bFacingRight)
 			CurrentState.Velocity.X += JumpForce.X;
 		else
@@ -1358,7 +1357,6 @@ void ABTCharacterBase::Jumping()
 	CurrentState.bForwardJump = false;
 	CurrentState.bBackwardJump = false;
 	CurrentState.JumpsUsed++;
-	TurnAroundCheck();
 }
 
 void ABTCharacterBase::GravityCalculation()
@@ -1527,8 +1525,8 @@ void ABTCharacterBase::UpdateResolve()
 
 void ABTCharacterBase::ProcessInputs(int32 Inputs)
 {
-	ChargeInputs(Inputs);
 	DirectionalInputs(Inputs);
+	ChargeInputs(Inputs);
 	ButtonInputs(Inputs);
 }
 
@@ -1536,24 +1534,36 @@ void ABTCharacterBase::ChargeInputs(int32 Inputs)  //set the correct charges bas
 {
 	if (Inputs & INPUT_UP) //up charge will override down charge
 	{
-		CurrentState.Charge8++;
+		if (CurrentState.Charge8 < 255)
+			CurrentState.Charge8++;
 		CurrentState.Charge8Life = DirInputTime;
+		CurrentState.Charge5 = 0;
 	}
 	else if (Inputs & INPUT_DOWN)
 	{
-		CurrentState.Charge2++;
+		if (CurrentState.Charge2 < 255)
+			CurrentState.Charge2++;
 		CurrentState.Charge2Life = DirInputTime;
+		CurrentState.Charge5 = 0;
 	}
 
 	if ((Inputs & INPUT_LEFT && CurrentState.Position.X > Opponent->CurrentState.Position.X) || (Inputs & INPUT_RIGHT && CurrentState.Position.X < Opponent->CurrentState.Position.X))
 	{
-		CurrentState.Charge6++;
+		if (CurrentState.Charge6 < 255)
+			CurrentState.Charge6++;
 		CurrentState.Charge6Life = DirInputTime;
+		CurrentState.Charge5 = 0;
 	}
 	else if ((Inputs & INPUT_LEFT && CurrentState.Position.X < Opponent->CurrentState.Position.X) || (Inputs & INPUT_RIGHT && CurrentState.Position.X > Opponent->CurrentState.Position.X)) //prevent charging both directions at the same time
 	{
-		CurrentState.Charge4++;
+		if (CurrentState.Charge4 < 255)
+			CurrentState.Charge4++;
 		CurrentState.Charge4Life = DirInputTime;
+		CurrentState.Charge5 = 0;
+	}
+	else if (CurrentState.Charge5 < 255)
+	{
+		CurrentState.Charge5++;
 	}
 	
 	if (CurrentState.Charge4Life == 0)
@@ -1580,7 +1590,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 			CurrentState.Dir1 = DirInputTime;
 		else
 		{
-			if (CurrentState.Dir2 < DirInputTime - 1 && CurrentState.Dir2 > 3 && CurrentState.DoubleDir2 == 0)
+			if (CurrentState.Dir2 < DirInputTime - 1 && CurrentState.Dir2 > 0 && CurrentState.Charge5 > 0 && CurrentState.DoubleDir2 == 0)
 			{
 				CurrentState.DoubleDir2 = DirInputTime;
 			}
@@ -1609,11 +1619,11 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		}
 		
 
-		if ((CurrentState.Position.X < Opponent->CurrentState.Position.X && Inputs & INPUT_RIGHT) || (CurrentState.Position.X > Opponent->CurrentState.Position.X && Inputs & INPUT_LEFT))
+		if ((CurrentState.bFacingRight && Inputs & INPUT_RIGHT) || (!CurrentState.bFacingRight && Inputs & INPUT_LEFT))
 		{
 			CurrentState.Dir9 = DirInputTime;
 		}
-		else if ((CurrentState.Position.X > Opponent->CurrentState.Position.X && Inputs & INPUT_RIGHT) || (CurrentState.Position.X < Opponent->CurrentState.Position.X && Inputs & INPUT_LEFT))
+		else if ((CurrentState.bFacingRight && Inputs & INPUT_LEFT) || (!CurrentState.bFacingRight && Inputs & INPUT_RIGHT))
 		{
 			CurrentState.Dir7 = DirInputTime;
 		}
@@ -1628,7 +1638,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		{
 			if (CurrentState.bFacingRight)
 			{
-				if (((CurrentState.Dir6 < DirInputTime - 1 && CurrentState.Dir6 > DirInputTime/3) || (CurrentState.Dir9 < DirInputTime - 1 && CurrentState.Dir9 > DirInputTime/3)) && CurrentState.Resolute && CurrentState.DoubleDir6 == 0)
+				if (((CurrentState.Dir6 < DirInputTime - 1 && CurrentState.Dir6 > 0) || (CurrentState.Dir9 < DirInputTime - 1 && CurrentState.Dir9 > 0)) && CurrentState.Charge5 > 0 && CurrentState.DoubleDir6 == 0)
 				{
 					CurrentState.DoubleDir6 = DirInputTime;
 				}
@@ -1636,7 +1646,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 			}
 			else
 			{
-				if (((CurrentState.Dir4 < DirInputTime - 1 && CurrentState.Dir4 > DirInputTime/3) || (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir7 > DirInputTime/3)) && CurrentState.Resolute && CurrentState.DoubleDir4 == 0)
+				if (((CurrentState.Dir4 < DirInputTime - 1 && CurrentState.Dir4 > 0) || (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir7 > 0)) && CurrentState.Charge5 > 0 && CurrentState.DoubleDir4 == 0)
 				{
 					CurrentState.DoubleDir4 = DirInputTime;
 				}
@@ -1655,7 +1665,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		{
 			if (CurrentState.bFacingRight)
 			{
-				if (((CurrentState.Dir4 < DirInputTime - 1 && CurrentState.Dir4 > DirInputTime/3) || (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir7 > DirInputTime/3)) && CurrentState.Resolute && CurrentState.DoubleDir4 == 0)
+				if (((CurrentState.Dir4 < DirInputTime - 1 && CurrentState.Dir4 > 0) || (CurrentState.Dir7 < DirInputTime - 2 && CurrentState.Dir7 > DirInputTime/3)) && CurrentState.Charge5 > 0 && CurrentState.DoubleDir4 == 0)
 				{
 					CurrentState.DoubleDir4 = DirInputTime;
 				}
@@ -1663,7 +1673,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 			}
 			else
 			{
-				if (((CurrentState.Dir6 < DirInputTime - 1 && CurrentState.Dir6 > DirInputTime/3) || (CurrentState.Dir9 < DirInputTime - 1 && CurrentState.Dir9 > DirInputTime/3)) && CurrentState.Resolute && CurrentState.DoubleDir6 == 0)
+				if (((CurrentState.Dir6 < DirInputTime - 1 && CurrentState.Dir6 > 0) || (CurrentState.Dir9 < DirInputTime - 1 && CurrentState.Dir9 > 0)) && CurrentState.Charge5 > 0 && CurrentState.DoubleDir6 == 0)
 				{
 					CurrentState.DoubleDir6 = DirInputTime;
 				}
@@ -1937,12 +1947,14 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			CurrentState.MReleased = 0;
 			CurrentState.HReleased = 0;
 			CurrentState.BReleased = 0;
-			StatusMix = .75f;
-			StatusColor = FVector(1);
+			StatusMix = 1;
+			StatusColor = FVector(1.2);
 			CurrentState.SlowMoTime = 0;
 			CurrentState.StatusTimer = 10;
 			CurrentState.JumpsUsed = 0;
 			CurrentState.WallBounceTime = 0;
+
+			TurnAroundCheck();
 			return EnterNewAnimation(AirRecovery);
 		}
 	}
@@ -1960,8 +1972,8 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			CurrentState.MReleased = 0;
 			CurrentState.HReleased = 0;
 			CurrentState.BReleased = 0;
-			StatusMix = .75f;
-			StatusColor = FVector(1);
+			StatusMix = 1;
+			StatusColor = FVector(1.2);
 			CurrentState.StatusTimer = 10;
 			return EnterNewAnimation(IdleCrouch);
 		}
@@ -2047,8 +2059,15 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 						SigilPosition.Y += AirDashForwardOffset.Y;
 					}
 					Sigils[0]->Activate(SigilPosition, SigilRotation);
+
+					FVector2D AirDashPosition = FVector2D(CurrentState.Position.X - AirDashForwardOffset.X, CurrentState.Position.Y + AirPushboxVerticalOffset + .5 * CrouchingPushBoxHeight);
+
+					if (!CurrentState.bFacingRight)
+						AirDashPosition.X += 2 * AirDashForwardOffset.X;
+
+					SpecialVFX[1]->Activate(AirDashPosition, CurrentState.bFacingRight, 0, AirDash);
 					
-					return EnterNewAnimation(AirDashForward);
+					return EnterNewAnimation(AirDashForwardIn);
 				}
 
 				if (CurrentState.DoubleDir4 > 0)
@@ -2083,6 +2102,13 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 						SigilPosition.Y += AirDashBackOffset.Y;
 					}
 					Sigils[0]->Activate(SigilPosition, SigilRotation);
+
+					FVector2D AirDashPosition = FVector2D(CurrentState.Position.X + AirDashForwardOffset.X, CurrentState.Position.Y + AirPushboxVerticalOffset + .5 * CrouchingPushBoxHeight);
+
+					if (!CurrentState.bFacingRight)
+						AirDashPosition.X -= 2 * AirDashForwardOffset.X;
+
+					SpecialVFX[1]->Activate(AirDashPosition, !CurrentState.bFacingRight, 0, AirDash);
 
 					return EnterNewAnimation(AirDashBackward);
 				}
@@ -2241,6 +2267,11 @@ bool ABTCharacterBase::ExitTimeTransitions()
 		return EnterNewAnimation(MidJump);
 	}
 
+	if (IsCurrentAnimation(AirDashForwardIn))
+	{
+		return EnterNewAnimation(AirDashForward);
+	}
+
 	if (IsCurrentAnimation(AirDashBackwardOut) || IsCurrentAnimation(AirDashForwardOut) || IsCurrentAnimation(AirRecovery))
 	{
 		TurnAroundCheck();
@@ -2335,56 +2366,6 @@ void ABTCharacterBase::AnimationEvents()
 				if (CurrentState.AnimFrameIndex == FocusBlitz.Num() - 1 && CurrentState.PosePlayTime == CurrentState.CurrentAnimFrame.PlayDuration - 1)
 				{
 					CurrentState.bBlitzing = true;
-
-					/*if (CurrentState.bIsAirborne)
-					{
-						//can hold direction to change velocity when exiting Focus Blitz
-						if (CurrentState.Dir2 == DirInputTime)
-							CurrentState.Velocity = FVector2D(0, -.25 * AirDashForce);
-						else if (CurrentState.Dir8 == DirInputTime)
-							CurrentState.Velocity = FVector2D(0, .35 * AirDashForce);
-						else if (CurrentState.Dir4 == DirInputTime)
-						{
-							CurrentState.Velocity = FVector2D(.35f * AirDashForce, 0);
-							if (CurrentState.bFacingRight)
-								CurrentState.Velocity.X *= -1;
-						}
-						else if (CurrentState.Dir6 == DirInputTime)
-						{
-							CurrentState.Velocity = FVector2D(.35f * AirDashForce, 0);
-
-							if (!CurrentState.bFacingRight)
-								CurrentState.Velocity.X *= -1;
-						}
-						else if (CurrentState.Dir7 == DirInputTime)
-						{
-							CurrentState.Velocity = FVector2D(.35f * AirDashForce);
-
-							if (CurrentState.bFacingRight)
-								CurrentState.Velocity.X *= -1;
-						}
-						else if (CurrentState.Dir9 == DirInputTime)
-						{
-							CurrentState.Velocity = FVector2D(.35f * AirDashForce);
-
-							if (!CurrentState.bFacingRight)
-								CurrentState.Velocity.X *= -1;
-						}
-						else if (CurrentState.Dir1 == DirInputTime)
-						{
-							CurrentState.Velocity = FVector2D(-.25f * AirDashForce);
-
-							if (!CurrentState.bFacingRight)
-								CurrentState.Velocity.X *= -1;
-						}
-						else if (CurrentState.Dir3 == DirInputTime)
-						{
-							CurrentState.Velocity = FVector2D(-.25f * AirDashForce);
-
-							if (CurrentState.bFacingRight)
-								CurrentState.Velocity.X *= -1;
-						}
-					}*/
 				}
 			}
 			else
@@ -2577,14 +2558,13 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			//reward opponent for blocking with exceptional timing
 			Opponent->CurrentState.Durability += 250;
 			Opponent->CurrentState.ResolvePulse += 3;
-			Opponent->CurrentState.JustDefense = 0;
 			if (Opponent->CurrentState.ResolveRecoverTimer < 180)
 				Opponent->CurrentState.ResolveRecoverTimer = 180;
 
 			//make opponent flash white
-			Opponent->StatusMix = .75f;
-			Opponent->CurrentState.StatusTimer = 8;
-			Opponent->StatusColor = FVector(1);
+			Opponent->StatusMix = 1;
+			Opponent->CurrentState.StatusTimer = 10;
+			Opponent->StatusColor = FVector(1.2);
 			UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
 		}
 		else
@@ -2738,16 +2718,20 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		if (Opponent)
 		{
 			FVector2D ImpactPoint = FVector2D(Opponent->CurrentState.Position.X - .5 * Opponent->PushboxWidth, IntersectCenter.Y);
+			uint8 GuardStatus = Guard;
+
+			if (Opponent->CurrentState.JustDefense >= 0)
+				GuardStatus = JustGuard;
 
 			if (Opponent->CurrentState.bFacingRight)
 				ImpactPoint.X = Opponent->CurrentState.Position.X + .5 * Opponent->PushboxWidth;
 
 			if (SpecialVFX[1]->CurrentState.bIsActive)
 			{
-				Opponent->SpecialVFX[1]->Activate(ImpactPoint, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties, Guard);
+				Opponent->SpecialVFX[1]->Activate(ImpactPoint, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties, GuardStatus);
 			}
 			else
-				SpecialVFX[1]->Activate(ImpactPoint, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties, Guard);
+				SpecialVFX[1]->Activate(ImpactPoint, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties, GuardStatus);
 		}
 
 	}
@@ -2936,7 +2920,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 				//make opponent flash magenta on pierce
 				Opponent->StatusMix = .7f;
-				Opponent->CurrentState.StatusTimer = 12;
+				Opponent->CurrentState.StatusTimer = 10;
 				Opponent->StatusColor = FVector(1, .1, 1);
 			}
 			else
@@ -2945,7 +2929,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 				//make opponent flash red on counter
 				Opponent->StatusMix = .7f;
-				Opponent->CurrentState.StatusTimer = 12;
+				Opponent->CurrentState.StatusTimer = 10;
 				Opponent->StatusColor = FVector(1, 0, 0);
 			}
 		}
@@ -2994,10 +2978,8 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		ComboProration = 4;
 	else if (CurrentState.ComboCount < 10)
 		ComboProration = 3;
-	else if (CurrentState.ComboCount < 11)
-		ComboProration = 2;
 	else
-		ComboProration = 1;
+		ComboProration = 2;
 
 	DamageToApply = FMath::FloorToInt(DamageToApply * ComboProration / 10);
 
@@ -3349,6 +3331,15 @@ bool ABTCharacterBase::BlitzCancel()
 				}
 				Sigils[0]->Activate(SigilPosition, SigilRotation);
 
+				FVector2D AirDashPosition = FVector2D(CurrentState.Position.X - AirDashForwardOffset.X, CurrentState.Position.Y + AirPushboxVerticalOffset + .5 * CrouchingPushBoxHeight);
+
+				if (!CurrentState.bFacingRight)
+					AirDashPosition.X += 2 * AirDashForwardOffset.X;
+
+				SpecialVFX[1]->Activate(AirDashPosition, CurrentState.bFacingRight, 0, AirDash);
+
+				return EnterNewAnimation(AirDashForward);
+
 				return EnterNewAnimation(BlitzDashForward);
 			}
 			if (CurrentState.Dir4 == DirInputTime) //blitz air dash backward
@@ -3382,6 +3373,13 @@ bool ABTCharacterBase::BlitzCancel()
 				Sigils[0]->Activate(SigilPosition, SigilRotation);
 
 				CurrentState.bBlitzing = true;
+
+				FVector2D AirDashPosition = FVector2D(CurrentState.Position.X + AirDashForwardOffset.X, CurrentState.Position.Y + AirPushboxVerticalOffset + .5 * CrouchingPushBoxHeight);
+
+				if (!CurrentState.bFacingRight)
+					AirDashPosition.X -= 2 * AirDashForwardOffset.X;
+
+				SpecialVFX[1]->Activate(AirDashPosition, !CurrentState.bFacingRight, 0, AirDash);
 
 				return EnterNewAnimation(BlitzDashBackward);
 			}
@@ -3530,7 +3528,7 @@ void ABTCharacterBase::LightSettings()
 void ABTCharacterBase::ProcessBlitz()
 {
 	CurrentState.bBlitzing = false;
-	if (FMath::Sqrt(FMath::Square(CurrentState.CurrentBlitzState[0].Position.X - Opponent->CurrentState.Position.X) + FMath::Square(CurrentState.CurrentBlitzState[0].Position.Y - Opponent->CurrentState.Position.Y)) < 150
+	if (FMath::Sqrt(FMath::Square(CurrentState.CurrentBlitzState[0].Position.X - Opponent->CurrentState.Position.X) + FMath::Square(CurrentState.CurrentBlitzState[0].Position.Y - Opponent->CurrentState.Position.Y)) < 125
 		&& Opponent->CurrentState.CurrentAnimFrame.Invincibility != FullInvincible && Opponent->CurrentState.CurrentAnimFrame.Invincibility != OTG)
 	{
 		if (Opponent->CurrentState.Resolute)
@@ -3589,9 +3587,9 @@ void ABTCharacterBase::ProcessBlitz()
 					Opponent->CurrentState.ResolvePulse += 3;
 
 					//make opponent flash white
-					Opponent->StatusMix = .75f;
-					Opponent->CurrentState.StatusTimer = 8;
-					Opponent->StatusColor = FVector(1);
+					Opponent->StatusMix = 1;
+					Opponent->CurrentState.StatusTimer = 10;
+					Opponent->StatusColor = FVector(1.2);
 					UE_LOG(LogTemp, Warning, TEXT("JUST DEFEND")); //ui Instant block effect "Instant"
 				}
 

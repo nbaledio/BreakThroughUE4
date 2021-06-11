@@ -10,10 +10,12 @@ enum Interactions
 {
 	Hit = 0,
 	Guard,
+	JustGuard,
 	Resolve,
 	HeavyResolve,
 	Clash,
 	Deflect,
+	AirDash,
 };
 
 class ABTCharacterBase;

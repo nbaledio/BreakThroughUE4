@@ -35,10 +35,13 @@ protected:
 		UMaterialInterface* WaveMaterial;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
 		UMaterialInterface* FlashMaterial;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
+		UMaterialInterface* AirMaterial;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
 		UTexture* FlashTexture;
 
 	UMaterialInstanceDynamic* DynamicWaveMaterial;
 	UMaterialInstanceDynamic* DynamicFlashMaterial;
+	UMaterialInstanceDynamic* DynamicAirMaterial;
 };
