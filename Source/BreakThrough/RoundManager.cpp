@@ -180,7 +180,7 @@ void ARoundManager::DetermineWinMethod()
 	{
 		RoundStop();
 		//Play Perfect KO Animation
-		UE_LOG(LogTemp, Warning, TEXT("Perfect"));
+		//UE_LOG(LogTemp, Warning, TEXT("Perfect"));
 		//Increment win count
 		if (Player2Base->CurrentState.Health <= 0)
 		{

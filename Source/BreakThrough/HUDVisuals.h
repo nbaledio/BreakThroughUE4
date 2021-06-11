@@ -15,7 +15,7 @@ class BREAKTHROUGH_API UHUDVisuals : public UUserWidget
 
 public:
 	//Widget Components
-	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+	UPROPERTY(meta = (BindWidget))
 		class UProgressBar* P1HealthBar;
 	UPROPERTY(meta = (BindWidget))
 		class UProgressBar* P2HealthBar;
@@ -27,7 +27,7 @@ public:
 		class UTextBlock* P1CharacterName;
 	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* P2CharacterName;
-	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* TimerText;
 
 	//Functions
