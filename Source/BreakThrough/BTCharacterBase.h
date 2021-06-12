@@ -318,7 +318,7 @@ struct FCharacterState
 	uint8 Charge2 = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Charge4 = 0;
-	//uint8 Charge5 = 0;
+	uint8 Charge5 = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Charge6 = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
@@ -747,6 +747,8 @@ public:
 		TArray<FAnimationFrame> BlitzDashForward;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> BlitzDashBackward;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
+		TArray<FAnimationFrame> AirDashForwardIn;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")
 		TArray<FAnimationFrame> AirDashForwardOut;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Locomotion Anims")

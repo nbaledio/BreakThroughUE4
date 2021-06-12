@@ -18,7 +18,7 @@ void ABTGuardVFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInfo,
 	if (!(HitInfo & IsSpecial || HitInfo & IsHeavy || InteractType == HeavyResolve))
 		Transform->SetRelativeScale3D(Transform->GetRelativeScale3D() * .75);
 
-	if (InteractType == Guard)
+	if (InteractType == Guard || InteractType == JustGuard)
 	{
 		DynamicWaveMaterial->SetVectorParameterValue(FName("Color"), FVector(0, .1, .65));
 		DynamicFlashMaterial->SetVectorParameterValue(FName("Color"), FVector(0, .5, 1));
@@ -44,6 +44,11 @@ void ABTGuardVFX::CreateMaterials()
 		DynamicFlashMaterial = UMaterialInstanceDynamic::Create(FlashMaterial, this);
 	}
 
+	if (AirMaterial)
+	{
+		DynamicAirMaterial = UMaterialInstanceDynamic::Create(AirMaterial, this);
+	}
+
 	if (GuardMesh)
 	{
 		if (DynamicWaveMaterial)
@@ -56,6 +61,11 @@ void ABTGuardVFX::CreateMaterials()
 			GuardMesh->SetMaterial(1, DynamicFlashMaterial);
 			DynamicFlashMaterial->SetTextureParameterValue(FName("SpriteSheet"), FlashTexture);
 		}
+
+		if (DynamicAirMaterial)
+		{
+			GuardMesh->SetMaterial(2, DynamicAirMaterial);
+		}
 	}
 }
 
@@ -65,7 +75,8 @@ void ABTGuardVFX::Update()
 
 	if (CurrentState.bIsActive)
 	{
-		if (!(CurrentState.HitProperties & IsSpecial || CurrentState.Interaction == HeavyResolve || CurrentState.HitProperties & IsHeavy))
+		if (!(CurrentState.HitProperties & IsSpecial || CurrentState.Interaction == HeavyResolve || CurrentState.HitProperties & IsHeavy || 
+			CurrentState.Interaction == AirDash || CurrentState.Interaction == JustGuard))
 		{
 			if (CurrentState.FramePlayTime == 1)
 			{
@@ -82,7 +93,9 @@ void ABTGuardVFX::Update()
 			}
 		}
 
-		if (CurrentState.AnimFrameIndex >= 8 && !(CurrentState.HitProperties & IsHeavy) && CurrentState.Interaction != HeavyResolve)
+		if (CurrentState.AnimFrameIndex >= 4 && CurrentState.Interaction == AirDash)
+			CurrentState.bIsActive = false;
+		else if (CurrentState.AnimFrameIndex >= 8 && !(CurrentState.HitProperties & IsHeavy) && CurrentState.Interaction != HeavyResolve)
 			CurrentState.bIsActive = false;
 		else if (CurrentState.AnimFrameIndex >= 10)
 			CurrentState.bIsActive = false;
@@ -103,7 +116,7 @@ void ABTGuardVFX::DrawEffect()
 
 		if (CurrentState.HitProperties & IsSpecial || CurrentState.Interaction == HeavyResolve)
 			Scale *= 1.35;
-		else if (CurrentState.Interaction == Resolve)
+		else if (CurrentState.Interaction == Resolve || CurrentState.Interaction == AirDash)
 			Scale *= .85;
 		else if (!(CurrentState.HitProperties & IsHeavy))
 			Scale *= .5;
@@ -112,14 +125,14 @@ void ABTGuardVFX::DrawEffect()
 
 		FVector AnimIndex = FVector(CurrentState.AnimFrameIndex % 4, CurrentState.AnimFrameIndex / 4, 0);
 
-		if (CurrentState.Interaction == Guard)
+		if (CurrentState.Interaction == Guard || CurrentState.Interaction == JustGuard)
 			AnimIndex.Y += 2;
 
-		if (CurrentState.AnimFrameIndex > 7)
+		if (CurrentState.AnimFrameIndex > 7 || CurrentState.Interaction == AirDash)
 			AnimIndex.X = -1;
 
 		DynamicFlashMaterial->SetVectorParameterValue(FName("AnimIndex"), AnimIndex);
-		DynamicFlashMaterial->SetScalarParameterValue(FName("Emissivity"), FMath::Lerp(20, 1, (float)(CurrentState.AnimFrameIndex * 2 + CurrentState.FramePlayTime) / 16));
+		DynamicFlashMaterial->SetScalarParameterValue(FName("Emissivity"), FMath::Lerp(20.f, 1.f, (float)(CurrentState.AnimFrameIndex * 2 + CurrentState.FramePlayTime) * .0625));
 
 		if (CurrentState.HitProperties & IsSpecial || CurrentState.Interaction == HeavyResolve)
 		{
@@ -131,6 +144,16 @@ void ABTGuardVFX::DrawEffect()
 		else
 		{
 			DynamicWaveMaterial->SetScalarParameterValue(FName("Alpha"), 1);
+		}
+
+		if ((CurrentState.Interaction == AirDash || CurrentState.Interaction == JustGuard) && CurrentState.AnimFrameIndex < 4)
+		{
+			DynamicAirMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 2, CurrentState.AnimFrameIndex / 2, 0));
+			DynamicAirMaterial->SetScalarParameterValue(FName("Alpha"), FMath::Lerp(1.f, 0.f, (float)((CurrentState.AnimFrameIndex * 2 + CurrentState.FramePlayTime) * .125)));
+		}
+		else
+		{
+			DynamicAirMaterial->SetScalarParameterValue(FName("Alpha"), 0);
 		}
 	}
 	else
