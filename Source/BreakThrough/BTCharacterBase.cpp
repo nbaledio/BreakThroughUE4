@@ -2944,6 +2944,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	{
 		DamageToApply = FMath::FloorToInt(3 * DamageToApply / 10);
 		HitStunToApply = FMath::FloorToInt(3 * HitStunToApply / 10);
+		CurrentState.SpecialProration *= .35f;
 	}
 
 	//calculate proration to apply on subsequent hits in a combo
