@@ -466,9 +466,9 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 					CurrentState.bTouchingOpponent = true;
 					Opponent->CurrentState.bTouchingOpponent = true;
 				}
-				else if (!CurrentState.bIsAirborne && (Opponent->CurrentState.bTouchingWall || (!IsCurrentAnimation(KnockDownFaceDown) && !IsCurrentAnimation(KnockDownFaceUp)
+				else if (!CurrentState.bIsAirborne && (!IsCurrentAnimation(KnockDownFaceDown) && !IsCurrentAnimation(KnockDownFaceUp)
 					&& !IsCurrentAnimation(WakeUpFaceUp) && !IsCurrentAnimation(WakeUpFaceDown))
-					&& Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.Velocity.Y <= 0))
+					&& Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.Velocity.Y <= 0)
 				{
 					if ((CurrentState.bIsCrouching && CrouchingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset) ||
 						(!CurrentState.bIsCrouching && StandingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset)) //check if pushboxes intersect
@@ -577,8 +577,8 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 					}
 				}
 				else if (CurrentState.bIsAirborne && !Opponent->CurrentState.bIsAirborne && CurrentState.Velocity.Y <= 0
-						&& ((!Opponent->IsCurrentAnimation(Opponent->KnockDownFaceDown) && !Opponent->IsCurrentAnimation(Opponent->KnockDownFaceUp) 
-						&& !Opponent->IsCurrentAnimation(Opponent->WakeUpFaceUp) && !Opponent->IsCurrentAnimation(Opponent->WakeUpFaceDown)) || Opponent->CurrentState.bTouchingWall))
+						&& (!Opponent->IsCurrentAnimation(Opponent->KnockDownFaceDown) && !Opponent->IsCurrentAnimation(Opponent->KnockDownFaceUp) 
+						&& !Opponent->IsCurrentAnimation(Opponent->WakeUpFaceUp) && !Opponent->IsCurrentAnimation(Opponent->WakeUpFaceDown)))
 				{
 					if ((Opponent->CurrentState.bIsCrouching && Opponent->CrouchingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset) ||
 						(!Opponent->CurrentState.bIsCrouching && Opponent->StandingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset)) //check if pushboxes intersect
@@ -1975,7 +1975,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			StatusMix = 1;
 			StatusColor = FVector(1.2);
 			CurrentState.StatusTimer = 10;
-			return EnterNewAnimation(IdleCrouch);
+			return EnterNewAnimation(StandUp);
 		}
 	}
 
@@ -3121,8 +3121,8 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 		{
 			CurrentState.bClash = true;
 			Opponent->CurrentState.bClash = true;
-			CurrentState.KnockBack = FVector2D(-1, 0);
-			Opponent->CurrentState.KnockBack = FVector2D(-1, 0);
+			CurrentState.KnockBack = FVector2D(-2, 0);
+			Opponent->CurrentState.KnockBack = FVector2D(-2, 0);
 
 			if (ThrowType == AirThrow)
 			{
@@ -3136,6 +3136,15 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 			}
 
 			//play throw escape effect
+			if (Opponent)
+			{
+				if (SpecialVFX[0]->CurrentState.bIsActive)
+				{
+					Opponent->SpecialVFX[0]->Activate(IntersectCenter, CurrentState.bFacingRight, 0, Clash);
+				}
+				else
+					SpecialVFX[0]->Activate(IntersectCenter, CurrentState.bFacingRight, 0, Clash);
+			}
 		}
 		else if (Opponent->CurrentState.Resolute)
 		{
@@ -3206,6 +3215,15 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 							Opponent->EnterNewAnimation(Opponent->ThrowEscape);
 						}
 						//play throw escape effect
+						if (Opponent)
+						{
+							if (SpecialVFX[0]->CurrentState.bIsActive)
+							{
+								Opponent->SpecialVFX[0]->Activate(IntersectCenter, CurrentState.bFacingRight, 0, Clash);
+							}
+							else
+								SpecialVFX[0]->Activate(IntersectCenter, CurrentState.bFacingRight, 0, Clash);
+						}
 					}
 				}
 			}
@@ -3693,8 +3711,18 @@ void ABTCharacterBase::ClashDetection()
 					else
 						Opponent->EnterNewAnimation(Opponent->Deflected);
 
-					CurrentState.HitStop = 9;
-					Opponent->CurrentState.HitStop = 9;
+					CurrentState.HitStop = 5;
+					Opponent->CurrentState.HitStop = 5;
+
+					if (Opponent)
+					{
+						if (SpecialVFX[0]->CurrentState.bIsActive)
+						{
+							Opponent->SpecialVFX[0]->Activate(IntersectCenter, CurrentState.bFacingRight, 0, Deflect);
+						}
+						else
+							SpecialVFX[0]->Activate(IntersectCenter, CurrentState.bFacingRight, 0, Deflect);
+					}
 				}
 				//opponent's attack can deflect
 				else if (!(CurrentState.CurrentAnimFrame.Hitboxes[0].AttackProperties & CanDeflect) && Opponent->CurrentState.CurrentAnimFrame.Hitboxes[0].AttackProperties & CanDeflect && !(CurrentState.CurrentAnimFrame.Hitboxes[0].AttackProperties & IsSuper))
@@ -3708,6 +3736,16 @@ void ABTCharacterBase::ClashDetection()
 
 					CurrentState.HitStop = 9;
 					Opponent->CurrentState.HitStop = 9;
+
+					if (Opponent)
+					{
+						if (SpecialVFX[0]->CurrentState.bIsActive)
+						{
+							Opponent->SpecialVFX[0]->Activate(IntersectCenter, CurrentState.bFacingRight, 0, Deflect);
+						}
+						else
+							SpecialVFX[0]->Activate(IntersectCenter, CurrentState.bFacingRight, 0, Deflect);
+					}
 				}
 				else //otherwise normal clash
 				{
@@ -3716,6 +3754,15 @@ void ABTCharacterBase::ClashDetection()
 					CurrentState.AvailableActions = AcceptAll - (AcceptMove + AcceptGuard);
 					Opponent->CurrentState.AvailableActions = AcceptAll - (AcceptMove + AcceptGuard);
 					//play clash effect
+					if (Opponent)
+					{
+						if (SpecialVFX[0]->CurrentState.bIsActive)
+						{
+							Opponent->SpecialVFX[0]->Activate(IntersectCenter, CurrentState.bFacingRight, 0, Clash);
+						}
+						else
+							SpecialVFX[0]->Activate(IntersectCenter, CurrentState.bFacingRight, 0, Clash);
+					}
 				}
 			}
 		}

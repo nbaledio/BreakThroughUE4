@@ -32,6 +32,9 @@ protected:
 		UStaticMeshComponent* Billboard;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UStaticMeshComponent* Ring;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UStaticMeshComponent* Spark;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UStaticMeshComponent* Cross;
@@ -47,9 +50,11 @@ protected:
 		UTexture* CrossTexture00;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
 		UTexture* CrossTexture01;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
+		UTexture* RingTexture;
 
 	UMaterialInstanceDynamic* DynamicBillboardMaterial;
 	UMaterialInstanceDynamic* DynamicSparkMaterial;
 	UMaterialInstanceDynamic* DynamicCrossMaterial;
-
+	UMaterialInstanceDynamic* DynamicRingMaterial;
 };

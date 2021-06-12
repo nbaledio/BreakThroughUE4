@@ -10,6 +10,9 @@ ABTHitFX::ABTHitFX()
 	Billboard = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Billboard"));
 	Billboard->SetupAttachment(RootComponent);
 
+	Ring = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Ring"));
+	Ring->SetupAttachment(RootComponent);
+
 	Spark = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Spark"));
 	Spark->SetupAttachment(RootComponent);
 
@@ -26,6 +29,8 @@ void ABTHitFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInfo, ui
 	Spark->SetRelativeRotation(FRotator(FMath::RandRange(-60, 60), FMath::RandRange(-60, 60), 90));
 
 	Cross->SetRelativeRotation(FRotator(FMath::RandRange(-180, 180), FMath::RandRange(-60, 60), 90));
+
+	Ring->SetRelativeRotation(FRotator(FMath::RandRange(-180, 180), FMath::RandRange(-30, 30), 90));
 
 	if (HitInfo & IsSlash)
 	{
@@ -47,6 +52,11 @@ void ABTHitFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInfo, ui
 	{
 		Billboard->SetRelativeRotation(FRotator(FMath::RandRange(-180, 180), 0, 90));
 	}
+
+	if (CurrentState.Interaction == Deflect)
+		DynamicSparkMaterial->SetScalarParameterValue(FName("Emissivity"), 0);
+	else
+		DynamicSparkMaterial->SetScalarParameterValue(FName("Emissivity"), 4);
 }
 
 void ABTHitFX::CreateMaterials()
@@ -58,36 +68,39 @@ void ABTHitFX::CreateMaterials()
 		DynamicBillboardMaterial = UMaterialInstanceDynamic::Create(EffectMaterial, this);
 		DynamicSparkMaterial = UMaterialInstanceDynamic::Create(EffectMaterial, this);
 		DynamicCrossMaterial = UMaterialInstanceDynamic::Create(EffectMaterial, this);
-
-		if (BillboardTexture)
-			DynamicBillboardMaterial->SetTextureParameterValue(FName("SpriteSheet"), BillboardTexture);
-
-		if (SparkTexture)
-			DynamicSparkMaterial->SetTextureParameterValue(FName("SpriteSheet"), SparkTexture);
-
-		if (CrossTexture00)
-		{
-			DynamicCrossMaterial->SetTextureParameterValue(FName("SpriteSheet"), CrossTexture00);
-		}
+		DynamicRingMaterial = UMaterialInstanceDynamic::Create(EffectMaterial, this);
 	}
 
 	if (DynamicBillboardMaterial && Billboard)
 	{
 		Billboard->SetMaterial(0, DynamicBillboardMaterial);
+		if (BillboardTexture)
+			DynamicBillboardMaterial->SetTextureParameterValue(FName("SpriteSheet"), BillboardTexture);
 	}
 
 	if (DynamicSparkMaterial && Spark)
 	{
 		Spark->SetMaterial(0, DynamicSparkMaterial);
-		DynamicSparkMaterial->SetScalarParameterValue(FName("Emissivity"), 4);
+		//DynamicSparkMaterial->SetScalarParameterValue(FName("Emissivity"), 4);
 		DynamicSparkMaterial->SetVectorParameterValue(FName("Color"), FVector(1));
+		if (SparkTexture)
+			DynamicSparkMaterial->SetTextureParameterValue(FName("SpriteSheet"), SparkTexture);
 	}
 
 	if (DynamicCrossMaterial && Cross)
 	{
 		Cross->SetMaterial(0, DynamicCrossMaterial);
 		DynamicCrossMaterial->SetScalarParameterValue(FName("Emissivity"), 0);
+		DynamicCrossMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .3f, 1));
 		DynamicCrossMaterial->SetVectorParameterValue(FName("RowsAndColumns"), FVector(2));
+	}
+
+	if (DynamicRingMaterial && Ring)
+	{
+		Ring->SetMaterial(0, DynamicRingMaterial);
+		DynamicRingMaterial->SetScalarParameterValue(FName("Emissivity"), 15);
+		DynamicRingMaterial->SetTextureParameterValue(FName("SpriteSheet"), RingTexture);
+		DynamicRingMaterial->SetVectorParameterValue(FName("Color"), FVector(0, 1, .1));
 	}
 }
 
@@ -103,12 +116,12 @@ void ABTHitFX::Update()
 
 		if (CurrentState.HitProperties & IsSpecial)
 			Scale *= 1.75;
-		else if (CurrentState.HitProperties & IsHeavy)
+		else if (CurrentState.HitProperties & IsHeavy || CurrentState.Interaction == Deflect)
 			Scale *= 1.35;
 
 		Transform->SetRelativeScale3D(Scale);
 
-		if (CurrentState.HitProperties & IsSpecial && CurrentState.AnimFrameIndex % 2 == 0)
+		if ((CurrentState.HitProperties & IsSpecial) && CurrentState.AnimFrameIndex % 2 == 0)
 		{
 			if (CurrentState.FramePlayTime == 3)
 			{
@@ -117,20 +130,27 @@ void ABTHitFX::Update()
 			}
 		}
 		else if (CurrentState.FramePlayTime == 2)
-			{
-				CurrentState.AnimFrameIndex++;
-				CurrentState.FramePlayTime = 0;
-			}
+		{
+			CurrentState.AnimFrameIndex++;
+			CurrentState.FramePlayTime = 0;
+		}
 
-		if ((CurrentState.HitProperties & IsSlash) && CurrentState.AnimFrameIndex >= 8)
+		if (CurrentState.Interaction == Hit)
 		{
-			CurrentState.bIsActive = false;
+			if ((CurrentState.HitProperties & IsSlash || CurrentState.Interaction == Clash || CurrentState.Interaction == Deflect) && CurrentState.AnimFrameIndex >= 8)
+			{
+				CurrentState.bIsActive = false;
+			}
+			else if ((CurrentState.HitProperties & IsHeavy || CurrentState.HitProperties & IsSpecial || CurrentState.HitProperties & IsSuper) && CurrentState.AnimFrameIndex >= 7)
+			{
+				CurrentState.bIsActive = false;
+			}
+			else if (!(CurrentState.HitProperties & IsSlash) && !(CurrentState.HitProperties & IsSpecial) && !(CurrentState.HitProperties & IsHeavy) && !(CurrentState.HitProperties & IsSuper) && CurrentState.AnimFrameIndex >= 5)
+			{
+				CurrentState.bIsActive = false;
+			}
 		}
-		else if ((CurrentState.HitProperties & IsHeavy || CurrentState.HitProperties & IsSpecial || CurrentState.HitProperties & IsSuper) && CurrentState.AnimFrameIndex >= 7)
-		{
-			CurrentState.bIsActive = false;
-		}
-		else if (!(CurrentState.HitProperties & IsSlash) && !(CurrentState.HitProperties & IsSpecial) && !(CurrentState.HitProperties & IsHeavy) && !(CurrentState.HitProperties & IsSuper) && CurrentState.AnimFrameIndex >= 5)
+		else if (CurrentState.AnimFrameIndex >= 8)
 		{
 			CurrentState.bIsActive = false;
 		}
@@ -146,6 +166,8 @@ void ABTHitFX::DrawEffect()
 		Billboard->SetVisibility(true);
 		Spark->SetVisibility(true);
 
+		Billboard->SetMaterial(0, DynamicBillboardMaterial);
+
 		if (CurrentState.HitProperties & IsSlash)
 		{
 			DynamicBillboardMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, 2 + CurrentState.AnimFrameIndex / 4, 0));
@@ -154,19 +176,27 @@ void ABTHitFX::DrawEffect()
 		else
 		{
 			DynamicBillboardMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, CurrentState.AnimFrameIndex / 4, 0));
-			DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .25, 0));
+			if (CurrentState.Interaction == Hit)
+				DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .25, 0));
+			else
+				DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, 0, .5));
 		}
 
-		if (!(CurrentState.HitProperties & IsSpecial) && !(CurrentState.HitProperties & IsHeavy) && !(CurrentState.HitProperties & IsSuper))
+		if (!(CurrentState.HitProperties & IsSpecial) && !(CurrentState.HitProperties & IsHeavy) && !(CurrentState.HitProperties & IsSuper) && CurrentState.Interaction != Deflect)
 			DynamicSparkMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, CurrentState.AnimFrameIndex / 4, 0));
 		else
 		{
 			DynamicSparkMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, 2 + CurrentState.AnimFrameIndex / 4, 0));
 		}
 
-		if (CurrentState.HitProperties & IsSpecial || CurrentState.HitProperties & IsSuper)
+		if (CurrentState.HitProperties & IsSpecial || CurrentState.HitProperties & IsSuper || CurrentState.Interaction == Clash || CurrentState.Interaction == Deflect)
 		{
 			Cross->SetVisibility(true);
+
+			if (CurrentState.Interaction != Hit)
+				DynamicCrossMaterial->SetScalarParameterValue(FName("Emissivity"), 10);
+			else
+				DynamicCrossMaterial->SetScalarParameterValue(FName("Emissivity"), 0);
 
 			if (CrossTexture00 && CurrentState.AnimFrameIndex < 4)
 			{
@@ -183,11 +213,23 @@ void ABTHitFX::DrawEffect()
 		{
 			Cross->SetVisibility(false);
 		}
+
+		if (CurrentState.Interaction != Hit)
+		{
+			Ring->SetVisibility(true);
+			DynamicRingMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, CurrentState.AnimFrameIndex / 4, 0));
+			DynamicRingMaterial->SetScalarParameterValue(FName("Emissivity"), FMath::Lerp(15.f, 1.f, CurrentState.AnimFrameIndex * .125));
+		}
+		else
+		{
+			Ring->SetVisibility(false);
+		}
 	}
 	else
 	{
 		Billboard->SetVisibility(false);
 		Spark->SetVisibility(false);
 		Cross->SetVisibility(false);
+		Ring->SetVisibility(false);
 	}
 }
