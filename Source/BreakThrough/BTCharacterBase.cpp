@@ -1547,14 +1547,16 @@ void ABTCharacterBase::ChargeInputs(int32 Inputs)  //set the correct charges bas
 		CurrentState.Charge5 = 0;
 	}
 
-	if ((Inputs & INPUT_LEFT && CurrentState.Position.X > Opponent->CurrentState.Position.X) || (Inputs & INPUT_RIGHT && CurrentState.Position.X < Opponent->CurrentState.Position.X))
+	if ((Inputs & INPUT_LEFT && CurrentState.Position.X > Opponent->CurrentState.Position.X) || (Inputs & INPUT_RIGHT && CurrentState.Position.X < Opponent->CurrentState.Position.X) ||
+		(Inputs & INPUT_LEFT && CurrentState.Position.X == Opponent->CurrentState.Position.X && !CurrentState.bFacingRight) || (Inputs & INPUT_RIGHT && CurrentState.Position.X == Opponent->CurrentState.Position.X && CurrentState.bFacingRight))
 	{
 		if (CurrentState.Charge6 < 255)
 			CurrentState.Charge6++;
 		CurrentState.Charge6Life = DirInputTime;
 		CurrentState.Charge5 = 0;
 	}
-	else if ((Inputs & INPUT_LEFT && CurrentState.Position.X < Opponent->CurrentState.Position.X) || (Inputs & INPUT_RIGHT && CurrentState.Position.X > Opponent->CurrentState.Position.X)) //prevent charging both directions at the same time
+	else if ((Inputs & INPUT_LEFT && CurrentState.Position.X < Opponent->CurrentState.Position.X) || (Inputs & INPUT_RIGHT && CurrentState.Position.X > Opponent->CurrentState.Position.X) ||
+		(Inputs & INPUT_LEFT && CurrentState.Position.X == Opponent->CurrentState.Position.X && CurrentState.bFacingRight) || (Inputs & INPUT_RIGHT && CurrentState.Position.X == Opponent->CurrentState.Position.X && !CurrentState.bFacingRight)) //prevent charging both directions at the same time
 	{
 		if (CurrentState.Charge4 < 255)
 			CurrentState.Charge4++;
@@ -1899,7 +1901,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		return true;
 
 	if (CurrentState.bIsAirborne && (CurrentState.CurrentAnimFrame.Invincibility == FaceDown || CurrentState.CurrentAnimFrame.Invincibility == FaceUp || IsCurrentAnimation(WallStick)) 
-		&& !IsCurrentAnimation(WallBounce) && !IsCurrentAnimation(GroundBounce) && CurrentState.HitStun == 0 && CurrentState.ShatteredTime == 0)
+		&& !IsCurrentAnimation(WallBounce) && !IsCurrentAnimation(GroundBounce) && CurrentState.HitStun == 0 && CurrentState.ShatteredTime == 0 && CurrentState.Health > 0)
 	{
 		if (CurrentState.bIsLDown || CurrentState.bIsMDown || CurrentState.bIsHDown || CurrentState.bIsBDown) //hold any attack button down to air recover once able
 		{
@@ -2940,11 +2942,12 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	else
 		Opponent->CurrentState.WallBounceTime = 0;
 		
-	if (Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)
+	if (Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG || CurrentState.SpecialProration <= .35)
 	{
 		DamageToApply = FMath::FloorToInt(3 * DamageToApply / 10);
 		HitStunToApply = FMath::FloorToInt(3 * HitStunToApply / 10);
-		CurrentState.SpecialProration *= .35f;
+		if (CurrentState.SpecialProration > .35)
+			CurrentState.SpecialProration *= .35f;
 	}
 
 	//calculate proration to apply on subsequent hits in a combo
