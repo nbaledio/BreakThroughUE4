@@ -10,14 +10,14 @@ ABTHitFX::ABTHitFX()
 	Billboard = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Billboard"));
 	Billboard->SetupAttachment(RootComponent);
 
-	Ring = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Ring"));
-	Ring->SetupAttachment(RootComponent);
-
 	Spark = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Spark"));
 	Spark->SetupAttachment(RootComponent);
 
 	Cross = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Cross"));
 	Cross->SetupAttachment(RootComponent);
+
+	Ring = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Ring"));
+	Ring->SetupAttachment(Cross);
 }
 
 void ABTHitFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInfo, uint8 InteractType)
@@ -28,9 +28,13 @@ void ABTHitFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInfo, ui
 
 	Spark->SetRelativeRotation(FRotator(FMath::RandRange(-60, 60), FMath::RandRange(-60, 60), 90));
 
-	Cross->SetRelativeRotation(FRotator(FMath::RandRange(-180, 180), FMath::RandRange(-60, 60), 90));
+	FRotator CrossRotation = FRotator(FMath::RandRange(-180, 180), FMath::RandRange(-60, 60), 90);
+	Cross->SetRelativeRotation(CrossRotation);
 
-	Ring->SetRelativeRotation(FRotator(FMath::RandRange(-180, 180), FMath::RandRange(-30, 30), 90));
+	/*if (InteractType == Deflect)
+		Ring->SetRelativeRotation(CrossRotation + FRotator(5));
+	else
+		Ring->SetRelativeRotation(CrossRotation);*/
 
 	if (HitInfo & IsSlash)
 	{
@@ -53,9 +57,9 @@ void ABTHitFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInfo, ui
 		Billboard->SetRelativeRotation(FRotator(FMath::RandRange(-180, 180), 0, 90));
 	}
 
-	if (CurrentState.Interaction == Deflect)
+	/*if (CurrentState.Interaction == Deflect)
 		DynamicSparkMaterial->SetScalarParameterValue(FName("Emissivity"), 0);
-	else
+	else*/
 		DynamicSparkMaterial->SetScalarParameterValue(FName("Emissivity"), 4);
 }
 
@@ -91,7 +95,8 @@ void ABTHitFX::CreateMaterials()
 	{
 		Cross->SetMaterial(0, DynamicCrossMaterial);
 		DynamicCrossMaterial->SetScalarParameterValue(FName("Emissivity"), 0);
-		DynamicCrossMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .3f, 1));
+		//DynamicCrossMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .3f, 1));
+		DynamicCrossMaterial->SetVectorParameterValue(FName("Color"), FVector(.25, 1, .35));
 		DynamicCrossMaterial->SetVectorParameterValue(FName("RowsAndColumns"), FVector(2));
 	}
 
@@ -99,8 +104,9 @@ void ABTHitFX::CreateMaterials()
 	{
 		Ring->SetMaterial(0, DynamicRingMaterial);
 		DynamicRingMaterial->SetScalarParameterValue(FName("Emissivity"), 15);
-		DynamicRingMaterial->SetTextureParameterValue(FName("SpriteSheet"), RingTexture);
-		DynamicRingMaterial->SetVectorParameterValue(FName("Color"), FVector(0, 1, .1));
+		DynamicRingMaterial->SetVectorParameterValue(FName("RowsAndColumns"), FVector(2));
+		DynamicRingMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .035, 0));
+		//DynamicRingMaterial->SetVectorParameterValue(FName("Color"), FVector(.1, 1, .25));
 	}
 }
 
@@ -179,7 +185,7 @@ void ABTHitFX::DrawEffect()
 			if (CurrentState.Interaction == Hit)
 				DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .25, 0));
 			else
-				DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, 0, .5));
+				DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(.25, 1, .35)); //(FName("Color"), FVector(1, 0, .5));
 		}
 
 		if (!(CurrentState.HitProperties & IsSpecial) && !(CurrentState.HitProperties & IsHeavy) && !(CurrentState.HitProperties & IsSuper) && CurrentState.Interaction != Deflect)
@@ -193,37 +199,57 @@ void ABTHitFX::DrawEffect()
 		{
 			Cross->SetVisibility(true);
 
+			if (CurrentState.FramePlayTime == 0 && CurrentState.Interaction == Hit)
+			{
+				FRotator CrossRotation = FRotator(Cross->GetRelativeRotation());
+				CrossRotation += FRotator(3, 0, 0);
+				Cross->SetRelativeRotation(CrossRotation);
+			}
+
+			if (CurrentState.Interaction != Clash)
+				Ring->SetVisibility(true);
+
 			if (CurrentState.Interaction != Hit)
+			{
 				DynamicCrossMaterial->SetScalarParameterValue(FName("Emissivity"), 10);
+				DynamicRingMaterial->SetScalarParameterValue(FName("Emissivity"), 0);
+			}
 			else
+			{
 				DynamicCrossMaterial->SetScalarParameterValue(FName("Emissivity"), 0);
+				DynamicRingMaterial->SetScalarParameterValue(FName("Emissivity"), 10);
+			}
 
 			if (CrossTexture00 && CurrentState.AnimFrameIndex < 4)
 			{
 				DynamicCrossMaterial->SetTextureParameterValue(FName("SpriteSheet"), CrossTexture00);
 				DynamicCrossMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 2, CurrentState.AnimFrameIndex / 2, 0));
+				DynamicRingMaterial->SetTextureParameterValue(FName("SpriteSheet"), CrossTexture00);
+				DynamicRingMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 2, CurrentState.AnimFrameIndex / 2, 0));
 			}
 			else if (CrossTexture01)
 			{
 				DynamicCrossMaterial->SetTextureParameterValue(FName("SpriteSheet"), CrossTexture01);
 				DynamicCrossMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector((CurrentState.AnimFrameIndex - 4) % 2, (CurrentState.AnimFrameIndex - 4) / 2, 0));
+				DynamicRingMaterial->SetTextureParameterValue(FName("SpriteSheet"), CrossTexture01);
+				DynamicRingMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 2, CurrentState.AnimFrameIndex / 2, 0));
 			}
 		}
 		else
 		{
 			Cross->SetVisibility(false);
+			Ring->SetVisibility(false);
 		}
 
-		if (CurrentState.Interaction != Hit)
+		/*if (CurrentState.Interaction == Deflect)
 		{
 			Ring->SetVisibility(true);
 			DynamicRingMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, CurrentState.AnimFrameIndex / 4, 0));
-			DynamicRingMaterial->SetScalarParameterValue(FName("Emissivity"), FMath::Lerp(15.f, 1.f, CurrentState.AnimFrameIndex * .125));
 		}
 		else
 		{
 			Ring->SetVisibility(false);
-		}
+		}*/
 	}
 	else
 	{

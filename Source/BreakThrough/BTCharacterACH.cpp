@@ -858,16 +858,10 @@ void ABTCharacterACH::DrawSmear()
 	else if (IsCurrentAnimation(NormalJH) && CurrentState.AnimFrameIndex > 1 && CurrentState.AnimFrameIndex < 7)
 	{
 		FVector SmearFrameIndex = FVector(0);
-		FVector EmitFrameIndex;
+		FVector EmitFrameIndex = FVector(0);
 
 
-		if (CurrentState.AnimFrameIndex < 4)
-		{
-			EmitFrameIndex = FVector(0);
-			if (CurrentState.AnimFrameIndex == 2)
-				SmearFrameIndex = FVector(1,0,0);
-		}
-		else
+		if (CurrentState.AnimFrameIndex >= 4)
 		{
 			SmearFrameIndex = FVector(.5, 0, 0);
 
