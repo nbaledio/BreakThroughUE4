@@ -107,8 +107,8 @@ void ARoundManager::UpdateTimer()
 void ARoundManager::DrawScreen()
 {
 	//Update HUD
-	UpperHUD->UpdateUpperHUD(roundTimer, Player1Base->CurrentState.Health, Player1Base->MaxHealth, Player2Base->CurrentState.Health, Player2Base->MaxHealth);
-	LowerHUD->UpdateLowerHUD(Player1Base->CurrentState.Resolve, Player1Base->CurrentState.Durability, Player2Base->CurrentState.Resolve, Player2Base->CurrentState.Durability);
+	UpperHUD->UpdateUpperHUD(roundTimer, Player1Base, Player2Base);
+	LowerHUD->UpdateLowerHUD(Player1Base, Player2Base);
 
 	//update camera/transform position from here
 }
