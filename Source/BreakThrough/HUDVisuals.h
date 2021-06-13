@@ -50,6 +50,10 @@ public:
 	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* P2ComboCountNumber;
 	UPROPERTY(meta = (BindWidget))
+		class UTextBlock* P1CounterText;
+	UPROPERTY(meta = (BindWidget))
+		class UTextBlock* P2CounterText;
+	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* TimerText;	
 
 	//Functions

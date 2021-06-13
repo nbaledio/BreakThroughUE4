@@ -1,6 +1,5 @@
 // Copyright 2020 ShatterPoint Games. All Rights Reserved.
 
-
 #include "HUDVisuals.h"
 #include "Slate.h"
 
@@ -74,22 +73,22 @@ void UHUDVisuals::UpdateUpperHUD(int32 time, ABTCharacterBase* Player1, ABTChara
 		P1ComboCountNumber->SetText(FText::AsNumber(Player1->CurrentState.ComboCount));
 		P1ComboCountHitsText->SetVisibility(ESlateVisibility::Visible);
 		//Set true combo colors
-		if (Player1->CurrentState.bTrueCombo) 
+		if (Player1->CurrentState.bTrueCombo)
 		{
 			P1ComboCountNumber->SetColorAndOpacity(FSlateColor(FLinearColor(0.625f, 0.0f, 0.0f, 1.0f)));
 			P1ComboCountHitsText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)));
-			P1ComboTimerBar->SetFillColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
+			P1ComboTimerBar->SetFillColorAndOpacity(FLinearColor(1.0f, 0.0f, 0.0f, 1.0f));
 		}
 		else 
 		{
 			P1ComboCountNumber->SetColorAndOpacity(FSlateColor(FLinearColor(0.04f, 0.04f, 0.04f, 1.0f)));
 			P1ComboCountHitsText->SetColorAndOpacity(FSlateColor(FLinearColor(0.95f, 0.95f, 0.95f, 1.0f)));
-			P1ComboTimerBar->SetFillColorAndOpacity(FLinearColor(0.2f, 0.2f, 0.2f, 1.0f));
+			P1ComboTimerBar->SetFillColorAndOpacity(FLinearColor(0.2f, 0.2, 0.2, 1.0f));
 		}
 	}
 	else if (Player1->CurrentState.ComboCount == 1)
 	{
-		P1ComboTimerBar->SetFillColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
+		P1ComboTimerBar->SetFillColorAndOpacity(FLinearColor(1.0f, 0.0f, 0.0f, 1.0f));
 	}
 	else 
 	{
@@ -107,7 +106,7 @@ void UHUDVisuals::UpdateUpperHUD(int32 time, ABTCharacterBase* Player1, ABTChara
 		{
 			P2ComboCountNumber->SetColorAndOpacity(FSlateColor(FLinearColor(0.625f, 0.0f, 0.0f, 1.0f)));
 			P2ComboCountHitsText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)));
-			P2ComboTimerBar->SetFillColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
+			P2ComboTimerBar->SetFillColorAndOpacity(FLinearColor(1.0f, 0.0f, 0.0f, 1.0f));
 		}
 		else
 		{
@@ -118,7 +117,7 @@ void UHUDVisuals::UpdateUpperHUD(int32 time, ABTCharacterBase* Player1, ABTChara
 	}
 	else if (Player2->CurrentState.ComboCount == 1) 
 	{
-		P2ComboTimerBar->SetFillColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
+		P2ComboTimerBar->SetFillColorAndOpacity(FLinearColor(1.0f, 0.0f, 0.0f, 1.0f));
 	}
 	else
 	{
@@ -165,9 +164,60 @@ void UHUDVisuals::UpdateUpperHUD(int32 time, ABTCharacterBase* Player1, ABTChara
 		P2ComboTimerBar->SetPercent(0.0f);
 	}
 
+	//Set counter hit display
+	//Set P1 counter hit text
+	if (Player2->CurrentState.bArmorActive && Player2->CurrentState.Resolve == 0 && Player2->CurrentState.HitStun > 0)
+	{
+		P1CounterText->SetVisibility(ESlateVisibility::Visible);
+	}
+	else 
+	{
+		P1CounterText->SetVisibility(ESlateVisibility::Hidden);
+	}
+
+	//Set P2 counter hit text
+	if (Player1->CurrentState.bArmorActive && Player1->CurrentState.Resolve == 0 && Player1->CurrentState.HitStun > 0)
+	{
+		P2CounterText->SetVisibility(ESlateVisibility::Visible);
+	}
+	else
+	{
+		P2CounterText->SetVisibility(ESlateVisibility::Hidden);
+	}
 };
 void UHUDVisuals::UpdateLowerHUD(ABTCharacterBase* Player1, ABTCharacterBase* Player2)
 {
+	//Update resolve bars
 	P1ResolveBar->SetPercent((static_cast<float>((static_cast<float>(Player1->CurrentState.Resolve) - 1) * 1000.0f + static_cast<float>(Player1->CurrentState.Durability)) / 4000.0f));
 	P2ResolveBar->SetPercent((static_cast<float>((static_cast<float>(Player2->CurrentState.Resolve) - 1) * 1000.0f + static_cast<float>(Player2->CurrentState.Durability)) / 4000.0f));
+
+	//Set resolve bars color based on amount
+	//Set Player1 resolve color
+	if (Player1->CurrentState.Resolve == 4 && Player1->CurrentState.Durability == 1000) 
+	{
+		P1ResolveBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 205.0f / 255.0f, 70.0f / 255.0f, 255.0f / 255.0f));
+	}
+	else if (Player1->CurrentState.Resolve >= 2)
+	{
+		P1ResolveBar->SetFillColorAndOpacity(FLinearColor(0.0f / 255.0f, 143.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f));
+	}	
+	else if (Player1->CurrentState.Resolve <= 1)
+	{
+		P1ResolveBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 0.0f / 255.0f, 85.0f / 255.0f, 255.0f / 255.0f));
+	}
+
+	//Set Player2 resolve color
+	if (Player2->CurrentState.Resolve == 4 && Player2->CurrentState.Durability == 1000)
+	{
+		P2ResolveBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 205.0f / 255.0f, 70.0f / 255.0f, 255.0f / 255.0f));
+	}
+	else if (Player2->CurrentState.Resolve >= 2)
+	{
+		P2ResolveBar->SetFillColorAndOpacity(FLinearColor(0.0f / 255.0f, 143.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f));
+	}
+	else if (Player2->CurrentState.Resolve <= 1)
+	{
+		P2ResolveBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 0.0f / 255.0f, 85.0f / 255.0f, 255.0f / 255.0f));
+	}
+
 };
