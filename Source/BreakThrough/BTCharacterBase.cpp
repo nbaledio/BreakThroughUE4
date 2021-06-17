@@ -16,7 +16,7 @@ ABTCharacterBase::ABTCharacterBase()
 	BaseMesh->SetupAttachment(RootComponent);
 
 	SmearMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Smear Mesh"));
-	SmearMesh->SetupAttachment(RootComponent);
+	SmearMesh->SetupAttachment(BaseMesh);
 
 	CharacterVoice = CreateDefaultSubobject<UAudioComponent>(TEXT("Character Voice"));
 	CharacterVoice->SetupAttachment(RootComponent);
@@ -777,8 +777,6 @@ void ABTCharacterBase::DrawCharacter()
 	LightSettings();
 	DrawSmear();
 
-	SmearMesh->SetVisibility(bShowSmear);
-
 	DynamicOutline->SetScalarParameterValue(FName("LineThickness"), LineThickness);
 	DynamicOutline->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
 
@@ -801,7 +799,6 @@ void ABTCharacterBase::DrawCharacter()
 	}
 
 	BaseMesh->SetRelativeScale3D(Scale);
-	SmearMesh->SetRelativeScale3D(Scale);
 
 	SetActorLocation(FVector(CurrentState.Position.X, GetActorLocation().Y, CurrentState.Position.Y));
 
@@ -2648,18 +2645,8 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			if (!(Hitbox.AttackProperties & IsSuper) && !(Hitbox.AttackProperties & NoPushBack))
 			{
 				KnockBackToApply.X = FMath::Max(1.75f, KnockBackToApply.X);
-				CurrentState.KnockBack = FVector2D(.95 * KnockBackToApply.X, 0);
+				CurrentState.KnockBack = FVector2D(KnockBackToApply.X, 0);
 			}
-
-			/*if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
-				CurrentState.KnockBack *= FVector2D(-1, 1);
-			else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
-			{
-			}
-			else if (CurrentState.bFacingRight)
-			{
-				CurrentState.KnockBack *= FVector2D(-1, 1);
-			}*/
 		}
 
 		Opponent->CurrentState.KnockBack = KnockBackToApply;
@@ -3315,7 +3302,6 @@ bool ABTCharacterBase::BlitzCancel()
 	if (((CurrentState.AvailableActions & AcceptBlitz && CurrentState.Resolve > 0) || (CurrentState.BlockStun > 0 && !CurrentState.bIsAirborne && CurrentState.Resolve > 1)) && CurrentState.SlowMoTime == 0 &&
 		CurrentState.MPressed > 0 && CurrentState.HPressed > 0 && FMath::Abs(CurrentState.MPressed - CurrentState.HPressed) <= InputTime) //Blitz cancel is performed by hitting M and H at the same time
 	{
-		RefreshMovelist();
 		CurrentState.Resolve--;
 		CurrentState.Durability = 750;
 		CurrentState.LandingLag = 0;
@@ -3556,6 +3542,7 @@ void ABTCharacterBase::LightSettings()
 void ABTCharacterBase::ProcessBlitz()
 {
 	CurrentState.bBlitzing = false;
+	RefreshMovelist();
 	if (FMath::Sqrt(FMath::Square(CurrentState.CurrentBlitzState[0].Position.X - Opponent->CurrentState.Position.X) + FMath::Square(CurrentState.CurrentBlitzState[0].Position.Y - Opponent->CurrentState.Position.Y)) < 125
 		&& Opponent->CurrentState.CurrentAnimFrame.Invincibility != FullInvincible && Opponent->CurrentState.CurrentAnimFrame.Invincibility != OTG)
 	{
@@ -3934,7 +3921,7 @@ void ABTCharacterBase::DrawHurtbox(FHurtbox Box)
 
 void ABTCharacterBase::ResetSmear()
 {
-	bShowSmear = true;
+	SmearMesh->SetVisibility(false);
 }
 
 void ABTCharacterBase::DrawSmear() {}

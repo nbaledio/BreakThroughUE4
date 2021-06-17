@@ -169,9 +169,11 @@ void ABTCharacterACH::AnimationEvents()
 	if (IsCurrentAnimation(Normal5B) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
 	{
 		SmearMesh->SetMorphTarget(TEXT("ACH_5B"), 1);
+		SmearMesh->SetVisibility(true);
 	}
 	else if (IsCurrentAnimation(Normal2B) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 11)
 	{
+		SmearMesh->SetVisibility(true);
 		if (CurrentState.AnimFrameIndex < 7)
 			SmearMesh->SetMorphTarget(TEXT("ACH_2B_00"), 1);
 		else
@@ -179,10 +181,12 @@ void ABTCharacterACH::AnimationEvents()
 	}
 	else if (IsCurrentAnimation(Normal5H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
 	{
+		SmearMesh->SetVisibility(true);
 		SmearMesh->SetMorphTarget(TEXT("ACH_5H"), 1);
 	}
 	else if (IsCurrentAnimation(Normal2H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 8)
 	{
+		SmearMesh->SetVisibility(true);
 		if (CurrentState.AnimFrameIndex == 3)
 			SmearMesh->SetMorphTarget(TEXT("ACH_2H_00"), 1);
 		else
@@ -190,6 +194,7 @@ void ABTCharacterACH::AnimationEvents()
 	}
 	else if (IsCurrentAnimation(NormalJH) && CurrentState.AnimFrameIndex > 1 && CurrentState.AnimFrameIndex < 7)
 	{
+		SmearMesh->SetVisibility(true);
 		if (CurrentState.AnimFrameIndex < 4)
 			SmearMesh->SetMorphTarget(TEXT("ACH_jH_00"), 1);
 		else
@@ -197,6 +202,7 @@ void ABTCharacterACH::AnimationEvents()
 	}
 	else if (IsCurrentAnimation(NormalJB) && CurrentState.AnimFrameIndex > 4)
 	{
+		SmearMesh->SetVisibility(true);
 		if (CurrentState.AnimFrameIndex == 5)
 			SmearMesh->SetMorphTarget(TEXT("ACH_jB_00"), 1);
 		else if (CurrentState.AnimFrameIndex == 6)
@@ -206,6 +212,7 @@ void ABTCharacterACH::AnimationEvents()
 	}
 	else if (IsCurrentAnimation(Normal6B) && CurrentState.AnimFrameIndex > 7 && CurrentState.AnimFrameIndex < 12)
 	{
+		SmearMesh->SetVisibility(true);
 		SmearMesh->SetMorphTarget(TEXT("ACH_6B"), 1);
 
 		if (IsCurrentAnimation(Normal6B) && CurrentState.AnimFrameIndex == 8)
@@ -214,10 +221,6 @@ void ABTCharacterACH::AnimationEvents()
 			CurrentState.Velocity.X *= .95;
 			CurrentState.bIsAirborne = false;
 		}
-	}
-	else
-	{
-		bShowSmear = false;
 	}
 }
 
@@ -657,8 +660,6 @@ void ABTCharacterACH::ResetSmear()
 
 void ABTCharacterACH::DrawSmear()
 {
-	ABTCharacterBase::DrawSmear();
-
 	if (IsCurrentAnimation(Normal5B) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
 	{
 		FVector SmearFrameIndex = FVector(0);
@@ -720,7 +721,6 @@ void ABTCharacterACH::DrawSmear()
 			{
 				SmearFrameIndex = FVector(1);
 				EmitFrameIndex.Y = 1;
-				//EmitFrameIndex = FVector(1);
 			}
 		}
 		else
@@ -864,7 +864,10 @@ void ABTCharacterACH::DrawSmear()
 				EmitFrameIndex = FVector(1, 1, 0);
 			}
 			else
-				bShowSmear = false;
+			{
+				SmearFrameIndex = FVector(.5, 0, 0);
+				EmitFrameIndex = FVector(.5, 0, 0);
+			}
 
 		}
 
@@ -940,7 +943,7 @@ void ABTCharacterACH::DrawSmear()
 			}
 			else
 			{
-				bShowSmear = false;
+				EmitFrameIndex.X = .5;
 			}
 		}
 
@@ -959,6 +962,8 @@ void ABTCharacterACH::DrawSmear()
 				DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
 		}
 	}
+
+	ABTCharacterBase::DrawSmear();
 }
 
 bool ABTCharacterACH::NormalAttacks()

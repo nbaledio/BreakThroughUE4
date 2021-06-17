@@ -648,8 +648,6 @@ protected:
 
 	virtual void DrawSmear();
 
-	bool bShowSmear;
-
 	/* Affects how quickly the character falls to the ground (See below for values per weight class) 
 		Featherweight = .95
 		Lightweight = .97
