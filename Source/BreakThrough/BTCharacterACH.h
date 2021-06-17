@@ -34,7 +34,7 @@ enum Moves  //keeps track of what moves have already been used in a string using
 
 enum ACHValues  //keeps track of index for Achealis' unique variables
 {
-	SpearGlow,
+	BreakCharge,
 	MTowerLeap,
 	WCActive,
 	WCDuration,

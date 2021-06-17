@@ -318,6 +318,7 @@ struct FCharacterState
 	uint8 Charge2 = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Charge4 = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Charge5 = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Charge6 = 0;

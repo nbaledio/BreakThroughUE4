@@ -16,7 +16,7 @@ ABTCharacterBase::ABTCharacterBase()
 	BaseMesh->SetupAttachment(RootComponent);
 
 	SmearMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Smear Mesh"));
-	SmearMesh->SetupAttachment(RootComponent);
+	SmearMesh->SetupAttachment(BaseMesh);
 
 	CharacterVoice = CreateDefaultSubobject<UAudioComponent>(TEXT("Character Voice"));
 	CharacterVoice->SetupAttachment(RootComponent);
@@ -40,6 +40,7 @@ void ABTCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
 	LineThickness = 3.f;
+	CurrentState.Health = MaxHealth;
 	CreateMaterials();
 	CreateVariables();
 	SpawnPBS();
@@ -151,7 +152,7 @@ void ABTCharacterBase::HitDetection()
 				((CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == AirCommandThrow || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == AirThrow) && Opponent->CurrentState.bIsAirborne)) &&
 				((Opponent->CurrentState.HitStun == 0) || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackProperties & ComboThrow || Opponent->IsCurrentAnimation(Opponent->Stagger) ||
 					Opponent->IsCurrentAnimation(Opponent->Crumple)) && Opponent->CurrentState.BlockStun == 0 && Opponent->CurrentState.CurrentAnimFrame.Invincibility != ThrowInvincible &&
-				Opponent->CurrentState.CurrentAnimFrame.Invincibility != FullInvincible && Opponent->CurrentState.CurrentAnimFrame.Invincibility != Intangible && Opponent->CurrentState.CurrentAnimFrame.Invincibility != OTG)
+				Opponent->CurrentState.CurrentAnimFrame.Invincibility != FullInvincible && Opponent->CurrentState.CurrentAnimFrame.Invincibility != OTG)
 			{
 				for (uint8 i = 0; i < CurrentState.CurrentAnimFrame.Hitboxes.Num() && !CurrentState.bAttackMadeContact; i++)
 				{
@@ -394,11 +395,11 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 {
 	if (Opponent != nullptr)
 	{
-		if ((Opponent->CurrentState.HitStun == 0 && !Opponent->CurrentState.bIsAirborne && !Opponent->IsCurrentAnimation(Opponent->Stagger)) ||
+		if ((Opponent->CurrentState.HitStun == 0 && !Opponent->CurrentState.bIsAirborne && !Opponent->IsCurrentAnimation(Opponent->Stagger) && Opponent->CurrentState.CurrentAnimFrame.Invincibility != OTG) ||
 			(Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.CurrentAnimFrame.Invincibility != FaceDown && Opponent->CurrentState.CurrentAnimFrame.Invincibility != FaceUp))
 			CurrentState.ComboCount = 0;
 
-		if ((CurrentState.HitStun == 0 && !CurrentState.bIsAirborne && !IsCurrentAnimation(Stagger)) ||
+		if ((CurrentState.HitStun == 0 && !CurrentState.bIsAirborne && !IsCurrentAnimation(Stagger) && CurrentState.CurrentAnimFrame.Invincibility != OTG) ||
 			(CurrentState.bIsAirborne && CurrentState.CurrentAnimFrame.Invincibility != FaceDown && CurrentState.CurrentAnimFrame.Invincibility != FaceUp))
 			Opponent->CurrentState.ComboCount = 0;
 
@@ -466,9 +467,7 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 					CurrentState.bTouchingOpponent = true;
 					Opponent->CurrentState.bTouchingOpponent = true;
 				}
-				else if (!CurrentState.bIsAirborne && (!IsCurrentAnimation(KnockDownFaceDown) && !IsCurrentAnimation(KnockDownFaceUp)
-					&& !IsCurrentAnimation(WakeUpFaceUp) && !IsCurrentAnimation(WakeUpFaceDown))
-					&& Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.Velocity.Y <= 0)
+				else if (!CurrentState.bIsAirborne && Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.Velocity.Y <= 0)
 				{
 					if ((CurrentState.bIsCrouching && CrouchingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset) ||
 						(!CurrentState.bIsCrouching && StandingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset)) //check if pushboxes intersect
@@ -576,9 +575,7 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 						Opponent->CurrentState.bTouchingOpponent = true;
 					}
 				}
-				else if (CurrentState.bIsAirborne && !Opponent->CurrentState.bIsAirborne && CurrentState.Velocity.Y <= 0
-						&& (!Opponent->IsCurrentAnimation(Opponent->KnockDownFaceDown) && !Opponent->IsCurrentAnimation(Opponent->KnockDownFaceUp) 
-						&& !Opponent->IsCurrentAnimation(Opponent->WakeUpFaceUp) && !Opponent->IsCurrentAnimation(Opponent->WakeUpFaceDown)))
+				else if (CurrentState.bIsAirborne && !Opponent->CurrentState.bIsAirborne && CurrentState.Velocity.Y <= 0)
 				{
 					if ((Opponent->CurrentState.bIsCrouching && Opponent->CrouchingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset) ||
 						(!Opponent->CurrentState.bIsCrouching && Opponent->StandingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset)) //check if pushboxes intersect
@@ -780,8 +777,6 @@ void ABTCharacterBase::DrawCharacter()
 	LightSettings();
 	DrawSmear();
 
-	SmearMesh->SetVisibility(bShowSmear);
-
 	DynamicOutline->SetScalarParameterValue(FName("LineThickness"), LineThickness);
 	DynamicOutline->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
 
@@ -804,7 +799,6 @@ void ABTCharacterBase::DrawCharacter()
 	}
 
 	BaseMesh->SetRelativeScale3D(Scale);
-	SmearMesh->SetRelativeScale3D(Scale);
 
 	SetActorLocation(FVector(CurrentState.Position.X, GetActorLocation().Y, CurrentState.Position.Y));
 
@@ -971,6 +965,18 @@ bool ABTCharacterBase::TurnAroundCheck()
 bool ABTCharacterBase::TriggerTurnAround()
 {
 	//Trigger turnaround animation if in idle stand or crouch;
+	uint8 TempDir1 = CurrentState.Dir1, TempDir4 = CurrentState.Dir4, TempDir7 = CurrentState.Dir7, TempDirDouble4 = CurrentState.DoubleDir4;
+
+	CurrentState.Dir1 = CurrentState.Dir3;
+	CurrentState.Dir4 = CurrentState.Dir6;
+	CurrentState.Dir7 = CurrentState.Dir9;
+	CurrentState.DoubleDir4 = CurrentState.DoubleDir6;
+
+	CurrentState.Dir3 = TempDir1;
+	CurrentState.Dir6 = TempDir4;
+	CurrentState.Dir9 = TempDir7;
+	CurrentState.DoubleDir6 = TempDirDouble4;
+
 	if (CurrentState.AvailableActions & AcceptMove && !CurrentState.bIsAirborne)
 	{
 		if (CurrentState.bIsCrouching)
@@ -1547,14 +1553,16 @@ void ABTCharacterBase::ChargeInputs(int32 Inputs)  //set the correct charges bas
 		CurrentState.Charge5 = 0;
 	}
 
-	if ((Inputs & INPUT_LEFT && CurrentState.Position.X > Opponent->CurrentState.Position.X) || (Inputs & INPUT_RIGHT && CurrentState.Position.X < Opponent->CurrentState.Position.X))
+	if ((Inputs & INPUT_LEFT && CurrentState.Position.X > Opponent->CurrentState.Position.X) || (Inputs & INPUT_RIGHT && CurrentState.Position.X < Opponent->CurrentState.Position.X) ||
+		(Inputs & INPUT_LEFT && CurrentState.Position.X == Opponent->CurrentState.Position.X && !CurrentState.bFacingRight) || (Inputs & INPUT_RIGHT && CurrentState.Position.X == Opponent->CurrentState.Position.X && CurrentState.bFacingRight))
 	{
 		if (CurrentState.Charge6 < 255)
 			CurrentState.Charge6++;
 		CurrentState.Charge6Life = DirInputTime;
 		CurrentState.Charge5 = 0;
 	}
-	else if ((Inputs & INPUT_LEFT && CurrentState.Position.X < Opponent->CurrentState.Position.X) || (Inputs & INPUT_RIGHT && CurrentState.Position.X > Opponent->CurrentState.Position.X)) //prevent charging both directions at the same time
+	else if ((Inputs & INPUT_LEFT && CurrentState.Position.X < Opponent->CurrentState.Position.X) || (Inputs & INPUT_RIGHT && CurrentState.Position.X > Opponent->CurrentState.Position.X) ||
+		(Inputs & INPUT_LEFT && CurrentState.Position.X == Opponent->CurrentState.Position.X && CurrentState.bFacingRight) || (Inputs & INPUT_RIGHT && CurrentState.Position.X == Opponent->CurrentState.Position.X && !CurrentState.bFacingRight)) //prevent charging both directions at the same time
 	{
 		if (CurrentState.Charge4 < 255)
 			CurrentState.Charge4++;
@@ -1590,7 +1598,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 			CurrentState.Dir1 = DirInputTime;
 		else
 		{
-			if (CurrentState.Dir2 < DirInputTime - 1 && CurrentState.Dir2 > 0 && CurrentState.Charge5 > 0 && CurrentState.DoubleDir2 == 0)
+			if (CurrentState.Dir2 < DirInputTime - 1 && CurrentState.Dir2 > 3 && CurrentState.Charge5 > 0 && CurrentState.DoubleDir2 == 0)
 			{
 				CurrentState.DoubleDir2 = DirInputTime;
 			}
@@ -1613,9 +1621,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 	{
 		if (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir8 < DirInputTime - 1 && CurrentState.Dir9 < DirInputTime - 1 )
 		{
-			CurrentState.AirJump = InputTime;
-			if (CurrentState.HitStop > 0)
-				CurrentState.AirJump += CurrentState.HitStop;
+			CurrentState.AirJump = InputTime + CurrentState.HitStop;
 		}
 		
 
@@ -1638,7 +1644,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		{
 			if (CurrentState.bFacingRight)
 			{
-				if (((CurrentState.Dir6 < DirInputTime - 1 && CurrentState.Dir6 > 0) || (CurrentState.Dir9 < DirInputTime - 1 && CurrentState.Dir9 > 0)) && CurrentState.Charge5 > 0 && CurrentState.DoubleDir6 == 0)
+				if (((CurrentState.Dir6 < DirInputTime - 1 && CurrentState.Dir6 > DirInputTime / 3) || (CurrentState.Dir9 < DirInputTime - 1 && CurrentState.Dir9 > DirInputTime / 3)) && CurrentState.Charge5 > 0 && CurrentState.DoubleDir6 == 0)
 				{
 					CurrentState.DoubleDir6 = DirInputTime;
 				}
@@ -1646,7 +1652,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 			}
 			else
 			{
-				if (((CurrentState.Dir4 < DirInputTime - 1 && CurrentState.Dir4 > 0) || (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir7 > 0)) && CurrentState.Charge5 > 0 && CurrentState.DoubleDir4 == 0)
+				if (((CurrentState.Dir4 < DirInputTime - 1 && CurrentState.Dir4 > DirInputTime / 3) || (CurrentState.Dir7 < DirInputTime - 1 && CurrentState.Dir7 > DirInputTime / 3)) && CurrentState.Charge5 > 0 && CurrentState.DoubleDir4 == 0)
 				{
 					CurrentState.DoubleDir4 = DirInputTime;
 				}
@@ -1665,7 +1671,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 		{
 			if (CurrentState.bFacingRight)
 			{
-				if (((CurrentState.Dir4 < DirInputTime - 1 && CurrentState.Dir4 > 0) || (CurrentState.Dir7 < DirInputTime - 2 && CurrentState.Dir7 > DirInputTime/3)) && CurrentState.Charge5 > 0 && CurrentState.DoubleDir4 == 0)
+				if (((CurrentState.Dir4 < DirInputTime - 1 && CurrentState.Dir4 > DirInputTime / 3) || (CurrentState.Dir7 < DirInputTime - 2 && CurrentState.Dir7 > DirInputTime/3)) && CurrentState.Charge5 > 0 && CurrentState.DoubleDir4 == 0)
 				{
 					CurrentState.DoubleDir4 = DirInputTime;
 				}
@@ -1673,7 +1679,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 			}
 			else
 			{
-				if (((CurrentState.Dir6 < DirInputTime - 1 && CurrentState.Dir6 > 0) || (CurrentState.Dir9 < DirInputTime - 1 && CurrentState.Dir9 > 0)) && CurrentState.Charge5 > 0 && CurrentState.DoubleDir6 == 0)
+				if (((CurrentState.Dir6 < DirInputTime - 1 && CurrentState.Dir6 > DirInputTime / 3) || (CurrentState.Dir9 < DirInputTime - 1 && CurrentState.Dir9 > DirInputTime / 3)) && CurrentState.Charge5 > 0 && CurrentState.DoubleDir6 == 0)
 				{
 					CurrentState.DoubleDir6 = DirInputTime;
 				}
@@ -1865,6 +1871,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 	{
 		CurrentState.AirJump = 0;
 
+		TurnAroundCheck();
 		if (CurrentState.Dir9 > 0 && CurrentState.Dir9 > CurrentState.Dir7 && CurrentState.Dir9 > CurrentState.Dir8) //Most recent input is forward jump
 			CurrentState.bForwardJump = true;
 		else if (CurrentState.Dir7 > 0 && CurrentState.Dir7 > CurrentState.Dir9 && CurrentState.Dir7 > CurrentState.Dir8) //Most recent input is backward jump
@@ -1899,7 +1906,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		return true;
 
 	if (CurrentState.bIsAirborne && (CurrentState.CurrentAnimFrame.Invincibility == FaceDown || CurrentState.CurrentAnimFrame.Invincibility == FaceUp || IsCurrentAnimation(WallStick)) 
-		&& !IsCurrentAnimation(WallBounce) && !IsCurrentAnimation(GroundBounce) && CurrentState.HitStun == 0 && CurrentState.ShatteredTime == 0)
+		&& !IsCurrentAnimation(WallBounce) && !IsCurrentAnimation(GroundBounce) && CurrentState.HitStun == 0 && CurrentState.ShatteredTime == 0 && CurrentState.Health > 0)
 	{
 		if (CurrentState.bIsLDown || CurrentState.bIsMDown || CurrentState.bIsHDown || CurrentState.bIsBDown) //hold any attack button down to air recover once able
 		{
@@ -2473,8 +2480,8 @@ bool ABTCharacterBase::RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2
 	if (TL1.Y <= BR2.Y || TL2.Y <= BR1.Y)
 		return false;
 
-	FVector2D TL3 = FVector2D(FMath::Max(TL1.X, TL2.X), FMath::Max(TL1.Y, TL2.Y));
-	FVector2D BR3 = FVector2D(FMath::Min(BR1.X, BR2.X), FMath::Min(BR1.Y, BR2.Y));
+	FVector2D TL3 = FVector2D(FMath::Max(TL1.X, TL2.X), FMath::Min(TL1.Y, TL2.Y));
+	FVector2D BR3 = FVector2D(FMath::Min(BR1.X, BR2.X), FMath::Max(BR1.Y, BR2.Y));
 	
 	IntersectCenter = (TL3 + BR3) / 2; //record midpoint of area intersection for placing hit effect
 	return true;
@@ -2651,18 +2658,8 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 			if (!(Hitbox.AttackProperties & IsSuper) && !(Hitbox.AttackProperties & NoPushBack))
 			{
 				KnockBackToApply.X = FMath::Max(1.75f, KnockBackToApply.X);
-				CurrentState.KnockBack = FVector2D(.95 * KnockBackToApply.X, 0);
+				CurrentState.KnockBack = FVector2D(KnockBackToApply.X, 0);
 			}
-
-			/*if (CurrentState.Position.X < Opponent->CurrentState.Position.X)
-				CurrentState.KnockBack *= FVector2D(-1, 1);
-			else if (CurrentState.Position.X > Opponent->CurrentState.Position.X)
-			{
-			}
-			else if (CurrentState.bFacingRight)
-			{
-				CurrentState.KnockBack *= FVector2D(-1, 1);
-			}*/
 		}
 
 		Opponent->CurrentState.KnockBack = KnockBackToApply;
@@ -2843,7 +2840,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	FVector2D KnockBackToApply;
 	uint8 HitStopToApply = Hitbox.BaseHitStop;
 
-	if (Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)
+	if (Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG || CurrentState.SpecialProration == .35f)
 	{
 		Hitbox.AttackProperties = None;
 		KnockBackToApply = FVector2D(1.1f * FMath::Abs(Hitbox.PotentialKnockBack.X), 3);
@@ -2933,6 +2930,10 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 				Opponent->StatusColor = FVector(1, 0, 0);
 			}
 		}
+		else if (!(Opponent->CurrentState.AvailableActions & AcceptGuard) && CurrentState.ComboCount == 1)
+		{
+			//set punish ui effect to play
+		}
 	}
 
 	if (Opponent->CurrentState.CharacterHitState & CanMidScreenWallBounce)
@@ -2940,11 +2941,12 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	else
 		Opponent->CurrentState.WallBounceTime = 0;
 		
-	if (Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)
+	if (Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG || CurrentState.SpecialProration == .35f)
 	{
-		DamageToApply = FMath::FloorToInt(3 * DamageToApply / 10);
-		HitStunToApply = FMath::FloorToInt(3 * HitStunToApply / 10);
-		CurrentState.SpecialProration *= .35f;
+		DamageToApply = FMath::FloorToInt(DamageToApply / 2);
+		HitStunToApply = 4;
+		//if (CurrentState.SpecialProration != .35)
+			CurrentState.SpecialProration = .35f;
 	}
 
 	//calculate proration to apply on subsequent hits in a combo
@@ -3139,12 +3141,15 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 			//play throw escape effect
 			if (Opponent)
 			{
+				FVector2D ThrowCenter = FVector2D(.5 * (CurrentState.Position.X + Opponent->CurrentState.Position.X),
+					.35 * (CurrentState.Position.Y + StandingPushBoxHeight + AirPushboxVerticalOffset +
+						Opponent->CurrentState.Position.Y + Opponent->StandingPushBoxHeight + Opponent->AirPushboxVerticalOffset));
 				if (SpecialVFX[0]->CurrentState.bIsActive)
 				{
-					Opponent->SpecialVFX[0]->Activate(IntersectCenter, CurrentState.bFacingRight, 0, Clash);
+					Opponent->SpecialVFX[0]->Activate(ThrowCenter, CurrentState.bFacingRight, 0, Clash);
 				}
 				else
-					SpecialVFX[0]->Activate(IntersectCenter, CurrentState.bFacingRight, 0, Clash);
+					SpecialVFX[0]->Activate(ThrowCenter, CurrentState.bFacingRight, 0, Clash);
 			}
 		}
 		else if (Opponent->CurrentState.Resolute)
@@ -3218,12 +3223,15 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 						//play throw escape effect
 						if (Opponent)
 						{
+							FVector2D ThrowCenter = FVector2D(.5 * (CurrentState.Position.X + Opponent->CurrentState.Position.X),
+								.35 * (CurrentState.Position.Y + StandingPushBoxHeight + AirPushboxVerticalOffset +
+									Opponent->CurrentState.Position.Y + Opponent->StandingPushBoxHeight + Opponent->AirPushboxVerticalOffset));
 							if (SpecialVFX[0]->CurrentState.bIsActive)
 							{
-								Opponent->SpecialVFX[0]->Activate(IntersectCenter, CurrentState.bFacingRight, 0, Clash);
+								Opponent->SpecialVFX[0]->Activate(ThrowCenter, CurrentState.bFacingRight, 0, Deflect);
 							}
 							else
-								SpecialVFX[0]->Activate(IntersectCenter, CurrentState.bFacingRight, 0, Clash);
+								SpecialVFX[0]->Activate(ThrowCenter, CurrentState.bFacingRight, 0, Deflect);
 						}
 					}
 				}
@@ -3307,6 +3315,7 @@ bool ABTCharacterBase::BlitzCancel()
 	if (((CurrentState.AvailableActions & AcceptBlitz && CurrentState.Resolve > 0) || (CurrentState.BlockStun > 0 && !CurrentState.bIsAirborne && CurrentState.Resolve > 1)) && CurrentState.SlowMoTime == 0 &&
 		CurrentState.MPressed > 0 && CurrentState.HPressed > 0 && FMath::Abs(CurrentState.MPressed - CurrentState.HPressed) <= InputTime) //Blitz cancel is performed by hitting M and H at the same time
 	{
+		TurnAroundCheck();
 		CurrentState.Resolve--;
 		CurrentState.Durability = 750;
 		CurrentState.LandingLag = 0;
@@ -3547,6 +3556,7 @@ void ABTCharacterBase::LightSettings()
 void ABTCharacterBase::ProcessBlitz()
 {
 	CurrentState.bBlitzing = false;
+	RefreshMovelist();
 	if (FMath::Sqrt(FMath::Square(CurrentState.CurrentBlitzState[0].Position.X - Opponent->CurrentState.Position.X) + FMath::Square(CurrentState.CurrentBlitzState[0].Position.Y - Opponent->CurrentState.Position.Y)) < 125
 		&& Opponent->CurrentState.CurrentAnimFrame.Invincibility != FullInvincible && Opponent->CurrentState.CurrentAnimFrame.Invincibility != OTG)
 	{
@@ -3755,6 +3765,7 @@ void ABTCharacterBase::ClashDetection()
 					CurrentState.AvailableActions = AcceptAll - (AcceptMove + AcceptGuard);
 					Opponent->CurrentState.AvailableActions = AcceptAll - (AcceptMove + AcceptGuard);
 					//play clash effect
+					
 					if (Opponent)
 					{
 						if (SpecialVFX[0]->CurrentState.bIsActive)
@@ -3927,6 +3938,6 @@ void ABTCharacterBase::ResetSmear()
 	bShowSmear = true;
 }
 
-void ABTCharacterBase::DrawSmear() {}
+void ABTCharacterBase::DrawSmear() { SmearMesh->SetVisibility(bShowSmear); }
 
 void ABTCharacterBase::CreateVariables() {}

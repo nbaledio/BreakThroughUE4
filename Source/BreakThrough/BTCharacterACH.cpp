@@ -31,35 +31,37 @@ void ABTCharacterACH::DrawCharacter()
 {
 	ABTCharacterBase::DrawCharacter();
 
+	DynamicSpearEdge->SetScalarParameterValue(FName("SpearGlow"), (float)CurrentState.SpecialVariables[BreakCharge]/100);
+
 	if (CurrentState.StatusTimer > 0)
 	{
-		DynamicBodyMain->SetVectorParameterValue("StatusColor", StatusColor);
-		DynamicBodyMain->SetScalarParameterValue("StatusMix", StatusMix);
-		DynamicBodyMetallic->SetVectorParameterValue("StatusColor", StatusColor);
-		DynamicBodyMetallic->SetScalarParameterValue("StatusMix", StatusMix);
-		DynamicBodySpec->SetVectorParameterValue("StatusColor", StatusColor);
-		DynamicBodySpec->SetScalarParameterValue("StatusMix", StatusMix);
-		DynamicSeals->SetVectorParameterValue("StatusColor", StatusColor);
-		DynamicSeals->SetScalarParameterValue("StatusMix", StatusMix);
-		DynamicRightEye->SetVectorParameterValue("StatusColor", StatusColor);
-		DynamicRightEye->SetScalarParameterValue("StatusMix", StatusMix);
-		DynamicSpearEdge->SetVectorParameterValue("StatusColor", StatusColor);
-		DynamicSpearEdge->SetScalarParameterValue("StatusMix", StatusMix);
-		DynamicSpearMetallic->SetVectorParameterValue("StatusColor", StatusColor);
-		DynamicSpearMetallic->SetScalarParameterValue("StatusMix", StatusMix);
-		DynamicSpearSpec->SetVectorParameterValue("StatusColor", StatusColor);
-		DynamicSpearSpec->SetScalarParameterValue("StatusMix", StatusMix);
+		DynamicBodyMain->SetVectorParameterValue(FName("StatusColor"), StatusColor);
+		DynamicBodyMain->SetScalarParameterValue(FName("StatusMix"), StatusMix);
+		DynamicBodyMetallic->SetVectorParameterValue(FName("StatusColor"), StatusColor);
+		DynamicBodyMetallic->SetScalarParameterValue(FName("StatusMix"), StatusMix);
+		DynamicBodySpec->SetVectorParameterValue(FName("StatusColor"), StatusColor);
+		DynamicBodySpec->SetScalarParameterValue(FName("StatusMix"), StatusMix);
+		DynamicSeals->SetVectorParameterValue(FName("StatusColor"), StatusColor);
+		DynamicSeals->SetScalarParameterValue(FName("StatusMix"), StatusMix);
+		DynamicRightEye->SetVectorParameterValue(FName("StatusColor"), StatusColor);
+		DynamicRightEye->SetScalarParameterValue(FName("StatusMix"), StatusMix);
+		DynamicSpearEdge->SetVectorParameterValue(FName("StatusColor"), StatusColor);
+		DynamicSpearEdge->SetScalarParameterValue(FName("StatusMix"), StatusMix);
+		DynamicSpearMetallic->SetVectorParameterValue(FName("StatusColor"), StatusColor);
+		DynamicSpearMetallic->SetScalarParameterValue(FName("StatusMix"), StatusMix);
+		DynamicSpearSpec->SetVectorParameterValue(FName("StatusColor"), StatusColor);
+		DynamicSpearSpec->SetScalarParameterValue(FName("StatusMix"), StatusMix);
 	}
 	else
 	{
-		DynamicBodyMain->SetScalarParameterValue("StatusMix", 0);
-		DynamicBodyMetallic->SetScalarParameterValue("StatusMix", 0);
-		DynamicBodySpec->SetScalarParameterValue("StatusMix", 0);
-		DynamicSpearEdge->SetScalarParameterValue("StatusMix", 0);
-		DynamicSpearSpec->SetScalarParameterValue("StatusMix", 0);
-		DynamicSpearMetallic->SetScalarParameterValue("StatusMix", 0);
-		DynamicRightEye->SetScalarParameterValue("StatusMix", 0);
-		DynamicSeals->SetScalarParameterValue("StatusMix", 0);
+		DynamicBodyMain->SetScalarParameterValue(FName("StatusMix"), 0);
+		DynamicBodyMetallic->SetScalarParameterValue(FName("StatusMix"), 0);
+		DynamicBodySpec->SetScalarParameterValue(FName("StatusMix"), 0);
+		DynamicSpearEdge->SetScalarParameterValue(FName("StatusMix"), 0);
+		DynamicSpearSpec->SetScalarParameterValue(FName("StatusMix"), 0);
+		DynamicSpearMetallic->SetScalarParameterValue(FName("StatusMix"), 0);
+		DynamicRightEye->SetScalarParameterValue(FName("StatusMix"), 0);
+		DynamicSeals->SetScalarParameterValue(FName("StatusMix"), 0);
 	}
 }
 
@@ -114,6 +116,31 @@ void ABTCharacterACH::AnimationEvents()
 		}
 	}
 
+	if (IsCurrentAnimation(Normal6B) && CurrentState.AnimFrameIndex == 8)
+	{
+		CurrentState.Position.Y = 0;
+		CurrentState.Velocity.X *= .95;
+		CurrentState.bIsAirborne = false;
+	}
+
+	if ((IsCurrentAnimation(Normal5B) || IsCurrentAnimation(Normal2B) || IsCurrentAnimation(Normal6B) || IsCurrentAnimation(NormalJB)) && 
+		(CurrentState.CurrentAnimFrame.bArmorActive || CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0))
+	{
+		if (CurrentState.PosePlayTime == 0)
+		{
+			if (CurrentState.SpecialVariables[BreakCharge] < 100)
+				CurrentState.SpecialVariables[BreakCharge] += 20;
+			else
+				CurrentState.SpecialVariables[BreakCharge] = 100;
+		}
+	}
+	else if (CurrentState.SpecialVariables[BreakCharge] != 0)
+	{
+		CurrentState.SpecialVariables[BreakCharge] -= 4;
+		if (CurrentState.SpecialVariables[BreakCharge] <= 0)
+			CurrentState.SpecialVariables[BreakCharge] = 0;
+	}
+
 	if (IsCurrentAnimation(TowerLeap) && CurrentState.AnimFrameIndex == 4 && CurrentState.PosePlayTime == 0)
 	{
 		if (CurrentState.SpecialVariables[MTowerLeap])
@@ -130,66 +157,18 @@ void ABTCharacterACH::AnimationEvents()
 			CurrentState.Velocity.X -= 1;
 		}
 		else if (CurrentState.Dir6 == DirInputTime)
+		{
 			CurrentState.Velocity.X += .5;
+
+			if (CurrentState.SpecialVariables[MTowerLeap])
+			{
+				CurrentState.Velocity.X += .5f;
+				CurrentState.Velocity.Y -= .5f;
+			}
+		}
 
 		if (!CurrentState.bFacingRight)
 			CurrentState.Velocity.X *= -1;
-	}
-
-	ResetSmear();
-
-	if (IsCurrentAnimation(Normal5B) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
-	{
-		SmearMesh->SetMorphTarget(TEXT("ACH_5B"), 1);
-	}
-	else if (IsCurrentAnimation(Normal2B) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 11)
-	{
-		if (CurrentState.AnimFrameIndex < 7)
-			SmearMesh->SetMorphTarget(TEXT("ACH_2B_00"), 1);
-		else
-			SmearMesh->SetMorphTarget(TEXT("ACH_2B_01"), 1);
-	}
-	else if (IsCurrentAnimation(Normal5H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
-	{
-		SmearMesh->SetMorphTarget(TEXT("ACH_5H"), 1);
-	}
-	else if (IsCurrentAnimation(Normal2H) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 8)
-	{
-		if (CurrentState.AnimFrameIndex == 3)
-			SmearMesh->SetMorphTarget(TEXT("ACH_2H_00"), 1);
-		else
-			SmearMesh->SetMorphTarget(TEXT("ACH_2H_01"), 1);
-	}
-	else if (IsCurrentAnimation(NormalJH) && CurrentState.AnimFrameIndex > 1 && CurrentState.AnimFrameIndex < 7)
-	{
-		if (CurrentState.AnimFrameIndex < 4)
-			SmearMesh->SetMorphTarget(TEXT("ACH_jH_00"), 1);
-		else
-			SmearMesh->SetMorphTarget(TEXT("ACH_jH_01"), 1);
-	}
-	else if (IsCurrentAnimation(NormalJB) && CurrentState.AnimFrameIndex > 4)
-	{
-		if (CurrentState.AnimFrameIndex == 5)
-			SmearMesh->SetMorphTarget(TEXT("ACH_jB_00"), 1);
-		else if (CurrentState.AnimFrameIndex == 6)
-			SmearMesh->SetMorphTarget(TEXT("ACH_jB_01"), 1);
-		else
-			SmearMesh->SetMorphTarget(TEXT("ACH_jB_02"), 1);
-	}
-	else if (IsCurrentAnimation(Normal6B) && CurrentState.AnimFrameIndex > 7 && CurrentState.AnimFrameIndex < 12)
-	{
-		SmearMesh->SetMorphTarget(TEXT("ACH_6B"), 1);
-
-		if (IsCurrentAnimation(Normal6B) && CurrentState.AnimFrameIndex == 8)
-		{
-			CurrentState.Position.Y = 0;
-			CurrentState.Velocity.X *= .95;
-			CurrentState.bIsAirborne = false;
-		}
-	}
-	else
-	{
-		bShowSmear = false;
 	}
 }
 
@@ -629,13 +608,14 @@ void ABTCharacterACH::ResetSmear()
 
 void ABTCharacterACH::DrawSmear()
 {
-	ABTCharacterBase::DrawSmear();
-
+	ResetSmear();
+	
 	if (IsCurrentAnimation(Normal5B) && CurrentState.AnimFrameIndex > 2 && CurrentState.AnimFrameIndex < 7)
 	{
 		FVector SmearFrameIndex = FVector(0);
 		FVector EmitFrameIndex = FVector(FMath::Min(1, (CurrentState.AnimFrameIndex - 3) % 2), FMath::Min(1, (CurrentState.AnimFrameIndex - 3) / 2), 0);
 
+		SmearMesh->SetMorphTarget(TEXT("ACH_5B"), 1);
 
 		if (CurrentState.AnimFrameIndex > 3)
 		{
@@ -675,6 +655,10 @@ void ABTCharacterACH::DrawSmear()
 		FVector SmearFrameIndex = FVector(0);
 		FVector EmitFrameIndex = FVector(0);
 
+		if (CurrentState.AnimFrameIndex < 7)
+			SmearMesh->SetMorphTarget(TEXT("ACH_2B_00"), 1);
+		else
+			SmearMesh->SetMorphTarget(TEXT("ACH_2B_01"), 1);
 
 		if (CurrentState.AnimFrameIndex < 7)
 		{
@@ -692,7 +676,6 @@ void ABTCharacterACH::DrawSmear()
 			{
 				SmearFrameIndex = FVector(1);
 				EmitFrameIndex.Y = 1;
-				//EmitFrameIndex = FVector(1);
 			}
 		}
 		else
@@ -737,6 +720,8 @@ void ABTCharacterACH::DrawSmear()
 		FVector SmearFrameIndex = FVector(.5f, 0, 0);
 		FVector EmitFrameIndex = FVector(FMath::Min(1, (CurrentState.AnimFrameIndex - 8) % 2), FMath::Min(1, (CurrentState.AnimFrameIndex - 8) / 2), 0);
 
+		SmearMesh->SetMorphTarget(TEXT("ACH_6B"), 1);
+
 		if (CurrentState.AnimFrameIndex == 8)
 			SmearFrameIndex = FVector(0);
 		else if (CurrentState.AnimFrameIndex == 9 && CurrentState.PosePlayTime < 3)
@@ -766,6 +751,7 @@ void ABTCharacterACH::DrawSmear()
 		FVector SmearFrameIndex = FVector(0);
 		FVector EmitFrameIndex = FVector((CurrentState.AnimFrameIndex - 3) % 2, (CurrentState.AnimFrameIndex - 3) / 2, 0);
 
+		SmearMesh->SetMorphTarget(TEXT("ACH_5H"), 1);
 
 		if (CurrentState.AnimFrameIndex > 3)
 		{
@@ -803,6 +789,10 @@ void ABTCharacterACH::DrawSmear()
 		FVector SmearFrameIndex = FVector(0);
 		FVector EmitFrameIndex;
 
+		if (CurrentState.AnimFrameIndex == 3)
+			SmearMesh->SetMorphTarget(TEXT("ACH_2H_00"), 1);
+		else
+			SmearMesh->SetMorphTarget(TEXT("ACH_2H_01"), 1);
 
 		if (CurrentState.AnimFrameIndex == 3)
 		{
@@ -836,7 +826,10 @@ void ABTCharacterACH::DrawSmear()
 				EmitFrameIndex = FVector(1, 1, 0);
 			}
 			else
-				bShowSmear = false;
+			{
+				SmearFrameIndex = FVector(.5, 0, 0);
+				EmitFrameIndex = FVector(.5, 0, 0);
+			}
 
 		}
 
@@ -858,16 +851,14 @@ void ABTCharacterACH::DrawSmear()
 	else if (IsCurrentAnimation(NormalJH) && CurrentState.AnimFrameIndex > 1 && CurrentState.AnimFrameIndex < 7)
 	{
 		FVector SmearFrameIndex = FVector(0);
-		FVector EmitFrameIndex;
-
+		FVector EmitFrameIndex = FVector(0);
 
 		if (CurrentState.AnimFrameIndex < 4)
-		{
-			EmitFrameIndex = FVector(0);
-			if (CurrentState.AnimFrameIndex == 2)
-				SmearFrameIndex = FVector(1,0,0);
-		}
+			SmearMesh->SetMorphTarget(TEXT("ACH_jH_00"), 1);
 		else
+			SmearMesh->SetMorphTarget(TEXT("ACH_jH_01"), 1);
+
+		if (CurrentState.AnimFrameIndex >= 4)
 		{
 			SmearFrameIndex = FVector(.5, 0, 0);
 
@@ -902,6 +893,12 @@ void ABTCharacterACH::DrawSmear()
 		FVector SmearFrameIndex = FVector(0);
 		FVector EmitFrameIndex = FVector(0);
 
+		if (CurrentState.AnimFrameIndex == 5)
+			SmearMesh->SetMorphTarget(TEXT("ACH_jB_00"), 1);
+		else if (CurrentState.AnimFrameIndex == 6)
+			SmearMesh->SetMorphTarget(TEXT("ACH_jB_01"), 1);
+		else
+			SmearMesh->SetMorphTarget(TEXT("ACH_jB_02"), 1);
 
 		if (CurrentState.AnimFrameIndex > 6)
 		{
@@ -918,7 +915,7 @@ void ABTCharacterACH::DrawSmear()
 			}
 			else
 			{
-				bShowSmear = false;
+				EmitFrameIndex.X = .5;
 			}
 		}
 
@@ -937,6 +934,10 @@ void ABTCharacterACH::DrawSmear()
 				DynamicSmear->SetTextureParameterValue(TEXT("EmissionSpriteSheet"), SmearEmit);
 		}
 	}
+	else
+		bShowSmear = false;
+
+	ABTCharacterBase::DrawSmear();
 }
 
 bool ABTCharacterACH::NormalAttacks()
