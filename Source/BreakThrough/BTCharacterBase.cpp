@@ -40,6 +40,7 @@ void ABTCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
 	LineThickness = 3.f;
+	CurrentState.Health = MaxHealth;
 	CreateMaterials();
 	CreateVariables();
 	SpawnPBS();
@@ -846,7 +847,7 @@ void ABTCharacterBase::DrawCharacter()
 	}
 
 	//if Hitbox View is on also loop through hitbox and hurtbox arrays and draw to screen
-	HitboxViewer();
+	//HitboxViewer();
 }
 
 void ABTCharacterBase::ProcessAnimationFrame()

@@ -95,7 +95,6 @@ void ABTHitFX::CreateMaterials()
 	{
 		Cross->SetMaterial(0, DynamicCrossMaterial);
 		DynamicCrossMaterial->SetScalarParameterValue(FName("Emissivity"), 0);
-		//DynamicCrossMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .3f, 1));
 		DynamicCrossMaterial->SetVectorParameterValue(FName("Color"), FVector(.25, 1, .35));
 		DynamicCrossMaterial->SetVectorParameterValue(FName("RowsAndColumns"), FVector(2));
 	}
@@ -105,7 +104,7 @@ void ABTHitFX::CreateMaterials()
 		Ring->SetMaterial(0, DynamicRingMaterial);
 		DynamicRingMaterial->SetScalarParameterValue(FName("Emissivity"), 15);
 		DynamicRingMaterial->SetVectorParameterValue(FName("RowsAndColumns"), FVector(2));
-		DynamicRingMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .035, 0));
+		DynamicRingMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .02, 0));
 		//DynamicRingMaterial->SetVectorParameterValue(FName("Color"), FVector(.1, 1, .25));
 	}
 }
@@ -177,13 +176,13 @@ void ABTHitFX::DrawEffect()
 		if (CurrentState.HitProperties & IsSlash)
 		{
 			DynamicBillboardMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, 2 + CurrentState.AnimFrameIndex / 4, 0));
-			DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .1, 0));
+			DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .075, 0));
 		}
 		else
 		{
 			DynamicBillboardMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, CurrentState.AnimFrameIndex / 4, 0));
 			if (CurrentState.Interaction == Hit)
-				DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .25, 0));
+				DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .1, 0));
 			else
 				DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(.25, 1, .35)); //(FName("Color"), FVector(1, 0, .5));
 		}
