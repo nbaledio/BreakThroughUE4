@@ -3921,9 +3921,9 @@ void ABTCharacterBase::DrawHurtbox(FHurtbox Box)
 
 void ABTCharacterBase::ResetSmear()
 {
-	SmearMesh->SetVisibility(false);
+	bShowSmear = true;
 }
 
-void ABTCharacterBase::DrawSmear() {}
+void ABTCharacterBase::DrawSmear() { SmearMesh->SetVisibility(bShowSmear); }
 
 void ABTCharacterBase::CreateVariables() {}
