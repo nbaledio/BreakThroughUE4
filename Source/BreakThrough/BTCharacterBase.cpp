@@ -3315,6 +3315,7 @@ bool ABTCharacterBase::BlitzCancel()
 	if (((CurrentState.AvailableActions & AcceptBlitz && CurrentState.Resolve > 0) || (CurrentState.BlockStun > 0 && !CurrentState.bIsAirborne && CurrentState.Resolve > 1)) && CurrentState.SlowMoTime == 0 &&
 		CurrentState.MPressed > 0 && CurrentState.HPressed > 0 && FMath::Abs(CurrentState.MPressed - CurrentState.HPressed) <= InputTime) //Blitz cancel is performed by hitting M and H at the same time
 	{
+		RefreshMovelist();
 		CurrentState.Resolve--;
 		CurrentState.Durability = 750;
 		CurrentState.LandingLag = 0;
