@@ -965,6 +965,18 @@ bool ABTCharacterBase::TurnAroundCheck()
 bool ABTCharacterBase::TriggerTurnAround()
 {
 	//Trigger turnaround animation if in idle stand or crouch;
+	uint8 TempDir1 = CurrentState.Dir1, TempDir4 = CurrentState.Dir4, TempDir7 = CurrentState.Dir7, TempDirDouble4 = CurrentState.DoubleDir4;
+
+	CurrentState.Dir1 = CurrentState.Dir3;
+	CurrentState.Dir4 = CurrentState.Dir6;
+	CurrentState.Dir7 = CurrentState.Dir9;
+	CurrentState.DoubleDir4 = CurrentState.DoubleDir6;
+
+	CurrentState.Dir3 = TempDir1;
+	CurrentState.Dir6 = TempDir4;
+	CurrentState.Dir9 = TempDir7;
+	CurrentState.DoubleDir6 = TempDirDouble4;
+
 	if (CurrentState.AvailableActions & AcceptMove && !CurrentState.bIsAirborne)
 	{
 		if (CurrentState.bIsCrouching)
@@ -1859,6 +1871,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 	{
 		CurrentState.AirJump = 0;
 
+		TurnAroundCheck();
 		if (CurrentState.Dir9 > 0 && CurrentState.Dir9 > CurrentState.Dir7 && CurrentState.Dir9 > CurrentState.Dir8) //Most recent input is forward jump
 			CurrentState.bForwardJump = true;
 		else if (CurrentState.Dir7 > 0 && CurrentState.Dir7 > CurrentState.Dir9 && CurrentState.Dir7 > CurrentState.Dir8) //Most recent input is backward jump
@@ -3302,6 +3315,7 @@ bool ABTCharacterBase::BlitzCancel()
 	if (((CurrentState.AvailableActions & AcceptBlitz && CurrentState.Resolve > 0) || (CurrentState.BlockStun > 0 && !CurrentState.bIsAirborne && CurrentState.Resolve > 1)) && CurrentState.SlowMoTime == 0 &&
 		CurrentState.MPressed > 0 && CurrentState.HPressed > 0 && FMath::Abs(CurrentState.MPressed - CurrentState.HPressed) <= InputTime) //Blitz cancel is performed by hitting M and H at the same time
 	{
+		TurnAroundCheck();
 		CurrentState.Resolve--;
 		CurrentState.Durability = 750;
 		CurrentState.LandingLag = 0;
