@@ -79,6 +79,58 @@ void ABTCharacterBase::SuperFlashSolver() //Only play once from Player1
 	}
 }
 
+void ABTCharacterBase::ThrowDetection()
+{
+	//logic to follow for throws
+	for (ABTProjectileBase* Projectile : Projectiles)
+	{
+		Projectile->ThrowDetection();
+	}
+
+	if (Opponent != nullptr && !CurrentState.bClash)
+	{
+		if (CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0 && !CurrentState.bAttackMadeContact && CurrentState.HitStop == 0)
+		{
+			if ((((CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == CommandThrow || (CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == Throw && Opponent->CurrentState.CurrentAnimFrame.Invincibility != NormalThrowInvincible)) && !Opponent->CurrentState.bIsAirborne) ||
+				((CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == AirCommandThrow || (CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == AirThrow && Opponent->CurrentState.CurrentAnimFrame.Invincibility != NormalThrowInvincible)) && Opponent->CurrentState.bIsAirborne)) &&
+				((Opponent->CurrentState.HitStun == 0) || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackProperties & ComboThrow || Opponent->IsCurrentAnimation(Opponent->Stagger) ||
+					Opponent->IsCurrentAnimation(Opponent->Crumple)) && Opponent->CurrentState.BlockStun == 0 && Opponent->CurrentState.CurrentAnimFrame.Invincibility != ThrowInvincible &&
+				Opponent->CurrentState.CurrentAnimFrame.Invincibility != FullInvincible && Opponent->CurrentState.CurrentAnimFrame.Invincibility != OTG)
+			{
+				for (uint8 i = 0; i < CurrentState.CurrentAnimFrame.Hitboxes.Num() && !CurrentState.bAttackMadeContact; i++)
+				{
+					FVector2D HitboxCenter;
+					if (CurrentState.bFacingRight)
+						HitboxCenter = CurrentState.Position + CurrentState.CurrentAnimFrame.Hitboxes[i].Position;
+					else
+						HitboxCenter = FVector2D(CurrentState.Position.X - CurrentState.CurrentAnimFrame.Hitboxes[i].Position.X, CurrentState.Position.Y + CurrentState.CurrentAnimFrame.Hitboxes[i].Position.Y);
+
+					FVector2D OpponentPushboxCenter = FVector2D(Opponent->CurrentState.Position.X, Opponent->CurrentState.Position.Y);
+					FVector2D OpponentPushboxSize = FVector2D(Opponent->PushboxWidth, Opponent->StandingPushBoxHeight);
+
+					if (Opponent->CurrentState.bIsAirborne)
+					{
+						OpponentPushboxCenter.Y += .5f * Opponent->CrouchingPushBoxHeight + Opponent->AirPushboxVerticalOffset;
+						OpponentPushboxSize.Y = Opponent->CrouchingPushBoxHeight;
+					}
+					else if (Opponent->CurrentState.bIsCrouching)
+					{
+						OpponentPushboxCenter.Y += .5f * Opponent->CrouchingPushBoxHeight;
+						OpponentPushboxSize.Y = Opponent->CrouchingPushBoxHeight;
+					}
+					else
+						OpponentPushboxCenter.Y += .5f * Opponent->StandingPushBoxHeight;
+
+					if (RectangleOverlap(HitboxCenter, OpponentPushboxCenter, CurrentState.CurrentAnimFrame.Hitboxes[i].Size, OpponentPushboxSize))
+					{
+						ContactThrow(CurrentState.CurrentAnimFrame.Hitboxes[i], CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight);
+					}
+				}
+			}
+		}
+	}
+}
+
 void ABTCharacterBase::HitDetection()
 {
 	for (ABTProjectileBase* Projectile : Projectiles)
@@ -144,44 +196,6 @@ void ABTCharacterBase::HitDetection()
 								}
 							}
 						}
-					}
-				}
-			}
-			//logic to follow for throws
-			else if ((((CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == CommandThrow || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == Throw) && !Opponent->CurrentState.bIsAirborne) ||
-				((CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == AirCommandThrow || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == AirThrow) && Opponent->CurrentState.bIsAirborne)) &&
-				((Opponent->CurrentState.HitStun == 0) || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackProperties & ComboThrow || Opponent->IsCurrentAnimation(Opponent->Stagger) ||
-					Opponent->IsCurrentAnimation(Opponent->Crumple)) && Opponent->CurrentState.BlockStun == 0 && Opponent->CurrentState.CurrentAnimFrame.Invincibility != ThrowInvincible &&
-				Opponent->CurrentState.CurrentAnimFrame.Invincibility != FullInvincible && Opponent->CurrentState.CurrentAnimFrame.Invincibility != OTG)
-			{
-				for (uint8 i = 0; i < CurrentState.CurrentAnimFrame.Hitboxes.Num() && !CurrentState.bAttackMadeContact; i++)
-				{
-					FVector2D HitboxCenter;
-					if (CurrentState.bFacingRight)
-						HitboxCenter = CurrentState.Position + CurrentState.CurrentAnimFrame.Hitboxes[i].Position;
-					else
-						HitboxCenter = FVector2D(CurrentState.Position.X - CurrentState.CurrentAnimFrame.Hitboxes[i].Position.X, CurrentState.Position.Y + CurrentState.CurrentAnimFrame.Hitboxes[i].Position.Y);
-
-					FVector2D OpponentPushboxCenter = FVector2D(Opponent->CurrentState.Position.X, Opponent->CurrentState.Position.Y);
-					FVector2D OpponentPushboxSize = FVector2D(Opponent->PushboxWidth, Opponent->StandingPushBoxHeight);
-
-					if (Opponent->CurrentState.bIsAirborne)
-					{
-						OpponentPushboxCenter.Y += .5f * Opponent->CrouchingPushBoxHeight + Opponent->AirPushboxVerticalOffset;
-						OpponentPushboxSize.Y = Opponent->CrouchingPushBoxHeight;
-					}
-					else if (Opponent->CurrentState.bIsCrouching)
-					{
-						OpponentPushboxCenter.Y += .5f * Opponent->CrouchingPushBoxHeight;
-						OpponentPushboxSize.Y = Opponent->CrouchingPushBoxHeight;
-					}
-					else
-						OpponentPushboxCenter.Y += .5f * Opponent->StandingPushBoxHeight;
-
-					if (RectangleOverlap(HitboxCenter, OpponentPushboxCenter, CurrentState.CurrentAnimFrame.Hitboxes[i].Size, OpponentPushboxSize))
-					{
-						CurrentState.bAttackMadeContact = true;
-						ContactThrow(CurrentState.CurrentAnimFrame.Hitboxes[i], CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight);
 					}
 				}
 			}
@@ -3144,12 +3158,13 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 				FVector2D ThrowCenter = FVector2D(.5 * (CurrentState.Position.X + Opponent->CurrentState.Position.X),
 					.35 * (CurrentState.Position.Y + StandingPushBoxHeight + AirPushboxVerticalOffset +
 						Opponent->CurrentState.Position.Y + Opponent->StandingPushBoxHeight + Opponent->AirPushboxVerticalOffset));
+
 				if (SpecialVFX[0]->CurrentState.bIsActive)
 				{
-					Opponent->SpecialVFX[0]->Activate(ThrowCenter, CurrentState.bFacingRight, 0, Clash);
+					Opponent->SpecialVFX[0]->Activate(ThrowCenter, CurrentState.bFacingRight, 0, Deflect);
 				}
 				else
-					SpecialVFX[0]->Activate(ThrowCenter, CurrentState.bFacingRight, 0, Clash);
+					SpecialVFX[0]->Activate(ThrowCenter, CurrentState.bFacingRight, 0, Deflect);
 			}
 		}
 		else if (Opponent->CurrentState.Resolute)
@@ -3207,7 +3222,7 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 					{
 						CurrentState.bClash = true;
 						Opponent->CurrentState.bClash = true;
-						CurrentState.KnockBack = FVector2D(-2, 0);
+						/*CurrentState.KnockBack = FVector2D(-2, 0);
 						Opponent->CurrentState.KnockBack = FVector2D(-2, 0);
 
 						if (ThrowType == AirCommandThrow)
@@ -3232,7 +3247,7 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 							}
 							else
 								SpecialVFX[0]->Activate(ThrowCenter, CurrentState.bFacingRight, 0, Deflect);
-						}
+						}*/
 					}
 				}
 			}
@@ -3248,6 +3263,7 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 			Opponent->DepthOffset = 100;
 		}
 		CurrentState.bAttackMadeContact = true;
+		Opponent->CurrentState.bClash = true; //set clash to true so opponent's strike attack isnt processed after being thrown
 		AttackCalculation(Hitbox, Opponent->CurrentState.Position);
 	}
 }
@@ -3330,7 +3346,7 @@ bool ABTCharacterBase::BlitzCancel()
 			if (CurrentState.Dir6 == DirInputTime) //blitz air dash forward
 			{
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
-				CurrentState.Velocity = FVector2D(4.25, 0);
+				CurrentState.Velocity = FVector2D(4.5, 0);
 				CurrentState.GravDefyTime = 24;
 				if (!CurrentState.bFacingRight)
 					CurrentState.Velocity.X *= -1;

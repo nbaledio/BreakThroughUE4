@@ -31,6 +31,12 @@ void BTGameState::Update(int inputs[], int disconnect_flags)
             for (int32 i = 0; i < 2; i++)
             {
                 if (Player[i])
+                    Player[i]->ThrowDetection();
+            }
+
+            for (int32 i = 0; i < 2; i++)
+            {
+                if (Player[i])
                         Player[i]->HitDetection();
             }
 

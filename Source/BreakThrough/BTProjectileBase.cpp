@@ -44,6 +44,57 @@ void ABTProjectileBase::Activate(bool FacingRight)
 	CurrentState.FramePlayTime = 0;
 }
 
+void ABTProjectileBase::ThrowDetection()
+{
+	//logic to follow for throws
+	if (CurrentState.bIsActive && CurrentState.HitStop == 0 && !CurrentState.bProjectileClash)
+	{
+		if (Owner && CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0)
+		{
+			if (Owner->Opponent)
+			{
+				CurrentState.bHitSuccess = false;
+				if (CurrentState.CurrentAnimFrame.bCanHit && (((CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == CommandThrow || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == Throw) && !Owner->Opponent->CurrentState.bIsAirborne) ||
+					((CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == AirCommandThrow || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == AirThrow) && Owner->Opponent->CurrentState.bIsAirborne)) &&
+					((Owner->Opponent->CurrentState.HitStun == 0) || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackProperties & ComboThrow || Owner->Opponent->IsCurrentAnimation(Owner->Opponent->Stagger) ||
+						Owner->Opponent->IsCurrentAnimation(Owner->Opponent->Crumple)) && Owner->Opponent->CurrentState.BlockStun == 0 && Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility != ThrowInvincible &&
+					Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility != FullInvincible && Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility != Intangible && Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility != OTG)
+				{
+					for (uint8 i = 0; i < CurrentState.CurrentAnimFrame.Hitboxes.Num() && !CurrentState.bAttackMadeContact; i++)
+					{
+						FVector2D HitboxCenter;
+						if (CurrentState.bFacingRight)
+							HitboxCenter = CurrentState.Position + CurrentState.CurrentAnimFrame.Hitboxes[i].Position;
+						else
+							HitboxCenter = FVector2D(CurrentState.Position.X - CurrentState.CurrentAnimFrame.Hitboxes[i].Position.X, CurrentState.Position.Y + CurrentState.CurrentAnimFrame.Hitboxes[i].Position.Y);
+
+						FVector2D OpponentPushboxCenter = FVector2D(Owner->Opponent->CurrentState.Position.X, Owner->Opponent->CurrentState.Position.Y);
+						FVector2D OpponentPushboxSize = FVector2D(Owner->Opponent->PushboxWidth, Owner->Opponent->StandingPushBoxHeight);
+
+						if (Owner->Opponent->CurrentState.bIsAirborne)
+						{
+							OpponentPushboxCenter.Y += .5f * Owner->Opponent->CrouchingPushBoxHeight + Owner->Opponent->AirPushboxVerticalOffset;
+							OpponentPushboxSize.Y = Owner->Opponent->CrouchingPushBoxHeight;
+						}
+						else if (Owner->Opponent->CurrentState.bIsCrouching)
+						{
+							OpponentPushboxCenter.Y += .5f * Owner->Opponent->CrouchingPushBoxHeight;
+							OpponentPushboxSize.Y = Owner->Opponent->CrouchingPushBoxHeight;
+						}
+						else
+							OpponentPushboxCenter.Y += .5f * Owner->Opponent->StandingPushBoxHeight;
+
+						if (Owner->RectangleOverlap(HitboxCenter, OpponentPushboxCenter, CurrentState.CurrentAnimFrame.Hitboxes[i].Size, OpponentPushboxSize))
+						{
+							ContactThrow(CurrentState.CurrentAnimFrame.Hitboxes[i], CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight);
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 void ABTProjectileBase::HitDetection()
 {
 	if (CurrentState.bIsActive && CurrentState.HitStop == 0 && !CurrentState.bProjectileClash)
@@ -239,44 +290,6 @@ void ABTProjectileBase::HitDetection()
 											}
 										}
 									}
-								}
-							}
-						}
-						//logic to follow for throws
-						else if (CurrentState.CurrentAnimFrame.bCanHit && (((CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == CommandThrow || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == Throw) && !Owner->Opponent->CurrentState.bIsAirborne) ||
-							((CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == AirCommandThrow || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight == AirThrow) && Owner->Opponent->CurrentState.bIsAirborne)) &&
-							((Owner->Opponent->CurrentState.HitStun == 0) || CurrentState.CurrentAnimFrame.Hitboxes[0].AttackProperties & ComboThrow || Owner->Opponent->IsCurrentAnimation(Owner->Opponent->Stagger) ||
-								Owner->Opponent->IsCurrentAnimation(Owner->Opponent->Crumple)) && Owner->Opponent->CurrentState.BlockStun == 0 && Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility != ThrowInvincible &&
-							Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility != FullInvincible && Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility != Intangible && Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility != OTG)
-						{
-							for (uint8 i = 0; i < CurrentState.CurrentAnimFrame.Hitboxes.Num() && !CurrentState.bAttackMadeContact; i++)
-							{
-								FVector2D HitboxCenter;
-								if (CurrentState.bFacingRight)
-									HitboxCenter = CurrentState.Position + CurrentState.CurrentAnimFrame.Hitboxes[i].Position;
-								else
-									HitboxCenter = FVector2D(CurrentState.Position.X - CurrentState.CurrentAnimFrame.Hitboxes[i].Position.X, CurrentState.Position.Y + CurrentState.CurrentAnimFrame.Hitboxes[i].Position.Y);
-
-								FVector2D OpponentPushboxCenter = FVector2D(Owner->Opponent->CurrentState.Position.X, Owner->Opponent->CurrentState.Position.Y);
-								FVector2D OpponentPushboxSize = FVector2D(Owner->Opponent->PushboxWidth, Owner->Opponent->StandingPushBoxHeight);
-
-								if (Owner->Opponent->CurrentState.bIsAirborne)
-								{
-									OpponentPushboxCenter.Y += .5f * Owner->Opponent->CrouchingPushBoxHeight + Owner->Opponent->AirPushboxVerticalOffset;
-									OpponentPushboxSize.Y = Owner->Opponent->CrouchingPushBoxHeight;
-								}
-								else if (Owner->Opponent->CurrentState.bIsCrouching)
-								{
-									OpponentPushboxCenter.Y += .5f * Owner->Opponent->CrouchingPushBoxHeight;
-									OpponentPushboxSize.Y = Owner->Opponent->CrouchingPushBoxHeight;
-								}
-								else
-									OpponentPushboxCenter.Y += .5f * Owner->Opponent->StandingPushBoxHeight;
-
-								if (Owner->RectangleOverlap(HitboxCenter, OpponentPushboxCenter, CurrentState.CurrentAnimFrame.Hitboxes[i].Size, OpponentPushboxSize))
-								{
-									CurrentState.bAttackMadeContact = true;
-									ContactThrow(CurrentState.CurrentAnimFrame.Hitboxes[i], CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight);
 								}
 							}
 						}
