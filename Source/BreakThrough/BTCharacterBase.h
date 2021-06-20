@@ -43,7 +43,8 @@ enum SpecialStates
 	SuperCounter,
 	FaceDown,
 	FaceUp,
-	OTG // 30% damage and halved hitstun
+	OTG, // 30% damage and halved hitstun
+	NormalThrowInvincible //Used so that command throws cant be beaten by normal throw during startup
 };
 
 enum CharacterActions
@@ -431,6 +432,8 @@ public:
 	virtual void Tick(float DeltaTime);
 
 	void SuperFlashSolver();
+
+	virtual void ThrowDetection();
 
 	virtual void HitDetection();
 

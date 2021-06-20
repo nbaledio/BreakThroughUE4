@@ -188,6 +188,8 @@ public:
 
 	virtual void Activate(bool FacingRight);
 
+	virtual void ThrowDetection();
+
 	virtual void HitDetection();
 
 	virtual void UpdateProjectile();
