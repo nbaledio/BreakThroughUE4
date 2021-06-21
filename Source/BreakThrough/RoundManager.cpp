@@ -20,6 +20,9 @@ ARoundManager::ARoundManager()
 	MainCamera = CreateDefaultSubobject<UCineCameraComponent>(TEXT("Main Camera"));
 	MainCamera->SetupAttachment(RootComponent);
 
+	SceneCapture = CreateDefaultSubobject<USceneCaptureComponent2D>("Scene Capture");
+	SceneCapture->SetupAttachment(MainCamera);
+
 	HUDWidgetComponent = CreateDefaultSubobject<UWidgetComponent>("UpperHUD");
 	HUDWidgetComponent->SetupAttachment(MainCamera);
 
@@ -31,14 +34,13 @@ ARoundManager::ARoundManager()
 void ARoundManager::BeginPlay()
 {
 	Super::BeginPlay();
-	yOffset = 105.0f;
-	zPosMax = 2500.0f;
-	zPosMin = 2200.0f;
-	zPos = 2200.0f;
+
 	//Create HUDs and add it to camera/world space
 	LowerHUD = CreateWidget<UHUDVisuals>(GetWorld()->GetGameInstance(), HUDWidgetClass);
 	LowerHUD->AddToViewport(0);
 	UpperHUD = Cast<UHUDVisuals>(HUDWidgetComponent->GetUserWidgetObject());
+
+	CurrentState.CameraRotation = FRotator(0.0f, -90.0f, 0.0f);
 
 	/*Assume 60 FPS. Change number if a longer/short in game second is desired
 	60 * (Real world seconds length) = Number of frames to check*/
@@ -54,10 +56,145 @@ void ARoundManager::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
-void ARoundManager::UpdateCameraPosition(FVector Position, FRotator Rotation) 
+void ARoundManager::SceneCaptureList()
 {
-	MainCamera->SetRelativeLocation(Position);
-	MainCamera->SetRelativeRotation(Rotation);
+	//Makes it only certain objects are picked up by the scene capture
+	if (Player1Base)
+	{
+		SceneCapture->ShowOnlyActorComponents(Player1Base, true);
+		SceneCapture->ShowOnlyActorComponents(Player1Base->BlitzImage, true);
+
+		for (ASigil* Sigil : Player1Base->Sigils)
+		{
+			SceneCapture->ShowOnlyActorComponents(Sigil, true);
+		}
+
+		for (ABTProjectileBase* Projectile : Player1Base->Projectiles)
+		{
+			SceneCapture->ShowOnlyActorComponents(Projectile, true);
+		}
+
+		for (ABTVFXBase* VFX : Player1Base->SpecialVFX)
+		{
+			SceneCapture->ShowOnlyActorComponents(VFX, true);
+		}
+	}
+
+	if (Player2Base)
+	{
+		SceneCapture->ShowOnlyActorComponents(Player2Base, true);
+		SceneCapture->ShowOnlyActorComponents(Player2Base->BlitzImage, true);
+
+		for (ASigil* Sigil : Player2Base->Sigils)
+		{
+			SceneCapture->ShowOnlyActorComponents(Sigil, true);
+		}
+
+		for (ABTProjectileBase* Projectile : Player2Base->Projectiles)
+		{
+			SceneCapture->ShowOnlyActorComponents(Projectile, true);
+		}
+
+		for (ABTVFXBase* VFX : Player2Base->SpecialVFX)
+		{
+			SceneCapture->ShowOnlyActorComponents(VFX, true);
+		}
+	}
+	//add stage actor to list as well
+}
+
+void ARoundManager::UpdateCameraPosition() 
+{
+	CurrentState.Position = FVector(CurrentState.Position.X, 0, 0);
+	
+	if (FMath::Abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X) <  PlayerMaxDistance)
+	{
+		CurrentState.Position.X = (Player1Base->CurrentState.Position.X + Player2Base->CurrentState.Position.X) / 2;
+	}
+
+	if (Player1Base->CurrentState.bIsAirborne || Player2Base->CurrentState.bIsAirborne)
+		CurrentState.Position.Z = ((Player1Base->CurrentState.Position.Y + Player1Base->AirPushboxVerticalOffset) + (Player2Base->CurrentState.Position.Y + Player2Base->AirPushboxVerticalOffset)) * .65;
+	/*else if (Player1Base->CurrentState.bIsAirborne || Player2Base->CurrentState.bIsAirborne)
+		CurrentState.Position.Z = ((Player1Base->CurrentState.Position.Y + Player1Base->AirPushboxVerticalOffset) + (Player2Base->CurrentState.Position.Y + Player2Base->AirPushboxVerticalOffset)) * .85;*/
+
+	//FRotator(0.0f, -90.0f, 0.0f)
+	if (Player1Base->CurrentState.CurrentAnimFrame.CameraLocation != FVector(0)) //check if Player 1's animation has a stored camera location
+	{
+		if (Player1Base->CurrentState.CurrentAnimFrame.bCinematic)
+		{
+			CurrentState.CameraPosition = Player1Base->CurrentState.CurrentAnimFrame.CameraLocation;
+		}
+		else
+		{
+			if (Player1Base->CurrentState.PosePlayTime == 0)
+				CurrentState.CameraPosition = FMath::Lerp(CurrentState.CameraPosition, Player1Base->CurrentState.CurrentAnimFrame.CameraLocation, .5f);
+		}
+	}
+	else if (Player2Base->CurrentState.CurrentAnimFrame.CameraLocation != FVector(0)) // check if Player 2's animation has a stored camera location
+	{
+		if (Player2Base->CurrentState.CurrentAnimFrame.bCinematic)
+		{
+			CurrentState.CameraPosition = Player2Base->CurrentState.CurrentAnimFrame.CameraLocation;
+		}
+		else
+		{
+			if (Player2Base->CurrentState.PosePlayTime == 0)
+				CurrentState.CameraPosition = FMath::Lerp(CurrentState.CameraPosition, Player2Base->CurrentState.CurrentAnimFrame.CameraLocation, .55f);
+		}
+	}
+	else //otherwise normal gameplay camera
+	{
+		FVector TargetPosition = FVector(CurrentState.Position.X, YPosMin, CurrentState.Position.Z);
+
+		if (TargetPosition.X < -XPosBound) //limit camera horizontal position
+			TargetPosition.X = -XPosBound;
+		else if (TargetPosition.X > XPosBound)
+			TargetPosition.X = XPosBound;
+
+		if (TargetPosition.Z < ZPosMin) //limit camera vertical position
+			TargetPosition.Z = ZPosMin;
+		else if (TargetPosition.Z > ZPosMax)
+			TargetPosition.Z = ZPosMax;
+
+		//Decide whether to zoom in or out based on characters' distance from each other
+		TargetPosition.Y = FMath::Lerp(YPosMin, YPosMax, (FMath::Max((FMath::Abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X) - 200), 0.f)/(PlayerMaxDistance - 200)));
+
+		CurrentState.CameraPosition.X = FMath::Lerp(CurrentState.CameraPosition.X, TargetPosition.X, .45f);
+		CurrentState.CameraPosition.Y = FMath::Lerp(CurrentState.CameraPosition.Y, TargetPosition.Y, .075f);
+		CurrentState.CameraPosition.Z = FMath::Lerp(CurrentState.CameraPosition.Z, TargetPosition.Z, .25f);
+	}
+
+	if (Player1Base->CurrentState.CurrentAnimFrame.CameraRotation != FRotator(0)) //check if Player 1's animation has a stored camera rotation
+	{
+		if (Player1Base->CurrentState.CurrentAnimFrame.bCinematic)
+		{
+			CurrentState.CameraRotation = Player1Base->CurrentState.CurrentAnimFrame.CameraRotation;
+		}
+		else
+		{
+			if (Player1Base->CurrentState.PosePlayTime == 0)
+				CurrentState.CameraRotation = FMath::Lerp(CurrentState.CameraRotation, Player1Base->CurrentState.CurrentAnimFrame.CameraRotation, .15f);
+		}
+	}
+	else if (Player2Base->CurrentState.CurrentAnimFrame.CameraRotation != FRotator(0)) //check if Player 2's animation has a stored camera rotation
+	{
+		if (Player2Base->CurrentState.CurrentAnimFrame.bCinematic)
+		{
+			CurrentState.CameraRotation = Player2Base->CurrentState.CurrentAnimFrame.CameraRotation;
+		}
+		else
+		{
+			if (Player2Base->CurrentState.PosePlayTime == 0)
+				CurrentState.CameraRotation = FMath::Lerp(CurrentState.CameraRotation, Player1Base->CurrentState.CurrentAnimFrame.CameraRotation, .15f);
+		}
+	}
+	else //otherwise normal gameplay camera
+	{
+		CurrentState.CameraRotation = FMath::Lerp(CurrentState.CameraRotation, FRotator(0.0f, -90.0f, 0.0f), .15);
+
+		if (CurrentState.CameraRotation.Yaw + 90 <= 1 && CurrentState.CameraRotation.Yaw != -90)
+			CurrentState.CameraRotation.Yaw = -90;
+	}
 }
 
 //Update function to be used by GameState
@@ -82,24 +219,7 @@ void ARoundManager::UpdateTimer()
 		DetermineWinMethod();
 	}
 
-	//Update camera position
-	if (abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X) > 250.0f)
-	{
-		if (zPos < zPosMax) 
-		{
-			zPos += 25.0f;
-		}
-	}
-	else 
-	{
-		if (zPos > zPosMin)
-		{
-			zPos -= 25.0f;
-		}
-	}
-
-
-	UpdateCameraPosition(FVector((Player1Base->CurrentState.Position.X + Player2Base->CurrentState.Position.X) / 2, zPos, (Player1Base->CurrentState.Position.Y + Player2Base->CurrentState.Position.Y) / 2 + yOffset), FRotator(0.0f, -90.0f, 0.0f));
+	UpdateCameraPosition();
 
 	
 }
@@ -111,6 +231,9 @@ void ARoundManager::DrawScreen()
 	LowerHUD->UpdateLowerHUD(Player1Base, Player2Base);
 
 	//update camera/transform position from here
+	SetActorLocation(CurrentState.Position);
+	MainCamera->SetWorldLocation(CurrentState.CameraPosition);
+	MainCamera->SetRelativeRotation(CurrentState.CameraRotation);
 }
 
 void ARoundManager::ResetPositions()

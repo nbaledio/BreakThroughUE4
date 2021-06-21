@@ -2,6 +2,7 @@
 
 
 #include "BTCharacterBase.h"
+#include "RoundManager.h"
 
 // Sets default values
 ABTCharacterBase::ABTCharacterBase()
@@ -361,13 +362,23 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 		if (CurrentState.Position.Y > 0 || CurrentState.Velocity.Y > 0)
 			CurrentState.bIsAirborne = true;
 
-		if (CurrentState.Position.X <= -StageBounds + .5f * PushboxWidth)
+		if (RoundManager)
 		{
-			CurrentState.Position.X = -StageBounds + .5f * PushboxWidth;
-		}
-		else if (CurrentState.Position.X >= StageBounds - .5f * PushboxWidth)
-		{
-			CurrentState.Position.X = StageBounds - .5f * PushboxWidth;
+			if (FMath::Abs(Opponent->CurrentState.Position.X - CurrentState.Position.X) > RoundManager->PlayerMaxDistance)
+			{
+				if (CurrentState.Position.X < RoundManager->CurrentState.Position.X)
+					CurrentState.Position.X = RoundManager->CurrentState.Position.X - .5 * RoundManager->PlayerMaxDistance;
+				else
+					CurrentState.Position.X = RoundManager->CurrentState.Position.X + .5 *RoundManager->PlayerMaxDistance;
+			}
+			else if (CurrentState.Position.X <= -StageBounds + .5f * PushboxWidth)
+			{
+				CurrentState.Position.X = -StageBounds + .5f * PushboxWidth;
+			}
+			else if (CurrentState.Position.X >= StageBounds - .5f * PushboxWidth)
+			{
+				CurrentState.Position.X = StageBounds - .5f * PushboxWidth;
+			}
 		}
 
 		if (CurrentState.GravDefyTime > 0)
@@ -2087,6 +2098,8 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 						AirDashPosition.X += 2 * AirDashForwardOffset.X;
 
 					SpecialVFX[1]->Activate(AirDashPosition, CurrentState.bFacingRight, 0, AirDash);
+
+					CurrentState.ResolvePulse += 1.5;
 					
 					return EnterNewAnimation(AirDashForwardIn);
 				}
@@ -2131,6 +2144,16 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 
 					SpecialVFX[1]->Activate(AirDashPosition, !CurrentState.bFacingRight, 0, AirDash);
 
+					if (CurrentState.ResolveRecoverTimer >= 200)
+						CurrentState.ResolveRecoverTimer = 180;
+					else
+						CurrentState.ResolveRecoverTimer -= 48;
+
+					if (CurrentState.ResolvePulse <= 4)
+						CurrentState.Durability -= 200;
+
+					CurrentState.ResolvePulse *= .8f;
+
 					return EnterNewAnimation(AirDashBackward);
 				}
 			}
@@ -2149,7 +2172,17 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		if (CurrentState.DoubleDir4 > 0 && CurrentState.BlockStun == 0 && CurrentState.LandingLag == 0)
 		{
 			CurrentState.DoubleDir4 = 0;
+			
+			if (CurrentState.ResolveRecoverTimer >= 200)
+				CurrentState.ResolveRecoverTimer = 180;
+			else
+				CurrentState.ResolveRecoverTimer -= 48;
+
+			if (CurrentState.ResolvePulse <= 4)
+				CurrentState.Durability -= 200;
+
 			CurrentState.ResolvePulse *= .8f;
+
 			return EnterNewAnimation(BackDash);
 		}
 	}
@@ -2387,6 +2420,9 @@ void ABTCharacterBase::AnimationEvents()
 				if (CurrentState.AnimFrameIndex == FocusBlitz.Num() - 1 && CurrentState.PosePlayTime == CurrentState.CurrentAnimFrame.PlayDuration - 1)
 				{
 					CurrentState.bBlitzing = true;
+
+					if (CurrentState.Dir1 == DirInputTime || CurrentState.Dir2 == DirInputTime || CurrentState.Dir3 == DirInputTime)
+						CurrentState.Velocity.Y = -.5;
 				}
 			}
 			else
@@ -2577,7 +2613,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 				KnockBackToApply *= 0;
 
 			//reward opponent for blocking with exceptional timing
-			Opponent->CurrentState.Durability += 250;
+			Opponent->CurrentState.Durability += 200;
 			Opponent->CurrentState.ResolvePulse += 3;
 			if (Opponent->CurrentState.ResolveRecoverTimer < 180)
 				Opponent->CurrentState.ResolveRecoverTimer = 180;
@@ -2591,6 +2627,7 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 		else
 		{
 			Opponent->CurrentState.ResolveRecoverTimer = FMath::Max(0, (int32)Opponent->CurrentState.ResolveRecoverTimer - 60);
+			Opponent->CurrentState.ResolvePulse -= .25;
 
 			//blocked hits chip away at durability
 			if (Opponent->CurrentState.Resolve > 0)
@@ -2605,20 +2642,20 @@ void ABTCharacterBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 					}
 
 					if (Hitbox.AttackProperties & IsSuper)
-						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 10);
+						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 4);
 					else if (Hitbox.AttackProperties & IsSpecial)
-						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 8);
+						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 3);
 					else
-						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 6);
+						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 2);
 				}
 				else
 				{
 					if (Hitbox.AttackProperties & IsSuper)
-						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 7);
+						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 2);
 					else if (Hitbox.AttackProperties & IsSpecial)
-						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 5);
+						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 1.5);
 					else
-						Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 3);
+						Opponent->CurrentState.Durability -= Hitbox.BaseDamage;
 				}
 
 			}
@@ -3013,15 +3050,15 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		if (Opponent->CurrentState.ComboTimer > 960 && !(Hitbox.AttackProperties & IsSpecial)) //16 seconds, normal attacks will only deal 1 frame of hitstun
 			HitStunToApply = 1;
 		else if (Opponent->CurrentState.ComboTimer > 840) //14 seconds, special attacks have a minimum of 60% their base hitstun
-			HitStunToApply *= 6/10;
+			HitStunToApply *= .6;
 		else if (Opponent->CurrentState.ComboTimer > 600)//10 seconds
-			HitStunToApply *= 7/10;
+			HitStunToApply *= .7;
 		else if (Opponent->CurrentState.ComboTimer > 420)//7 seconds
-			HitStunToApply *= 8/10;
+			HitStunToApply *= .8;
 		else if (Opponent->CurrentState.ComboTimer > 300)//5 seconds
-			HitStunToApply *= 9/10;
+			HitStunToApply *= .9;
 	}
-	Opponent->CurrentState.HitStun = HitStunToApply;
+	Opponent->CurrentState.HitStun = FMath::Max(HitStunToApply, (uint8)1);
 	if (Opponent->CurrentState.bIsCrouching || Opponent->IsCurrentAnimation(Opponent->GuardLo) || Opponent->IsCurrentAnimation(Opponent->GuardLoHeavy)) //two extra frames of hitstun if hitting a crouching opponent
 		Opponent->CurrentState.HitStun += 2;
 
@@ -3031,7 +3068,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 	//meter gain for each character
 	if (Opponent->CurrentState.ShatteredTime == 0)
-		Opponent->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * FMath::Max(1.f, Opponent->CurrentState.ResolvePulse / 2)), 1);
+		Opponent->CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * .1f), 1);
 
 	/*if (CurrentState.ResolveRecoverTimer >= 180)
 		CurrentState.Durability += FMath::Max((int32)(Hitbox.BaseDamage * 3), 1);*/
@@ -3315,7 +3352,7 @@ void ABTCharacterBase::SaveFXStates()
 
 bool ABTCharacterBase::BlitzCancel()
 {
-	if (CurrentState.AvailableActions & AcceptMove && !CurrentState.bIsCrouching && CurrentState.LPressed > 0 && CurrentState.BPressed > 0 && FMath::Abs(CurrentState.LPressed - CurrentState.BPressed) <= InputTime)
+	if ((CurrentState.AvailableActions & AcceptMove || IsCurrentAnimation(Brake) || CurrentState.bIsRunning)&& !CurrentState.bIsCrouching && CurrentState.LPressed > 0 && CurrentState.BPressed > 0 && FMath::Abs(CurrentState.LPressed - CurrentState.BPressed) <= InputTime)
 	{
 		if (CurrentState.Dir4 == DirInputTime)
 			bBackThrow = true;
@@ -3381,8 +3418,6 @@ bool ABTCharacterBase::BlitzCancel()
 					AirDashPosition.X += 2 * AirDashForwardOffset.X;
 
 				SpecialVFX[1]->Activate(AirDashPosition, CurrentState.bFacingRight, 0, AirDash);
-
-				return EnterNewAnimation(AirDashForward);
 
 				return EnterNewAnimation(BlitzDashForward);
 			}
@@ -3572,7 +3607,6 @@ void ABTCharacterBase::LightSettings()
 void ABTCharacterBase::ProcessBlitz()
 {
 	CurrentState.bBlitzing = false;
-	RefreshMovelist();
 	if (FMath::Sqrt(FMath::Square(CurrentState.CurrentBlitzState[0].Position.X - Opponent->CurrentState.Position.X) + FMath::Square(CurrentState.CurrentBlitzState[0].Position.Y - Opponent->CurrentState.Position.Y)) < 125
 		&& Opponent->CurrentState.CurrentAnimFrame.Invincibility != FullInvincible && Opponent->CurrentState.CurrentAnimFrame.Invincibility != OTG)
 	{

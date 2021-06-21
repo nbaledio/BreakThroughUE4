@@ -109,6 +109,7 @@ struct FBlitzState;
 class UAnimationFrame;
 class ABTVFXBase;
 struct FEffectState;
+class ARoundManager;
 
 USTRUCT(BlueprintType)
 struct FAnimationFrame
@@ -475,6 +476,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "State")
 	FCharacterState CurrentState;
+
+	ARoundManager* RoundManager;
 
 	TArray<ABTProjectileBase*> Projectiles;
 

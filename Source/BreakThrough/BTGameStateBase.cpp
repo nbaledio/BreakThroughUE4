@@ -143,7 +143,7 @@ void ABTGameStateBase::SpawnCharacters()
     {
         FActorSpawnParameters SpawnParams;
 
-        //spawn specific characters based on persistent info
+        //spawn specific characters and stage based on persistent info
         //place characters on stage and update character state variables based on whether they should start on the left or right
         //set stage lighting defaults
         gs.RoundManager = GetWorld()->SpawnActor<ARoundManager>(RoundManagerBlueprint, FVector(0), FRotator(0), SpawnParams);

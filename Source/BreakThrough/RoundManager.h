@@ -10,6 +10,7 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Math/Vector.h"
 #include "Runtime/CinematicCamera/Public/CineCameraComponent.h"
+#include "Components/SceneCaptureComponent2D.h"
 #include "Components/WidgetComponent.h"
 #include "RoundManager.generated.h"
 
@@ -49,6 +50,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		UCineCameraComponent* MainCamera;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		USceneCaptureComponent2D* SceneCapture;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UWidgetComponent* HUDWidgetComponent;
 
 	FRoundManagerState CurrentState;
@@ -57,13 +60,30 @@ public:
 	ABTCharacterBase* Player1Base;
 	ABTCharacterBase* Player2Base;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
+	float PlayerMaxDistance = 400;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
+		float ZPosMin = 100;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
+		float ZPosMax = 500;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
+		float YPosMax = 2200;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
+		float YPosMin = 2050.0f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
+		float XPosBound = 710.0f;
+
 	//HUD Widgets
 	UHUDVisuals* UpperHUD;
 	UHUDVisuals* LowerHUD;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
+		float CameraSpeed = 1;
+
 	//Functions
-	void UpdateCameraPosition(FVector Position, FRotator Rotation);
+	void UpdateCameraPosition();
 	void UpdateTimer();
+	void SceneCaptureList();
 	void DrawScreen();
 
 	// Called every frame
@@ -83,11 +103,6 @@ private:
 	int32 maxRounds;
 
 	int32 gameTime;
-
-	float yOffset;
-	float zPosMax;
-	float zPosMin;
-	float zPos;
 
 	FVector2D P1startPosition;
 	FVector2D P2startPosition;
