@@ -10,6 +10,7 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Math/Vector.h"
 #include "Runtime/CinematicCamera/Public/CineCameraComponent.h"
+#include "Components/SceneCaptureComponent2D.h"
 #include "Components/WidgetComponent.h"
 #include "RoundManager.generated.h"
 
@@ -49,6 +50,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
 		UCineCameraComponent* MainCamera;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		USceneCaptureComponent2D* SceneCapture;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UWidgetComponent* HUDWidgetComponent;
 
 	FRoundManagerState CurrentState;
@@ -64,6 +67,7 @@ public:
 	//Functions
 	void UpdateCameraPosition(FVector Position, FRotator Rotation);
 	void UpdateTimer();
+	void SceneCaptureList();
 	void DrawScreen();
 
 	// Called every frame

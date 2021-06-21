@@ -20,6 +20,9 @@ ARoundManager::ARoundManager()
 	MainCamera = CreateDefaultSubobject<UCineCameraComponent>(TEXT("Main Camera"));
 	MainCamera->SetupAttachment(RootComponent);
 
+	SceneCapture = CreateDefaultSubobject<USceneCaptureComponent2D>("Scene Capture");
+	SceneCapture->SetupAttachment(MainCamera);
+
 	HUDWidgetComponent = CreateDefaultSubobject<UWidgetComponent>("UpperHUD");
 	HUDWidgetComponent->SetupAttachment(MainCamera);
 
@@ -52,6 +55,16 @@ void ARoundManager::BeginPlay()
 void ARoundManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+}
+
+void ARoundManager::SceneCaptureList()
+{
+	//Makes it only certain objects are picked up by the scene capture
+	if (Player1Base)
+		SceneCapture->ShowOnlyActorComponents(Player1Base);
+	if (Player2Base)
+		SceneCapture->ShowOnlyActorComponents(Player2Base);
+	//add stage actor to list as well
 }
 
 void ARoundManager::UpdateCameraPosition(FVector Position, FRotator Rotation) 
