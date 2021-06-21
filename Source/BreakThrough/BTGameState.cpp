@@ -12,12 +12,16 @@ void BTGameState::Init()
             Player[1]->Opponent = Player[0];
             CharacterStates[0] = Player[0]->CurrentState;
             CharacterStates[1] = Player[1]->CurrentState;
+
+            Player[0]->RoundManager = RoundManager;
+            Player[1]->RoundManager = RoundManager;
         }
     }
     RoundManager->Player1Base = Player[0]; //set players for RoundManager
     RoundManager->Player2Base = Player[1];
     //Give RoundManager pointer to stage actor as well
     RoundManager->SceneCaptureList();
+
     FrameNumber = 0;
     SaveGameState();//copy the initial character states to this structure
 }
