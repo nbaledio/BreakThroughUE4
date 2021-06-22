@@ -20,9 +20,13 @@ public:
 	UPROPERTY(meta = (BindWidget))
 		class UProgressBar* P1HealthBar;
 	UPROPERTY(meta = (BindWidget))
+		class UProgressBar* P1HealthBarFlash;
+	UPROPERTY(meta = (BindWidget))
 		class UProgressBar* P1HealthRedBar;
 	UPROPERTY(meta = (BindWidget))
 		class UProgressBar* P2HealthBar;
+	UPROPERTY(meta = (BindWidget))
+		class UProgressBar* P2HealthBarFlash;
 	UPROPERTY(meta = (BindWidget))
 		class UProgressBar* P2HealthRedBar;
 	UPROPERTY(meta = (BindWidget))

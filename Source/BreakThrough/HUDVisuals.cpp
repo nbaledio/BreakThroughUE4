@@ -16,6 +16,8 @@ void UHUDVisuals::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase*
 	//Update health bars
 	P1HealthBar->SetPercent(static_cast<float>(Player1->CurrentState.Health) / static_cast<float>(Player1->MaxHealth));
 	P2HealthBar->SetPercent(static_cast<float>(Player2->CurrentState.Health) / static_cast<float>(Player2->MaxHealth));
+	P1HealthBarFlash->SetPercent(static_cast<float>(Player1->CurrentState.Health) / static_cast<float>(Player1->MaxHealth));
+	P2HealthBarFlash->SetPercent(static_cast<float>(Player2->CurrentState.Health) / static_cast<float>(Player2->MaxHealth));
 
 	//Calculate current health percents for health colors 
 	float P1CurrentHealthPercent = static_cast<float>(Player1->CurrentState.Health) / static_cast<float>(Player1->MaxHealth);
@@ -56,12 +58,24 @@ void UHUDVisuals::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase*
 		P2HealthBar->SetFillColorAndOpacity(FLinearColor(200.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f));
 	}
 
+	//cause health bar to flash when health is 10% or less
+	
+	if (P1CurrentHealthPercent <= 0.1f && frameCount % 6 == 0)
+		P1HealthBarFlash->SetVisibility(ESlateVisibility::Visible);
+	else
+		P1HealthBarFlash->SetVisibility(ESlateVisibility::Hidden);
+
+	if (P2CurrentHealthPercent <= 0.1f && frameCount % 6 == 0)
+		P2HealthBarFlash->SetVisibility(ESlateVisibility::Visible);
+	else
+		P2HealthBarFlash->SetVisibility(ESlateVisibility::Hidden);
+
 	//Set damage health bar once a character's hitstun ends
-	if (Player1->CurrentState.HitStun == 0 || Player1->CurrentState.Health == 0) 
+	if (Player2->CurrentState.ComboCount == 0) 
 	{
 		P1HealthRedBar->SetPercent(P1CurrentHealthPercent);
 	}
-	if (Player2->CurrentState.HitStun == 0 || Player2->CurrentState.Health == 0)
+	if (Player1->CurrentState.ComboCount == 0)
 	{
 		P2HealthRedBar->SetPercent(P2CurrentHealthPercent);
 	}
