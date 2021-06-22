@@ -33,6 +33,24 @@ public:
 		class UProgressBar* P1DurabilityBar;
 	UPROPERTY(meta = (BindWidget))
 		class UProgressBar* P2DurabilityBar;
+
+	UPROPERTY(meta = (BindWidget))
+		class UImage* P1ResolveBar1;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* P1ResolveBar2;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* P1ResolveBar3;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* P1ResolveBar4;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* P2ResolveBar1;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* P2ResolveBar2;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* P2ResolveBar3;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* P2ResolveBar4;
+
 	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* P1CharacterName;
 	UPROPERTY(meta = (BindWidget))

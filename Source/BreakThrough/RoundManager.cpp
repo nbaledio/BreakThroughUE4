@@ -40,6 +40,34 @@ void ARoundManager::BeginPlay()
 	LowerHUD->AddToViewport(0);
 	UpperHUD = Cast<UHUDVisuals>(HUDWidgetComponent->GetUserWidgetObject());
 
+	if (ResolveBar != nullptr)
+	{
+		for (uint8 i = 0; i < 8; i++)
+		{
+			FResolveBarState BarState;
+			DynamicResolve.Add(UMaterialInstanceDynamic::Create(ResolveBar, this));
+			CurrentState.ResolveStates.Add(BarState);
+
+			if (i == 7)
+				UE_LOG(LogTemp, Warning, TEXT("Created all dynamic resolve bar materials"));
+		}
+	}
+
+	if (DynamicResolve.Num() == 8)
+	{
+		LowerHUD->P1ResolveBar1->SetBrushFromMaterial(DynamicResolve[0]);
+		LowerHUD->P1ResolveBar2->SetBrushFromMaterial(DynamicResolve[1]);
+		LowerHUD->P1ResolveBar3->SetBrushFromMaterial(DynamicResolve[2]);
+		LowerHUD->P1ResolveBar4->SetBrushFromMaterial(DynamicResolve[3]);
+
+		LowerHUD->P2ResolveBar1->SetBrushFromMaterial(DynamicResolve[4]);
+		LowerHUD->P2ResolveBar2->SetBrushFromMaterial(DynamicResolve[5]);
+		LowerHUD->P2ResolveBar3->SetBrushFromMaterial(DynamicResolve[6]);
+		LowerHUD->P2ResolveBar4->SetBrushFromMaterial(DynamicResolve[7]);
+
+		UE_LOG(LogTemp, Warning, TEXT("resolve bar materials have been assigned"));
+	}
+
 	CurrentState.CameraRotation = FRotator(0.0f, -90.0f, 0.0f);
 
 	/*Assume 60 FPS. Change number if a longer/short in game second is desired
@@ -221,16 +249,134 @@ void ARoundManager::UpdateTimer()
 
 	UpdateCameraPosition();
 
+	if (DynamicResolve.Num() == 8)
+	{
+		if (Player1Base)
+		{
+			if (Player1Base->CurrentState.Resolve == 4 && !CurrentState.ResolveStates[3].bIsActive && CurrentState.ResolveStates[3].AnimFrameIndex == 11)
+				ActivateResolveBar(3, true);
+			else if (Player1Base->CurrentState.Resolve < 4 && !CurrentState.ResolveStates[3].bIsActive && CurrentState.ResolveStates[3].AnimFrameIndex == 0)
+				ActivateResolveBar(3, false);
+
+			if (Player1Base->CurrentState.Resolve >= 3 && !CurrentState.ResolveStates[2].bIsActive && CurrentState.ResolveStates[2].AnimFrameIndex == 11)
+				ActivateResolveBar(2, true);
+			else if (Player1Base->CurrentState.Resolve < 3 && !CurrentState.ResolveStates[2].bIsActive && CurrentState.ResolveStates[2].AnimFrameIndex == 0)
+				ActivateResolveBar(2, false);
+
+			if (Player1Base->CurrentState.Resolve >= 2 && !CurrentState.ResolveStates[1].bIsActive && CurrentState.ResolveStates[1].AnimFrameIndex == 11)
+				ActivateResolveBar(1, true);
+			else if (Player1Base->CurrentState.Resolve < 2 && !CurrentState.ResolveStates[1].bIsActive && CurrentState.ResolveStates[1].AnimFrameIndex == 0)
+				ActivateResolveBar(1, false);
+
+			if (Player1Base->CurrentState.Resolve >= 1 && !CurrentState.ResolveStates[0].bIsActive && CurrentState.ResolveStates[0].AnimFrameIndex == 11)
+				ActivateResolveBar(0, true);
+			else if (Player1Base->CurrentState.Resolve < 1 && !CurrentState.ResolveStates[0].bIsActive && CurrentState.ResolveStates[0].AnimFrameIndex == 0)
+				ActivateResolveBar(0, false);
+		}
+
+		if (Player2Base)
+		{
+			if (Player2Base->CurrentState.Resolve == 4 && !CurrentState.ResolveStates[7].bIsActive && CurrentState.ResolveStates[7].AnimFrameIndex == 11)
+				ActivateResolveBar(3, true);
+			else if (Player2Base->CurrentState.Resolve < 4 && !CurrentState.ResolveStates[7].bIsActive && CurrentState.ResolveStates[7].AnimFrameIndex == 0)
+				ActivateResolveBar(3, false);
+
+			if (Player2Base->CurrentState.Resolve >= 3 && !CurrentState.ResolveStates[6].bIsActive && CurrentState.ResolveStates[6].AnimFrameIndex == 11)
+				ActivateResolveBar(2, true);
+			else if (Player2Base->CurrentState.Resolve < 3 && !CurrentState.ResolveStates[6].bIsActive && CurrentState.ResolveStates[6].AnimFrameIndex == 0)
+				ActivateResolveBar(2, false);
+
+			if (Player2Base->CurrentState.Resolve >= 2 && !CurrentState.ResolveStates[5].bIsActive && CurrentState.ResolveStates[5].AnimFrameIndex == 11)
+				ActivateResolveBar(1, true);
+			else if (Player2Base->CurrentState.Resolve < 2 && !CurrentState.ResolveStates[5].bIsActive && CurrentState.ResolveStates[5].AnimFrameIndex == 0)
+				ActivateResolveBar(1, false);
+
+			if (Player2Base->CurrentState.Resolve >= 1 && !CurrentState.ResolveStates[4].bIsActive && CurrentState.ResolveStates[4].AnimFrameIndex == 11)
+				ActivateResolveBar(0, true);
+			else if (Player2Base->CurrentState.Resolve < 1 && !CurrentState.ResolveStates[4].bIsActive && CurrentState.ResolveStates[4].AnimFrameIndex == 0)
+				ActivateResolveBar(0, false);
+		}
+	}
+
+	if (CurrentState.ResolveStates.Num() == 8)
+	{
+		for (uint8 i = 0; i < 8; i++)
+			UpdateResolveBar(i);
+	}
 	
 }
 
 void ARoundManager::DrawScreen()
 {
-	//Update HUD
+	//Draw HUD updates
 	UpperHUD->UpdateUpperHUD(CurrentState.FrameCount, CurrentState.RoundTimer, Player1Base, Player2Base);
 	LowerHUD->UpdateLowerHUD(Player1Base, Player2Base);
 
-	//update camera/transform position from here
+	if (CurrentState.ResolveStates[3].AnimFrameIndex < 11)
+	{
+		LowerHUD->P1ResolveBar4->SetVisibility(ESlateVisibility::Visible);
+		DynamicResolve[3]->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.ResolveStates[3].AnimFrameIndex % 3, CurrentState.ResolveStates[3].AnimFrameIndex / 3, 0));
+	}
+	else
+		LowerHUD->P1ResolveBar4->SetVisibility(ESlateVisibility::Hidden);
+
+	if (CurrentState.ResolveStates[2].AnimFrameIndex < 11)
+	{
+		LowerHUD->P1ResolveBar3->SetVisibility(ESlateVisibility::Visible);
+		DynamicResolve[2]->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.ResolveStates[2].AnimFrameIndex % 3, CurrentState.ResolveStates[2].AnimFrameIndex / 3, 0));
+	}
+	else
+		LowerHUD->P1ResolveBar3->SetVisibility(ESlateVisibility::Hidden);
+
+	if (CurrentState.ResolveStates[1].AnimFrameIndex < 11)
+	{
+		LowerHUD->P1ResolveBar2->SetVisibility(ESlateVisibility::Visible);
+		DynamicResolve[1]->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.ResolveStates[1].AnimFrameIndex % 3, CurrentState.ResolveStates[1].AnimFrameIndex / 3, 0));
+	}
+	else
+		LowerHUD->P1ResolveBar2->SetVisibility(ESlateVisibility::Hidden);
+
+	if (CurrentState.ResolveStates[0].AnimFrameIndex < 11)
+	{
+		LowerHUD->P1ResolveBar1->SetVisibility(ESlateVisibility::Visible);
+		DynamicResolve[0]->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.ResolveStates[0].AnimFrameIndex % 3, CurrentState.ResolveStates[0].AnimFrameIndex / 3, 0));
+	}
+	else
+		LowerHUD->P1ResolveBar1->SetVisibility(ESlateVisibility::Hidden);
+
+	if (CurrentState.ResolveStates[7].AnimFrameIndex < 11)
+	{
+		LowerHUD->P2ResolveBar4->SetVisibility(ESlateVisibility::Visible);
+		DynamicResolve[7]->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.ResolveStates[7].AnimFrameIndex % 3, CurrentState.ResolveStates[7].AnimFrameIndex / 3, 0));
+	}
+	else
+		LowerHUD->P2ResolveBar4->SetVisibility(ESlateVisibility::Hidden);
+
+	if (CurrentState.ResolveStates[6].AnimFrameIndex < 11)
+	{
+		LowerHUD->P2ResolveBar3->SetVisibility(ESlateVisibility::Visible);
+		DynamicResolve[6]->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.ResolveStates[6].AnimFrameIndex % 3, CurrentState.ResolveStates[6].AnimFrameIndex / 3, 0));
+	}
+	else
+		LowerHUD->P2ResolveBar3->SetVisibility(ESlateVisibility::Hidden);
+
+	if (CurrentState.ResolveStates[5].AnimFrameIndex < 11)
+	{
+		LowerHUD->P2ResolveBar2->SetVisibility(ESlateVisibility::Visible);
+		DynamicResolve[5]->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.ResolveStates[5].AnimFrameIndex % 3, CurrentState.ResolveStates[5].AnimFrameIndex / 3, 0));
+	}
+	else
+		LowerHUD->P2ResolveBar2->SetVisibility(ESlateVisibility::Hidden);
+
+	if (CurrentState.ResolveStates[4].AnimFrameIndex < 11)
+	{
+		LowerHUD->P2ResolveBar1->SetVisibility(ESlateVisibility::Visible);
+		DynamicResolve[4]->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.ResolveStates[4].AnimFrameIndex % 3, CurrentState.ResolveStates[4].AnimFrameIndex / 3, 0));
+	}
+	else
+		LowerHUD->P2ResolveBar1->SetVisibility(ESlateVisibility::Hidden);
+
+	//draw updated camera/transform position from here
 	SetActorLocation(CurrentState.Position);
 	MainCamera->SetWorldLocation(CurrentState.CameraPosition);
 	MainCamera->SetRelativeRotation(CurrentState.CameraRotation);
@@ -338,6 +484,44 @@ void ARoundManager::DetermineWinMethod()
 		RoundStop();
 		//Play Double KO Animation
 		//UE_LOG(LogTemp, Warning, TEXT("Double KO"));
+	}
+}
+
+void ARoundManager::ActivateResolveBar(uint8 index, bool bReverse)
+{
+	CurrentState.ResolveStates[index].bIsActive = true;
+	CurrentState.ResolveStates[index].bReverse = bReverse;
+	CurrentState.ResolveStates[index].FramePlayTime = 0;
+
+	if (bReverse)
+		CurrentState.ResolveStates[index].AnimFrameIndex = 11;
+	else
+		CurrentState.ResolveStates[index].AnimFrameIndex = 0;
+}
+
+void ARoundManager::UpdateResolveBar(uint8 index)
+{
+	if (CurrentState.ResolveStates[index].bIsActive)
+	{
+		CurrentState.ResolveStates[index].FramePlayTime++;
+
+		if ((CurrentState.ResolveStates[index].FramePlayTime == 2 && !CurrentState.ResolveStates[index].bReverse) || (CurrentState.ResolveStates[index].FramePlayTime == 3 && CurrentState.ResolveStates[index].bReverse))
+		{
+			CurrentState.ResolveStates[index].FramePlayTime = 0;
+
+			if (CurrentState.ResolveStates[index].bReverse)
+			{
+				CurrentState.ResolveStates[index].AnimFrameIndex--;
+				if (CurrentState.ResolveStates[index].AnimFrameIndex == 0)
+					CurrentState.ResolveStates[index].bIsActive = false;
+			}
+			else
+			{
+				CurrentState.ResolveStates[index].AnimFrameIndex++;
+				if (CurrentState.ResolveStates[index].AnimFrameIndex == 11)
+					CurrentState.ResolveStates[index].bIsActive = false;
+			}
+		}
 	}
 }
 
