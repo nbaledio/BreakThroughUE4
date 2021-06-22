@@ -15,6 +15,18 @@
 #include "RoundManager.generated.h"
 
 USTRUCT(BlueprintType)
+struct FResolveBarState
+{
+	GENERATED_BODY()
+
+	bool bIsActive;
+	bool bReverse;
+
+	uint8 AnimFrameIndex;
+	uint8 FramePlayTime;
+};
+
+USTRUCT(BlueprintType)
 struct FRoundManagerState
 {
 	GENERATED_BODY()
@@ -35,6 +47,8 @@ struct FRoundManagerState
 	bool bIsGameActive;
 	bool bLockInputs;
 	bool bSuddenDeath;
+
+	TArray<FResolveBarState> ResolveStates;
 };
 
 UCLASS()
@@ -78,6 +92,12 @@ public:
 	UHUDVisuals* UpperHUD;
 	UHUDVisuals* LowerHUD;
 
+	//ResolveBar Material
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
+		UMaterialInterface* ResolveBar;
+
+	TArray<UMaterialInstanceDynamic*> DynamicResolve;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
 		float CameraSpeed = 1;
 
@@ -113,4 +133,6 @@ private:
 	void RoundStop();
 	void ResetGame();
 	void DetermineWinMethod();
+	void ActivateResolveBar(uint8 index, bool bReverse);
+	void UpdateResolveBar(uint8 index);
 };

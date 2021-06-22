@@ -209,7 +209,7 @@ void UHUDVisuals::UpdateLowerHUD(ABTCharacterBase* Player1, ABTCharacterBase* Pl
 	//Set Player1 resolve color
 	if (Player1->CurrentState.Resolve == 4 && Player1->CurrentState.Durability == 1000) 
 	{
-		P1DurabilityBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 205.0f / 255.0f, 70.0f / 255.0f, 255.0f / 255.0f));
+		P1DurabilityBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 200.0f / 255.0f, 30.0f / 255.0f, 255.0f / 255.0f));
 	}
 	else if (Player1->CurrentState.Resolve >= 2)
 	{
@@ -223,7 +223,7 @@ void UHUDVisuals::UpdateLowerHUD(ABTCharacterBase* Player1, ABTCharacterBase* Pl
 	//Set Player2 resolve color
 	if (Player2->CurrentState.Resolve == 4 && Player2->CurrentState.Durability == 1000)
 	{
-		P2DurabilityBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 205.0f / 255.0f, 70.0f / 255.0f, 255.0f / 255.0f));
+		P2DurabilityBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 200.0f / 255.0f, 30.0f / 255.0f, 255.0f / 255.0f));
 	}
 	else if (Player2->CurrentState.Resolve >= 2)
 	{
