@@ -8,7 +8,7 @@ void UHUDVisuals::SetCharacterNames(FString P1Character, FString P2Character)
 	//Read character info and set name here
 }
 
-void UHUDVisuals::UpdateUpperHUD(int32 time, ABTCharacterBase* Player1, ABTCharacterBase* Player2)
+void UHUDVisuals::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* Player1, ABTCharacterBase* Player2)
 {
 	//Update timer
 	TimerText->SetText(FText::AsNumber(time));
@@ -16,6 +16,8 @@ void UHUDVisuals::UpdateUpperHUD(int32 time, ABTCharacterBase* Player1, ABTChara
 	//Update health bars
 	P1HealthBar->SetPercent(static_cast<float>(Player1->CurrentState.Health) / static_cast<float>(Player1->MaxHealth));
 	P2HealthBar->SetPercent(static_cast<float>(Player2->CurrentState.Health) / static_cast<float>(Player2->MaxHealth));
+	P1HealthBarFlash->SetPercent(static_cast<float>(Player1->CurrentState.Health) / static_cast<float>(Player1->MaxHealth));
+	P2HealthBarFlash->SetPercent(static_cast<float>(Player2->CurrentState.Health) / static_cast<float>(Player2->MaxHealth));
 
 	//Calculate current health percents for health colors 
 	float P1CurrentHealthPercent = static_cast<float>(Player1->CurrentState.Health) / static_cast<float>(Player1->MaxHealth);
@@ -24,44 +26,56 @@ void UHUDVisuals::UpdateUpperHUD(int32 time, ABTCharacterBase* Player1, ABTChara
 	//Set health bar colors
 	if (P1CurrentHealthPercent <= 0.25f)
 	{
-		P1HealthBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 75.0f / 255.0f, 98.0f / 255.0f, 255.0f / 255.0f));
+		P1HealthBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 70.0f / 255.0f, 70.0f / 255.0f, 255.0f / 255.0f));
 	}
 	else if (P1CurrentHealthPercent <= 0.5f)
 	{
-		P1HealthBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 223.0f / 255.0f, 105.0f / 255.0f, 255.0f / 255.0f));
+		P1HealthBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 255.0f / 255.0f, 95.0f / 255.0f, 255.0f / 255.0f));
 	}
 	else if (P1CurrentHealthPercent < 1.0f)
 	{
-		P1HealthBar->SetFillColorAndOpacity(FLinearColor(93.0f / 255.0f, 255.0f / 255.0f, 175.0f / 255.0f, 255.0f / 255.0f));
+		P1HealthBar->SetFillColorAndOpacity(FLinearColor(70.0f / 255.0f, 255.0f / 255.0f, 180.0f / 255.0f, 255.0f / 255.0f));
 	}
-	else if (P1CurrentHealthPercent == 1.0f)
+	else
 	{
-		P1HealthBar->SetFillColorAndOpacity(FLinearColor(170.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f));
+		P1HealthBar->SetFillColorAndOpacity(FLinearColor(200.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f));
 	}
 
 	if (P2CurrentHealthPercent <= 0.25f)
 	{
-		P2HealthBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 75.0f / 255.0f, 98.0f / 255.0f, 255.0f / 255.0f));
+		P2HealthBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 70.0f / 255.0f, 70.0f / 255.0f, 255.0f / 255.0f));
 	}
 	else if (P2CurrentHealthPercent <= 0.5f)
 	{
-		P2HealthBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 223.0f / 255.0f, 105.0f / 255.0f, 255.0f / 255.0f));
+		P2HealthBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 255.0f / 255.0f, 95.0f / 255.0f, 255.0f / 255.0f));
 	}
 	else if (P2CurrentHealthPercent < 1.0f)
 	{
-		P2HealthBar->SetFillColorAndOpacity(FLinearColor(93.0f/255.0f, 255.0f/255.0f, 175.0f/255.0f, 255.0f / 255.0f));
+		P2HealthBar->SetFillColorAndOpacity(FLinearColor(70.0f/255.0f, 255.0f/255.0f, 180.0f/255.0f, 255.0f / 255.0f));
 	}
-	else if (P2CurrentHealthPercent == 1.0f)
+	else
 	{
-		P2HealthBar->SetFillColorAndOpacity(FLinearColor(170.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f));
+		P2HealthBar->SetFillColorAndOpacity(FLinearColor(200.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f));
 	}
 
+	//cause health bar to flash when health is 10% or less
+	
+	if (P1CurrentHealthPercent <= 0.1f && frameCount % 6 == 0)
+		P1HealthBarFlash->SetVisibility(ESlateVisibility::Visible);
+	else
+		P1HealthBarFlash->SetVisibility(ESlateVisibility::Hidden);
+
+	if (P2CurrentHealthPercent <= 0.1f && frameCount % 6 == 0)
+		P2HealthBarFlash->SetVisibility(ESlateVisibility::Visible);
+	else
+		P2HealthBarFlash->SetVisibility(ESlateVisibility::Hidden);
+
 	//Set damage health bar once a character's hitstun ends
-	if (Player1->CurrentState.HitStun == 0 || Player1->CurrentState.Health == 0) 
+	if (Player2->CurrentState.ComboCount == 0) 
 	{
 		P1HealthRedBar->SetPercent(P1CurrentHealthPercent);
 	}
-	if (Player2->CurrentState.HitStun == 0 || Player2->CurrentState.Health == 0)
+	if (Player1->CurrentState.ComboCount == 0)
 	{
 		P2HealthRedBar->SetPercent(P2CurrentHealthPercent);
 	}
@@ -188,36 +202,36 @@ void UHUDVisuals::UpdateUpperHUD(int32 time, ABTCharacterBase* Player1, ABTChara
 void UHUDVisuals::UpdateLowerHUD(ABTCharacterBase* Player1, ABTCharacterBase* Player2)
 {
 	//Update resolve bars
-	P1ResolveBar->SetPercent((static_cast<float>((static_cast<float>(Player1->CurrentState.Resolve) - 1) * 1000.0f + static_cast<float>(Player1->CurrentState.Durability)) / 4000.0f));
-	P2ResolveBar->SetPercent((static_cast<float>((static_cast<float>(Player2->CurrentState.Resolve) - 1) * 1000.0f + static_cast<float>(Player2->CurrentState.Durability)) / 4000.0f));
+	P1DurabilityBar->SetPercent((static_cast<float>((static_cast<float>(Player1->CurrentState.Resolve) - 1) * 1000.0f + static_cast<float>(Player1->CurrentState.Durability)) / 4000.0f));
+	P2DurabilityBar->SetPercent((static_cast<float>((static_cast<float>(Player2->CurrentState.Resolve) - 1) * 1000.0f + static_cast<float>(Player2->CurrentState.Durability)) / 4000.0f));
 
 	//Set resolve bars color based on amount
 	//Set Player1 resolve color
 	if (Player1->CurrentState.Resolve == 4 && Player1->CurrentState.Durability == 1000) 
 	{
-		P1ResolveBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 205.0f / 255.0f, 70.0f / 255.0f, 255.0f / 255.0f));
+		P1DurabilityBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 205.0f / 255.0f, 70.0f / 255.0f, 255.0f / 255.0f));
 	}
 	else if (Player1->CurrentState.Resolve >= 2)
 	{
-		P1ResolveBar->SetFillColorAndOpacity(FLinearColor(0.0f / 255.0f, 143.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f));
+		P1DurabilityBar->SetFillColorAndOpacity(FLinearColor(0.0f / 255.0f, 143.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f));
 	}	
 	else if (Player1->CurrentState.Resolve <= 1)
 	{
-		P1ResolveBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 0.0f / 255.0f, 85.0f / 255.0f, 255.0f / 255.0f));
+		P1DurabilityBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 0.0f / 255.0f, 85.0f / 255.0f, 255.0f / 255.0f));
 	}
 
 	//Set Player2 resolve color
 	if (Player2->CurrentState.Resolve == 4 && Player2->CurrentState.Durability == 1000)
 	{
-		P2ResolveBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 205.0f / 255.0f, 70.0f / 255.0f, 255.0f / 255.0f));
+		P2DurabilityBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 205.0f / 255.0f, 70.0f / 255.0f, 255.0f / 255.0f));
 	}
 	else if (Player2->CurrentState.Resolve >= 2)
 	{
-		P2ResolveBar->SetFillColorAndOpacity(FLinearColor(0.0f / 255.0f, 143.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f));
+		P2DurabilityBar->SetFillColorAndOpacity(FLinearColor(0.0f / 255.0f, 143.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f));
 	}
 	else if (Player2->CurrentState.Resolve <= 1)
 	{
-		P2ResolveBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 0.0f / 255.0f, 85.0f / 255.0f, 255.0f / 255.0f));
+		P2DurabilityBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 0.0f / 255.0f, 85.0f / 255.0f, 255.0f / 255.0f));
 	}
 
 };

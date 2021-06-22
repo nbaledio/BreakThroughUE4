@@ -23,6 +23,7 @@ struct FRoundManagerState
 	FVector CameraPosition;
 	FRotator CameraRotation;
 
+	// Round variables
 	uint8 FrameCount;
 	uint8 RoundCount;
 	uint8 RoundTimer;
@@ -63,13 +64,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
 	float PlayerMaxDistance = 400;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
-		float ZPosMin = 100;
+		float ZPosMin = 105;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
 		float ZPosMax = 500;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
-		float YPosMax = 2200;
+		float YPosMax = 2250;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
-		float YPosMin = 2050.0f;
+		float YPosMin = 2100.0f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
 		float XPosBound = 710.0f;
 
@@ -94,13 +95,6 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	// Round variables
-	int32 roundCount;
-	int32 roundTimer;
-	int32 frameCount;
-	int32 p1Wins;
-	int32 p2Wins;
-	int32 maxRounds;
 
 	int32 gameTime;
 

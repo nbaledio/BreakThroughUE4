@@ -45,7 +45,7 @@ void ARoundManager::BeginPlay()
 	/*Assume 60 FPS. Change number if a longer/short in game second is desired
 	60 * (Real world seconds length) = Number of frames to check*/
 	gameTime = 60;
-	roundTimer = 99;
+	CurrentState.RoundTimer = 99;
 	//Change any values here based on player settings (ex: max rounds or round time)
 	RoundStart(); //Temporary, remove this when there's a round start animation
 }
@@ -200,19 +200,19 @@ void ARoundManager::UpdateCameraPosition()
 //Update function to be used by GameState
 void ARoundManager::UpdateTimer()
 {
-	if (gameActive)
+	if (CurrentState.bIsGameActive)
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("GameActive"));
-		if (!suddenDeath)
+		//UE_LOG(LogTemp, Warning, TEXT("CurrentState.bIsGameActive"));
+		if (!CurrentState.bSuddenDeath)
 		{
 			if (Player1Base && Player2Base)
 				if (Player1Base->CurrentState.SlowMoTime % 2 == 0 && Player2Base->CurrentState.SlowMoTime % 2 == 0)
-					frameCount++;
+					CurrentState.FrameCount++;
 			//Check if one in-game second has passed and decrement timer
-			if (frameCount == gameTime && !suddenDeath)
+			if (CurrentState.FrameCount == gameTime && !CurrentState.bSuddenDeath)
 			{
-				frameCount = 0;
-				roundTimer--;
+				CurrentState.FrameCount = 0;
+				CurrentState.RoundTimer--;
 			}
 		}
 		//Check if a win condition is met
@@ -227,7 +227,7 @@ void ARoundManager::UpdateTimer()
 void ARoundManager::DrawScreen()
 {
 	//Update HUD
-	UpperHUD->UpdateUpperHUD(roundTimer, Player1Base, Player2Base);
+	UpperHUD->UpdateUpperHUD(CurrentState.FrameCount, CurrentState.RoundTimer, Player1Base, Player2Base);
 	LowerHUD->UpdateLowerHUD(Player1Base, Player2Base);
 
 	//update camera/transform position from here
@@ -238,8 +238,8 @@ void ARoundManager::DrawScreen()
 
 void ARoundManager::ResetPositions()
 {
-	roundCount++;
-	roundTimer = 99;
+	CurrentState.RoundCount++;
+	CurrentState.RoundTimer = 99;
 	Player1Base->CurrentState.Position = P1startPosition;
 	Player1Base->CurrentState.Health = Player1Base->MaxHealth;
 	Player2Base->CurrentState.Position = P2startPosition;
@@ -248,21 +248,21 @@ void ARoundManager::ResetPositions()
 
 void ARoundManager::RoundStart()
 {
-	gameActive = true;
-	lockInputs = false;
+	CurrentState.bIsGameActive = true;
+	CurrentState.bLockInputs = false;
 }
 
 void ARoundManager::RoundStop()
 {
-	gameActive = false;
-	lockInputs = true;
+	CurrentState.bIsGameActive = false;
+	CurrentState.bLockInputs = true;
 }
 
 void ARoundManager::ResetGame()
 {
-	roundCount = 0;
-	p1Wins = 0;
-	p2Wins = 0;
+	CurrentState.RoundCount = 0;
+	CurrentState.P1Wins = 0;
+	CurrentState.P2Wins = 0;
 	Player1Base->CurrentState.Resolve = 4;
 	Player1Base->CurrentState.Durability = 100;
 	Player2Base->CurrentState.Resolve = 4;
@@ -273,15 +273,15 @@ void ARoundManager::ResetGame()
 //Used to check if a win condition has been met 
 void ARoundManager::DetermineWinMethod()
 {
-	if (!suddenDeath && roundTimer <= 0 && Player1Base->CurrentState.Health > 0 && Player2Base->CurrentState.Health > 0 && Player1Base->CurrentState.Health == Player2Base->CurrentState.Health)
+	if (!CurrentState.bSuddenDeath && CurrentState.RoundTimer <= 0 && Player1Base->CurrentState.Health > 0 && Player2Base->CurrentState.Health > 0 && Player1Base->CurrentState.Health == Player2Base->CurrentState.Health)
 	{
 		RoundStop();
-		suddenDeath = true;
+		CurrentState.bSuddenDeath = true;
 		//Play Sudden Death Animation
 		//UE_LOG(LogTemp, Warning, TEXT("Sudden Death"));
 		RoundStart();
 	}
-	else if (!suddenDeath && roundTimer <= 0 && Player1Base->CurrentState.Health > 0 && Player2Base->CurrentState.Health > 0 && Player1Base->CurrentState.Health != Player2Base->CurrentState.Health)
+	else if (!CurrentState.bSuddenDeath && CurrentState.RoundTimer <= 0 && Player1Base->CurrentState.Health > 0 && Player2Base->CurrentState.Health > 0 && Player1Base->CurrentState.Health != Player2Base->CurrentState.Health)
 	{
 		RoundStop();
 		//Play Time Up Animation
@@ -289,12 +289,12 @@ void ARoundManager::DetermineWinMethod()
 		//Increment win count
 		if (Player1Base->CurrentState.Health > Player2Base->CurrentState.Health)
 		{
-			p1Wins++;
+			CurrentState.P1Wins++;
 			//UE_LOG(LogTemp, Warning, TEXT("P1 Wins"));
 		}
 		else
 		{
-			p2Wins++;
+			CurrentState.P2Wins++;
 			//UE_LOG(LogTemp, Warning, TEXT("P2 Wins"));
 		}
 	}
@@ -307,12 +307,12 @@ void ARoundManager::DetermineWinMethod()
 		//Increment win count
 		if (Player2Base->CurrentState.Health <= 0)
 		{
-			p1Wins++;
+			CurrentState.P1Wins++;
 			//UE_LOG(LogTemp, Warning, TEXT("P1 Wins"));
 		}
 		else
 		{
-			p2Wins++;
+			CurrentState.P2Wins++;
 			//UE_LOG(LogTemp, Warning, TEXT("P2 Wins"));
 		}
 	}
@@ -324,12 +324,12 @@ void ARoundManager::DetermineWinMethod()
 		//Increment win count
 		if (Player2Base->CurrentState.Health <= 0)
 		{
-			p1Wins++;
+			CurrentState.P1Wins++;
 			//UE_LOG(LogTemp, Warning, TEXT("P1 Wins"));
 		}
 		else
 		{
-			p2Wins++;
+			CurrentState.P2Wins++;
 			//UE_LOG(LogTemp, Warning, TEXT("P2 Wins"));
 		}
 	}
