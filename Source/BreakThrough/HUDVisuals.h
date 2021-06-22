@@ -26,9 +26,9 @@ public:
 	UPROPERTY(meta = (BindWidget))
 		class UProgressBar* P2HealthRedBar;
 	UPROPERTY(meta = (BindWidget))
-		class UProgressBar* P1ResolveBar;
+		class UProgressBar* P1DurabilityBar;
 	UPROPERTY(meta = (BindWidget))
-		class UProgressBar* P2ResolveBar;
+		class UProgressBar* P2DurabilityBar;
 	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* P1CharacterName;
 	UPROPERTY(meta = (BindWidget))
@@ -58,6 +58,6 @@ public:
 
 	//Functions
 	void SetCharacterNames(FString P1Character, FString P2Character);
-	void UpdateUpperHUD(int32 time, ABTCharacterBase* Player1, ABTCharacterBase* Player2);
+	void UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* Player1, ABTCharacterBase* Player2);
 	void UpdateLowerHUD(ABTCharacterBase* Player1, ABTCharacterBase* Player2);
 };
