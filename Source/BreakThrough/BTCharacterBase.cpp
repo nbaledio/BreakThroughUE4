@@ -40,7 +40,6 @@ ABTCharacterBase::ABTCharacterBase()
 void ABTCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
-	LineThickness = 3.f;
 	CurrentState.Health = MaxHealth;
 	CreateMaterials();
 	CreateVariables();
@@ -802,7 +801,7 @@ void ABTCharacterBase::DrawCharacter()
 	LightSettings();
 	DrawSmear();
 
-	DynamicOutline->SetScalarParameterValue(FName("LineThickness"), LineThickness);
+	DynamicOutline->SetScalarParameterValue(FName("LineThickness"), FMath::Lerp(0, 4, RoundManager->CurrentState.CameraPosition.Y/RoundManager->YPosMax));
 	DynamicOutline->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
 
 	DynamicEyeShine->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
