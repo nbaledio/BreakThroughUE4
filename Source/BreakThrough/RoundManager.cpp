@@ -253,48 +253,48 @@ void ARoundManager::UpdateTimer()
 	{
 		if (Player1Base)
 		{
-			if (Player1Base->CurrentState.Resolve == 4 && !CurrentState.ResolveStates[3].bIsActive && CurrentState.ResolveStates[3].AnimFrameIndex == 11)
+			if (Player1Base->CurrentState.Resolve == 4 && !CurrentState.ResolveStates[3].bReverse && CurrentState.ResolveStates[3].AnimFrameIndex > 0)
 				ActivateResolveBar(3, true);
-			else if (Player1Base->CurrentState.Resolve < 4 && !CurrentState.ResolveStates[3].bIsActive && CurrentState.ResolveStates[3].AnimFrameIndex == 0)
+			else if (Player1Base->CurrentState.Resolve < 4 && CurrentState.ResolveStates[3].bReverse && CurrentState.ResolveStates[3].AnimFrameIndex < 11)
 				ActivateResolveBar(3, false);
 
-			if (Player1Base->CurrentState.Resolve >= 3 && !CurrentState.ResolveStates[2].bIsActive && CurrentState.ResolveStates[2].AnimFrameIndex == 11)
+			if (Player1Base->CurrentState.Resolve >= 3 && !CurrentState.ResolveStates[2].bReverse && CurrentState.ResolveStates[2].AnimFrameIndex > 0)
 				ActivateResolveBar(2, true);
-			else if (Player1Base->CurrentState.Resolve < 3 && !CurrentState.ResolveStates[2].bIsActive && CurrentState.ResolveStates[2].AnimFrameIndex == 0)
+			else if (Player1Base->CurrentState.Resolve < 3 && CurrentState.ResolveStates[2].bReverse && CurrentState.ResolveStates[2].AnimFrameIndex < 11)
 				ActivateResolveBar(2, false);
 
-			if (Player1Base->CurrentState.Resolve >= 2 && !CurrentState.ResolveStates[1].bIsActive && CurrentState.ResolveStates[1].AnimFrameIndex == 11)
+			if (Player1Base->CurrentState.Resolve >= 2 && !CurrentState.ResolveStates[1].bReverse && CurrentState.ResolveStates[1].AnimFrameIndex > 0)
 				ActivateResolveBar(1, true);
-			else if (Player1Base->CurrentState.Resolve < 2 && !CurrentState.ResolveStates[1].bIsActive && CurrentState.ResolveStates[1].AnimFrameIndex == 0)
+			else if (Player1Base->CurrentState.Resolve < 2 && CurrentState.ResolveStates[1].bReverse && CurrentState.ResolveStates[1].AnimFrameIndex < 11)
 				ActivateResolveBar(1, false);
 
-			if (Player1Base->CurrentState.Resolve >= 1 && !CurrentState.ResolveStates[0].bIsActive && CurrentState.ResolveStates[0].AnimFrameIndex == 11)
+			if (Player1Base->CurrentState.Resolve >= 1 && !CurrentState.ResolveStates[0].bReverse && CurrentState.ResolveStates[0].AnimFrameIndex > 0)
 				ActivateResolveBar(0, true);
-			else if (Player1Base->CurrentState.Resolve < 1 && !CurrentState.ResolveStates[0].bIsActive && CurrentState.ResolveStates[0].AnimFrameIndex == 0)
+			else if (Player1Base->CurrentState.Resolve < 1 && CurrentState.ResolveStates[0].bReverse && CurrentState.ResolveStates[0].AnimFrameIndex < 11)
 				ActivateResolveBar(0, false);
 		}
 
 		if (Player2Base)
 		{
-			if (Player2Base->CurrentState.Resolve == 4 && !CurrentState.ResolveStates[7].bIsActive && CurrentState.ResolveStates[7].AnimFrameIndex == 11)
-				ActivateResolveBar(3, true);
-			else if (Player2Base->CurrentState.Resolve < 4 && !CurrentState.ResolveStates[7].bIsActive && CurrentState.ResolveStates[7].AnimFrameIndex == 0)
-				ActivateResolveBar(3, false);
+			if (Player2Base->CurrentState.Resolve == 4 && !CurrentState.ResolveStates[7].bReverse && CurrentState.ResolveStates[7].AnimFrameIndex > 0)
+				ActivateResolveBar(7, true);
+			else if (Player2Base->CurrentState.Resolve < 4 && CurrentState.ResolveStates[7].bReverse && CurrentState.ResolveStates[7].AnimFrameIndex < 11)
+				ActivateResolveBar(7, false);
 
-			if (Player2Base->CurrentState.Resolve >= 3 && !CurrentState.ResolveStates[6].bIsActive && CurrentState.ResolveStates[6].AnimFrameIndex == 11)
-				ActivateResolveBar(2, true);
-			else if (Player2Base->CurrentState.Resolve < 3 && !CurrentState.ResolveStates[6].bIsActive && CurrentState.ResolveStates[6].AnimFrameIndex == 0)
-				ActivateResolveBar(2, false);
+			if (Player2Base->CurrentState.Resolve >= 3 && !CurrentState.ResolveStates[6].bReverse && CurrentState.ResolveStates[6].AnimFrameIndex > 0)
+				ActivateResolveBar(6, true);
+			else if (Player2Base->CurrentState.Resolve < 3 && CurrentState.ResolveStates[6].bReverse && CurrentState.ResolveStates[6].AnimFrameIndex < 11)
+				ActivateResolveBar(6, false);
 
-			if (Player2Base->CurrentState.Resolve >= 2 && !CurrentState.ResolveStates[5].bIsActive && CurrentState.ResolveStates[5].AnimFrameIndex == 11)
-				ActivateResolveBar(1, true);
-			else if (Player2Base->CurrentState.Resolve < 2 && !CurrentState.ResolveStates[5].bIsActive && CurrentState.ResolveStates[5].AnimFrameIndex == 0)
-				ActivateResolveBar(1, false);
+			if (Player2Base->CurrentState.Resolve >= 2 && !CurrentState.ResolveStates[5].bReverse && CurrentState.ResolveStates[5].AnimFrameIndex > 0)
+				ActivateResolveBar(5, true);
+			else if (Player2Base->CurrentState.Resolve < 2 && CurrentState.ResolveStates[5].bReverse && CurrentState.ResolveStates[5].AnimFrameIndex < 11)
+				ActivateResolveBar(5, false);
 
-			if (Player2Base->CurrentState.Resolve >= 1 && !CurrentState.ResolveStates[4].bIsActive && CurrentState.ResolveStates[4].AnimFrameIndex == 11)
-				ActivateResolveBar(0, true);
-			else if (Player2Base->CurrentState.Resolve < 1 && !CurrentState.ResolveStates[4].bIsActive && CurrentState.ResolveStates[4].AnimFrameIndex == 0)
-				ActivateResolveBar(0, false);
+			if (Player2Base->CurrentState.Resolve >= 1 && !CurrentState.ResolveStates[4].bReverse && CurrentState.ResolveStates[4].AnimFrameIndex > 0)
+				ActivateResolveBar(4, true);
+			else if (Player2Base->CurrentState.Resolve < 1 && CurrentState.ResolveStates[4].bReverse && CurrentState.ResolveStates[4].AnimFrameIndex < 11)
+				ActivateResolveBar(4, false);
 		}
 	}
 

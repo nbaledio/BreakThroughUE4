@@ -69,7 +69,7 @@ void ABlitzImageBase::Update()
 		{
 			if (Owner->Opponent != nullptr)
 			{
-				if (Owner->Opponent->CurrentState.SlowMoTime > 15)
+				if (Owner->Opponent->CurrentState.SlowMoTime > 15 || Owner->IsCurrentAnimation(Owner->ExtendBlitz))
 				{
 					CurrentState.Alpha = 0;
 				}
@@ -99,13 +99,26 @@ void ABlitzImageBase::Update()
 
 		if (CurrentState.bWaveIsActive)
 		{
-			if (CurrentState.WaveScaleAlpha < 2)
-				CurrentState.WaveScaleAlpha += .1f;
+			if (Owner->IsCurrentAnimation(Owner->ExtendBlitz))
+			{
+				if (CurrentState.WaveScaleAlpha < 2)
+					CurrentState.WaveScaleAlpha += .125f;
 
-			if (CurrentState.WaveScaleAlpha > .5f && CurrentState.WaveAlpha < 1)
-				CurrentState.WaveAlpha += .07f;
-			else if (CurrentState.WaveAlpha >= 1)
-				CurrentState.bWaveIsActive = false;
+				if (CurrentState.WaveScaleAlpha > .5f && CurrentState.WaveAlpha < 1)
+					CurrentState.WaveAlpha += .1f;
+				else if (CurrentState.WaveAlpha >= 1)
+					CurrentState.bWaveIsActive = false;
+			}
+			else
+			{
+				if (CurrentState.WaveScaleAlpha < 2)
+					CurrentState.WaveScaleAlpha += .1f;
+
+				if (CurrentState.WaveScaleAlpha > .5f && CurrentState.WaveAlpha < 1)
+					CurrentState.WaveAlpha += .07f;
+				else if (CurrentState.WaveAlpha >= 1)
+					CurrentState.bWaveIsActive = false;
+			}
 		}
 
 		if (BaseMesh != nullptr)
@@ -176,8 +189,10 @@ void ABlitzImageBase::DrawBlitz()
 
 		if (CurrentState.EffectColor == 1) //Focus BCs are blue
 			DynamicWaveMaterial->SetVectorParameterValue(FName("Color"), FVector(0, .1f, .65f));
-		else // Breaker BCs are Pink
+		else if (CurrentState.EffectColor == 2) // Breaker BCs are Pink
 			DynamicWaveMaterial->SetVectorParameterValue(FName("Color"), FVector(.65f, 0, .65f));
+		else //Normal BCs are Yellow
+			DynamicWaveMaterial->SetVectorParameterValue(FName("Color"), FVector(.7, .7, 0));
 	}
 	else
 	{
