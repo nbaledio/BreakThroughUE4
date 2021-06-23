@@ -47,9 +47,6 @@ void ARoundManager::BeginPlay()
 			FResolveBarState BarState;
 			DynamicResolve.Add(UMaterialInstanceDynamic::Create(ResolveBar, this));
 			CurrentState.ResolveStates.Add(BarState);
-
-			if (i == 7)
-				UE_LOG(LogTemp, Warning, TEXT("Created all dynamic resolve bar materials"));
 		}
 	}
 
@@ -64,8 +61,6 @@ void ARoundManager::BeginPlay()
 		LowerHUD->P2ResolveBar2->SetBrushFromMaterial(DynamicResolve[5]);
 		LowerHUD->P2ResolveBar3->SetBrushFromMaterial(DynamicResolve[6]);
 		LowerHUD->P2ResolveBar4->SetBrushFromMaterial(DynamicResolve[7]);
-
-		UE_LOG(LogTemp, Warning, TEXT("resolve bar materials have been assigned"));
 	}
 
 	CurrentState.CameraRotation = FRotator(0.0f, -90.0f, 0.0f);
