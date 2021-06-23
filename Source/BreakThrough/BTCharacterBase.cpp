@@ -2479,7 +2479,6 @@ void ABTCharacterBase::AnimationEvents()
 		if (IsCurrentAnimation(ExtendBlitz))
 		{
 			Opponent->CurrentState.SlowMoTime = 60;
-			UE_LOG(LogTemp, Warning, TEXT("ExtendBlitz slow motion success"));
 		}
 
 		CurrentState.bHitSuccess = false;
