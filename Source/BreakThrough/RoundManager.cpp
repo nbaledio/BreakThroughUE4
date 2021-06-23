@@ -61,6 +61,11 @@ void ARoundManager::BeginPlay()
 		LowerHUD->P2ResolveBar2->SetBrushFromMaterial(DynamicResolve[5]);
 		LowerHUD->P2ResolveBar3->SetBrushFromMaterial(DynamicResolve[6]);
 		LowerHUD->P2ResolveBar4->SetBrushFromMaterial(DynamicResolve[7]);
+
+		for (uint8 i = 0; i < 8; i++)
+		{
+			ActivateResolveBar(i, true);
+		}
 	}
 
 	CurrentState.CameraRotation = FRotator(0.0f, -90.0f, 0.0f);

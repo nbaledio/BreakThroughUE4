@@ -87,7 +87,7 @@ enum AttackProperties
 	ComboThrow = (1 << 16), //Throws with this flag can hit opponents even if they are in hitstun
 	AntiAir = (1 << 17),
 	NoPushBack = (1 << 18),
-	ReflectProjectile = (1 << 19),
+	NonFatal = (1 << 19),
 	IsSpecial = (1 << 20),
 	IsSuper = (1 << 21),
 	IsSlash = (1 << 22),
@@ -207,6 +207,8 @@ struct FCharacterState
 	float PosePlayTime = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
 	uint8 IdleCycle = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
+		bool bUsedExtend = false;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
 	bool bPlaySound = false;
 
