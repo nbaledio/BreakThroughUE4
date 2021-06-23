@@ -140,7 +140,6 @@ void ABTCharacterBase::HitDetection()
 
 	if (Opponent != nullptr && !CurrentState.bClash)
 	{
-		CurrentState.bHitSuccess = false;
 		if (CurrentState.bBlitzing)
 		{
 			ProcessBlitz();
@@ -148,6 +147,7 @@ void ABTCharacterBase::HitDetection()
 		//only look for hits if there are hitboxes active, and the current hitbox has not hit anything previously
 		else if (CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0 && !CurrentState.bAttackMadeContact && CurrentState.HitStop == 0)
 		{
+			CurrentState.bHitSuccess = false;
 			if (CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight < Throw) //Current active attack is a strike
 			{
 				//loop through opponent's active hurtboxes and see if any current hitboxes overlap them
@@ -325,7 +325,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 	{
 		if (CurrentState.SlowMoTime % 2 == 0) //animation speed is halved and stun values decrease at half speed while in slow motion
 		{
-			if (CurrentState.HitStun > 0 && !IsCurrentAnimation(Sweep) && !IsCurrentAnimation(Crumple) && !IsCurrentAnimation(Tumble) && !IsCurrentAnimation(GroundBounce) && !IsCurrentAnimation(WallBounce))
+			if (CurrentState.HitStun > 0 && !IsCurrentAnimation(Sweep) && !IsCurrentAnimation(Tumble) && !IsCurrentAnimation(GroundBounce) && !IsCurrentAnimation(WallBounce))
 			{
 				CurrentState.HitStun--;
 			}
@@ -903,7 +903,7 @@ void ABTCharacterBase::ProcessAnimationFrame()
 				CurrentState.AvailableActions = None;
 			else if (CurrentState.BlockStun > 0)
 				CurrentState.AvailableActions = AcceptGuard;
-			else if (CurrentState.bAttackMadeContact && CurrentState.AnimFrameIndex > 0)
+			else if (CurrentState.bAttackMadeContact && CurrentState.AnimFrameIndex > 0 && !IsCurrentAnimation(ExtendBlitz))
 				CurrentState.AvailableActions |= CurrentState.CurrentAnimFrame.AvailableActions;
 			else
 				CurrentState.AvailableActions = CurrentState.CurrentAnimFrame.AvailableActions;
@@ -964,6 +964,9 @@ bool ABTCharacterBase::IsCurrentAnimation(TArray<FAnimationFrame> Animation)
 				{
 					return false;
 				}
+
+		if (Animation[i].PlayDuration != CurrentState.CurrentAnimation[i].PlayDuration)
+			return false;
 	}
 	return true;
 }
@@ -2391,7 +2394,7 @@ bool ABTCharacterBase::ExitTimeTransitions()
 	if (IsCurrentAnimation(GroundBounce) || IsCurrentAnimation(HitstunAir))
 		return EnterNewAnimation(HitstunAirCycle);
 
-	if (IsCurrentAnimation(FocusBlitz) || IsCurrentAnimation(BreakerBlitz))
+	if (IsCurrentAnimation(FocusBlitz) || IsCurrentAnimation(BreakerBlitz) || IsCurrentAnimation(ExtendBlitz))
 	{
 		if (CurrentState.bIsAirborne)
 			return EnterNewAnimation(BlitzOutAir);
@@ -2406,7 +2409,7 @@ void ABTCharacterBase::AnimationEvents()
 {
 	if (CurrentState.HitStop == 0)
 	{
-		if (IsCurrentAnimation(FocusBlitz) || IsCurrentAnimation(BreakerBlitz))
+		if (IsCurrentAnimation(FocusBlitz) || IsCurrentAnimation(BreakerBlitz) || IsCurrentAnimation(ExtendBlitz))
 		{
 			if (IsCurrentAnimation(FocusBlitz)) //Focus Blitz
 			{
@@ -2423,6 +2426,11 @@ void ABTCharacterBase::AnimationEvents()
 					if (CurrentState.Dir1 == DirInputTime || CurrentState.Dir2 == DirInputTime || CurrentState.Dir3 == DirInputTime)
 						CurrentState.Velocity.Y = -.5;
 				}
+			}
+			else if (IsCurrentAnimation(ExtendBlitz)) //Extend Blitz
+			{
+				if (CurrentState.AnimFrameIndex == 6 && CurrentState.PosePlayTime == 0)
+					BlitzImage->ActivateWave();
 			}
 			else
 			{
@@ -2463,7 +2471,18 @@ void ABTCharacterBase::AnimationEvents()
 
 			if (CurrentState.bFacingRight)
 				CurrentState.Velocity.X *= -1;
+		}	
+	}
+
+	if (CurrentState.bHitSuccess)
+	{
+		if (IsCurrentAnimation(ExtendBlitz))
+		{
+			Opponent->CurrentState.SlowMoTime = 60;
+			UE_LOG(LogTemp, Warning, TEXT("ExtendBlitz slow motion success"));
 		}
+
+		CurrentState.bHitSuccess = false;
 	}
 }
 
@@ -3464,7 +3483,6 @@ bool ABTCharacterBase::BlitzCancel()
 			if (CurrentState.Dir2 == DirInputTime) //blitz downward
 			{
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
-				TurnAroundCheck();
 				CurrentState.Velocity = FVector2D(0, -5);
 				CurrentState.GravDefyTime = 0;
 
@@ -3474,20 +3492,21 @@ bool ABTCharacterBase::BlitzCancel()
 			}
 			if (CurrentState.AvailableActions & AcceptMove) //focus blitz
 			{
-				TurnAroundCheck();
-
 				return EnterNewAnimation(FocusBlitz);
 			}
 
 			BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
 			CurrentState.bBlitzing = true;
-			return EnterNewAnimation(MidJump);
+
+			if (Opponent->CurrentState.HitStun > 0 || Opponent->CurrentState.BlockStun > 0)
+				return EnterNewAnimation(ExtendBlitz);
+			else
+				return EnterNewAnimation(MidJump);
 		}
 		else
 		{
 			if (CurrentState.BlockStun > 0) //breaker blitz
 			{
-				TurnAroundCheck();
 				BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 2);
 				CurrentState.BlockStun = 0;
 
@@ -3497,14 +3516,16 @@ bool ABTCharacterBase::BlitzCancel()
 			}
 			if (CurrentState.AvailableActions & AcceptMove) //focus blitz
 			{
-				TurnAroundCheck();
 				return EnterNewAnimation(FocusBlitz);
 			}
 
 			BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
-			TurnAroundCheck();
 			CurrentState.bBlitzing = true;
-			return EnterNewAnimation(IdleStand);
+
+			if (Opponent->CurrentState.HitStun > 0 || Opponent->CurrentState.BlockStun > 0)
+				return EnterNewAnimation(ExtendBlitz);
+			else
+				return EnterNewAnimation(IdleStand);
 		}
 	}
 	return false;
@@ -3606,7 +3627,7 @@ void ABTCharacterBase::LightSettings()
 void ABTCharacterBase::ProcessBlitz()
 {
 	CurrentState.bBlitzing = false;
-	if (FMath::Sqrt(FMath::Square(CurrentState.CurrentBlitzState[0].Position.X - Opponent->CurrentState.Position.X) + FMath::Square(CurrentState.CurrentBlitzState[0].Position.Y - Opponent->CurrentState.Position.Y)) < 125
+	if (FMath::Sqrt(FMath::Square(CurrentState.CurrentBlitzState[0].Position.X - Opponent->CurrentState.Position.X) + FMath::Square(CurrentState.CurrentBlitzState[0].Position.Y - Opponent->CurrentState.Position.Y)) < 200
 		&& Opponent->CurrentState.CurrentAnimFrame.Invincibility != FullInvincible && Opponent->CurrentState.CurrentAnimFrame.Invincibility != OTG)
 	{
 		if (Opponent->CurrentState.Resolute)
@@ -3619,7 +3640,7 @@ void ABTCharacterBase::ProcessBlitz()
 		}
 		else if (IsCurrentAnimation(FocusBlitz))
 		{
-			Opponent->CurrentState.SlowMoTime = 85;
+			Opponent->CurrentState.SlowMoTime += 85;
 			UE_LOG(LogTemp, Warning, TEXT("Focus Blitz Slow"));
 		}
 		else if (IsCurrentAnimation(BreakerBlitz))
@@ -3809,8 +3830,8 @@ void ABTCharacterBase::ClashDetection()
 				}
 				else //otherwise normal clash
 				{
-					CurrentState.HitStop = 15;
-					Opponent->CurrentState.HitStop = 15;
+					CurrentState.HitStop = 12;
+					Opponent->CurrentState.HitStop = 12;
 					CurrentState.AvailableActions = AcceptAll - (AcceptMove + AcceptGuard);
 					Opponent->CurrentState.AvailableActions = AcceptAll - (AcceptMove + AcceptGuard);
 					//play clash effect

@@ -73,7 +73,7 @@ void ABTGuardVFX::Update()
 {
 	ABTVFXBase::Update();
 
-	if (CurrentState.bIsActive)
+	if (CurrentState.bIsActive && CurrentState.HitStop == 0)
 	{
 		if (!(CurrentState.HitProperties & IsSpecial || CurrentState.Interaction == HeavyResolve || CurrentState.HitProperties & IsHeavy || 
 			CurrentState.Interaction == AirDash || CurrentState.Interaction == JustGuard))

@@ -113,20 +113,22 @@ void ABTHitFX::Update()
 {
 	ABTVFXBase::Update();
 
-	if (CurrentState.bIsActive)
+	if (CurrentState.bIsActive && CurrentState.HitStop == 0)
 	{
 		FVector Scale = FVector(.15);
 		if (!CurrentState.bFacingRight)
 			Scale.X *= -1;
 
-		if (CurrentState.HitProperties & IsSpecial)
+		if (CurrentState.HitProperties & IsSuper)
+			Scale *= 2;
+		else if (CurrentState.HitProperties & IsSpecial)
 			Scale *= 1.75;
 		else if (CurrentState.HitProperties & IsHeavy || CurrentState.Interaction == Deflect)
 			Scale *= 1.35;
 
 		Transform->SetRelativeScale3D(Scale);
 
-		if ((CurrentState.HitProperties & IsSpecial) && CurrentState.AnimFrameIndex % 2 == 0)
+		if ((CurrentState.HitProperties & IsSpecial && CurrentState.AnimFrameIndex % 2 == 0) || CurrentState.HitProperties & IsSuper)
 		{
 			if (CurrentState.FramePlayTime == 3)
 			{

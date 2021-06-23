@@ -97,7 +97,7 @@ enum AttackProperties
 	LowerBodyHit = (1 << 26),
 	ForceStand = (1 << 27),
 	IsUpwardSlash = (1 << 28),
-	DisbaleBurst = (1 << 29),
+	DisableBurst = (1 << 29),
 };
 
 class ABTProjectileBase;
@@ -526,6 +526,8 @@ public:
 		TArray<FAnimationFrame> FocusBlitz;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
 		TArray<FAnimationFrame> BreakerBlitz;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
+		TArray<FAnimationFrame> ExtendBlitz;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
 		TArray<FAnimationFrame> BlitzOutAir;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
