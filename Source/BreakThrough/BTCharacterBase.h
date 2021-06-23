@@ -208,6 +208,8 @@ struct FCharacterState
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
 	uint8 IdleCycle = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
+		bool bUsedExtend = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CurrentState")
 	bool bPlaySound = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Battle Stats")

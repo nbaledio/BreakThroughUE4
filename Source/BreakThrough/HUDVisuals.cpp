@@ -60,12 +60,12 @@ void UHUDVisuals::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase*
 
 	//cause health bar to flash when health is 10% or less
 	
-	if (P1CurrentHealthPercent <= 0.1f && frameCount % 6 == 0)
+	if (P1CurrentHealthPercent <= 0.1f && frameCount % 10 < 5)
 		P1HealthBarFlash->SetVisibility(ESlateVisibility::Visible);
 	else
 		P1HealthBarFlash->SetVisibility(ESlateVisibility::Hidden);
 
-	if (P2CurrentHealthPercent <= 0.1f && frameCount % 6 == 0)
+	if (P2CurrentHealthPercent <= 0.1f && frameCount % 10 < 5)
 		P2HealthBarFlash->SetVisibility(ESlateVisibility::Visible);
 	else
 		P2HealthBarFlash->SetVisibility(ESlateVisibility::Hidden);

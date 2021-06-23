@@ -421,11 +421,17 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 	{
 		if ((Opponent->CurrentState.HitStun == 0 && !Opponent->CurrentState.bIsAirborne && !Opponent->IsCurrentAnimation(Opponent->Stagger) && Opponent->CurrentState.CurrentAnimFrame.Invincibility != OTG) ||
 			(Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.CurrentAnimFrame.Invincibility != FaceDown && Opponent->CurrentState.CurrentAnimFrame.Invincibility != FaceUp))
+		{
 			CurrentState.ComboCount = 0;
+			CurrentState.bUsedExtend = false;
+		}
 
 		if ((CurrentState.HitStun == 0 && !CurrentState.bIsAirborne && !IsCurrentAnimation(Stagger) && CurrentState.CurrentAnimFrame.Invincibility != OTG) ||
 			(CurrentState.bIsAirborne && CurrentState.CurrentAnimFrame.Invincibility != FaceDown && CurrentState.CurrentAnimFrame.Invincibility != FaceUp))
+		{
 			Opponent->CurrentState.ComboCount = 0;
+			Opponent->CurrentState.bUsedExtend = false;
+		}
 
 		if (!CurrentState.CurrentAnimFrame.bCinematic && !Opponent->CurrentState.CurrentAnimFrame.bCinematic)
 		{
@@ -2479,6 +2485,7 @@ void ABTCharacterBase::AnimationEvents()
 		if (IsCurrentAnimation(ExtendBlitz))
 		{
 			Opponent->CurrentState.SlowMoTime = 60;
+			CurrentState.bUsedExtend = true;
 		}
 
 		CurrentState.bHitSuccess = false;
@@ -3497,7 +3504,7 @@ bool ABTCharacterBase::BlitzCancel()
 			BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
 			CurrentState.bBlitzing = true;
 
-			if (Opponent->CurrentState.HitStun > 0 || Opponent->CurrentState.BlockStun > 0)
+			if ((Opponent->CurrentState.HitStun > 0 || Opponent->CurrentState.BlockStun > 0) && !CurrentState.bUsedExtend)
 				return EnterNewAnimation(ExtendBlitz);
 			else
 				return EnterNewAnimation(MidJump);
@@ -3521,7 +3528,7 @@ bool ABTCharacterBase::BlitzCancel()
 			BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
 			CurrentState.bBlitzing = true;
 
-			if (Opponent->CurrentState.HitStun > 0 || Opponent->CurrentState.BlockStun > 0)
+			if ((Opponent->CurrentState.HitStun > 0 || Opponent->CurrentState.BlockStun > 0) && !CurrentState.bUsedExtend)
 				return EnterNewAnimation(ExtendBlitz);
 			else
 				return EnterNewAnimation(IdleStand);
