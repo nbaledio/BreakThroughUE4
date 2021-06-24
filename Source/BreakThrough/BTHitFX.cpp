@@ -3,6 +3,7 @@
 
 #include "BTHitFX.h"
 #include "BTCharacterBase.h"
+#include "RoundManager.h"
 
 // Sets default values
 ABTHitFX::ABTHitFX()
@@ -173,6 +174,16 @@ void ABTHitFX::DrawEffect()
 		Billboard->SetVisibility(true);
 		Spark->SetVisibility(true);
 
+		if (Owner)
+		{
+			if (Owner->RoundManager)
+			{
+				FRotator EffectRotation = FRotator(Owner->RoundManager->CurrentState.CameraRotation);
+				EffectRotation.Yaw += 90;
+				SetActorRotation(EffectRotation);
+			}
+		}
+
 		Billboard->SetMaterial(0, DynamicBillboardMaterial);
 
 		if (CurrentState.HitProperties & IsSlash)
@@ -186,7 +197,7 @@ void ABTHitFX::DrawEffect()
 			if (CurrentState.Interaction == Hit)
 				DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .1, 0));
 			else
-				DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(.25, 1, .35)); //(FName("Color"), FVector(1, 0, .5));
+				DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(.25, 1, .35));
 		}
 
 		if (!(CurrentState.HitProperties & IsSpecial) && !(CurrentState.HitProperties & IsHeavy) && !(CurrentState.HitProperties & IsSuper) && CurrentState.Interaction != Deflect)
