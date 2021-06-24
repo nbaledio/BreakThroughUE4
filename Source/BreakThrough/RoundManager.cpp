@@ -11,7 +11,7 @@ ARoundManager::ARoundManager()
 	PrimaryActorTick.bCanEverTick = false; //Gamestate will update this
 
 	//Create and add HUD widget
-	static ConstructorHelpers::FClassFinder<UHUDVisuals> HUDWidget(TEXT("/Game/UI/Blueprints/HUD_Resolve"));
+	static ConstructorHelpers::FClassFinder<ULowerHUD> HUDWidget(TEXT("/Game/UI/Blueprints/HUDLower"));
 	HUDWidgetClass = HUDWidget.Class;
 
 	Transform = CreateDefaultSubobject<USceneComponent>(TEXT("Transform"));
@@ -36,9 +36,9 @@ void ARoundManager::BeginPlay()
 	Super::BeginPlay();
 
 	//Create HUDs and add it to camera/world space
-	LowerHUD = CreateWidget<UHUDVisuals>(GetWorld()->GetGameInstance(), HUDWidgetClass);
+	LowerHUD = CreateWidget<ULowerHUD>(GetWorld()->GetGameInstance(), HUDWidgetClass);
 	LowerHUD->AddToViewport(0);
-	UpperHUD = Cast<UHUDVisuals>(HUDWidgetComponent->GetUserWidgetObject());
+	UpperHUD = Cast<UUpperHUD>(HUDWidgetComponent->GetUserWidgetObject());
 
 	if (ResolveBar != nullptr)
 	{
@@ -69,6 +69,12 @@ void ARoundManager::BeginPlay()
 	}
 
 	CurrentState.CameraRotation = FRotator(0.0f, -90.0f, 0.0f);
+
+	//Bind UI Animation Evens
+	ResetPositionsDelegate.BindDynamic(this, &ARoundManager::NotifyRoundEnd);
+	LowerHUD->BindToAnimationFinished(LowerHUD->BlackScreenFadeIn, ResetPositionsDelegate);
+	RoundStartDelegate.BindDynamic(this, &ARoundManager::NotifyRoundStart);
+	LowerHUD->BindToAnimationFinished(LowerHUD->BlackScreenFadeOut, RoundStartDelegate);
 
 	/*Assume 60 FPS. Change number if a longer/short in game second is desired
 	60 * (Real world seconds length) = Number of frames to check*/
@@ -228,22 +234,29 @@ void ARoundManager::UpdateCameraPosition()
 //Update function to be used by GameState
 void ARoundManager::UpdateTimer()
 {
+	//Check for round start notification
+	if (bRoundStart)
+	{
+		bRoundStart = false;
+		RoundStart();
+	}
+
+	//Decrement Timer (Moved outside of gameactive check so health bar can still flash regardless)
+	if (Player1Base && Player2Base)
+		if (Player1Base->CurrentState.SlowMoTime % 2 == 0 && Player2Base->CurrentState.SlowMoTime % 2 == 0)
+			CurrentState.FrameCount++;
+
+	//Check if one in-game second has passed and decrement timer
+	if (CurrentState.FrameCount == gameTime && !CurrentState.bSuddenDeath && CurrentState.RoundTimer != 0 && CurrentState.bIsGameActive)
+	{
+		CurrentState.FrameCount = 0;
+		CurrentState.RoundTimer--;
+	}
+
+	//Check if a win condition is met
 	if (CurrentState.bIsGameActive)
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("CurrentState.bIsGameActive"));
-		if (!CurrentState.bSuddenDeath)
-		{
-			if (Player1Base && Player2Base)
-				if (Player1Base->CurrentState.SlowMoTime % 2 == 0 && Player2Base->CurrentState.SlowMoTime % 2 == 0)
-					CurrentState.FrameCount++;
-			//Check if one in-game second has passed and decrement timer
-			if (CurrentState.FrameCount == gameTime && !CurrentState.bSuddenDeath)
-			{
-				CurrentState.FrameCount = 0;
-				CurrentState.RoundTimer--;
-			}
-		}
-		//Check if a win condition is met
 		DetermineWinMethod();
 	}
 
@@ -303,7 +316,13 @@ void ARoundManager::UpdateTimer()
 		for (uint8 i = 0; i < 8; i++)
 			UpdateResolveBar(i);
 	}
-	
+
+	//Check for round reset notification
+	if (bRoundReset)
+	{
+		bRoundReset = false;
+		ResetPositions();
+	}
 }
 
 void ARoundManager::DrawScreen()
@@ -382,14 +401,26 @@ void ARoundManager::DrawScreen()
 	MainCamera->SetRelativeRotation(CurrentState.CameraRotation);
 }
 
+void ARoundManager::NotifyRoundEnd()
+{
+	bRoundReset = true;
+}
+
+void ARoundManager::NotifyRoundStart()
+{
+	bRoundStart = true;
+}
+
 void ARoundManager::ResetPositions()
 {
+	CurrentState.FrameCount = 0;
 	CurrentState.RoundCount++;
 	CurrentState.RoundTimer = 99;
-	Player1Base->CurrentState.Position = P1startPosition;
+	Player1Base->CurrentState.Position = FVector2D(-80.0f, 0.0f);
 	Player1Base->CurrentState.Health = Player1Base->MaxHealth;
-	Player2Base->CurrentState.Position = P2startPosition;
+	Player2Base->CurrentState.Position = FVector2D(80.0f, 0.0f);
 	Player2Base->CurrentState.Health = Player2Base->MaxHealth;
+	LowerHUD->PlayAnimation(LowerHUD->BlackScreenFadeOut, 1.0f, 1, EUMGSequencePlayMode::Forward, 1.0f, false);
 }
 
 void ARoundManager::RoundStart()
@@ -431,59 +462,56 @@ void ARoundManager::DetermineWinMethod()
 	{
 		RoundStop();
 		//Play Time Up Animation
-		//UE_LOG(LogTemp, Warning, TEXT("Time Out"));
 		//Increment win count
 		if (Player1Base->CurrentState.Health > Player2Base->CurrentState.Health)
 		{
 			CurrentState.P1Wins++;
-			//UE_LOG(LogTemp, Warning, TEXT("P1 Wins"));
 		}
 		else
 		{
 			CurrentState.P2Wins++;
-			//UE_LOG(LogTemp, Warning, TEXT("P2 Wins"));
 		}
+		LowerHUD->PlayAnimation(LowerHUD->BlackScreenFadeIn, 1.0f, 1, EUMGSequencePlayMode::Forward, 1.0f, false);
 	}
 	else if ((Player1Base->CurrentState.Health == Player1Base->MaxHealth && Player2Base->CurrentState.Health <= 0) || 
 		(Player2Base->CurrentState.Health == Player2Base->MaxHealth && Player1Base->CurrentState.Health <= 0))
 	{
 		RoundStop();
 		//Play Perfect KO Animation
-		//UE_LOG(LogTemp, Warning, TEXT("Perfect"));
 		//Increment win count
 		if (Player2Base->CurrentState.Health <= 0)
 		{
 			CurrentState.P1Wins++;
-			//UE_LOG(LogTemp, Warning, TEXT("P1 Wins"));
 		}
 		else
 		{
 			CurrentState.P2Wins++;
-			//UE_LOG(LogTemp, Warning, TEXT("P2 Wins"));
 		}
+		LowerHUD->PlayAnimation(LowerHUD->BlackScreenFadeIn, 1.0f, 1, EUMGSequencePlayMode::Forward, 1.0f, false);
+
 	}
 	else if ((Player1Base->CurrentState.Health > 0 && Player2Base->CurrentState.Health <= 0) || (Player2Base->CurrentState.Health > 0 && Player1Base->CurrentState.Health <= 0))
 	{
 		RoundStop();
 		//Play BreakDown Animation
-		//UE_LOG(LogTemp, Warning, TEXT("Breakdown"));
 		//Increment win count
 		if (Player2Base->CurrentState.Health <= 0)
 		{
 			CurrentState.P1Wins++;
-			//UE_LOG(LogTemp, Warning, TEXT("P1 Wins"));
 		}
 		else
 		{
 			CurrentState.P2Wins++;
-			//UE_LOG(LogTemp, Warning, TEXT("P2 Wins"));
 		}
+		LowerHUD->PlayAnimation(LowerHUD->BlackScreenFadeIn, 1.0f, 1, EUMGSequencePlayMode::Forward, 1.0f, false);
+
 	}
 	else if (Player1Base->CurrentState.Health <= 0 && Player2Base->CurrentState.Health <= 0)
 	{
 		RoundStop();
 		//Play Double KO Animation
-		//UE_LOG(LogTemp, Warning, TEXT("Double KO"));
+		LowerHUD->PlayAnimation(LowerHUD->BlackScreenFadeIn, 1.0f, 1, EUMGSequencePlayMode::Forward, 1.0f, false);
+
 	}
 }
 

@@ -10,15 +10,24 @@
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "BTCharacterBase.h"
-#include "HUDVisuals.generated.h"
+#include "UpperHUD.generated.h"
 
 UCLASS(Abstract)
-class BREAKTHROUGH_API UHUDVisuals : public UUserWidget
+class BREAKTHROUGH_API UUpperHUD : public UUserWidget
 {
 	GENERATED_BODY()
 
 public:
 	//Widget Components
+	//Timer/Names
+	UPROPERTY(meta = (BindWidget))
+		class UTextBlock* P1CharacterName;
+	UPROPERTY(meta = (BindWidget))
+		class UTextBlock* P2CharacterName;
+	UPROPERTY(meta = (BindWidget))
+		class UTextBlock* TimerText;
+
+	//Health bars
 	UPROPERTY(meta = (BindWidget))
 		class UProgressBar* P1HealthBar;
 	UPROPERTY(meta = (BindWidget))
@@ -31,39 +40,12 @@ public:
 		class UProgressBar* P2HealthBarFlash;
 	UPROPERTY(meta = (BindWidget))
 		class UProgressBar* P2HealthRedBar;
-	UPROPERTY(meta = (BindWidget))
-		class UProgressBar* P1DurabilityBar;
-	UPROPERTY(meta = (BindWidget))
-		class UProgressBar* P2DurabilityBar;
 
+	//Combo/attack state text
 	UPROPERTY(meta = (BindWidget))
-		class UImage* P1ResolveBar1;
-	UPROPERTY(meta = (BindWidget))
-		class UImage* P1ResolveBar2;
-	UPROPERTY(meta = (BindWidget))
-		class UImage* P1ResolveBar3;
-	UPROPERTY(meta = (BindWidget))
-		class UImage* P1ResolveBar4;
-	UPROPERTY(meta = (BindWidget))
-		class UImage* P2ResolveBar1;
-	UPROPERTY(meta = (BindWidget))
-		class UImage* P2ResolveBar2;
-	UPROPERTY(meta = (BindWidget))
-		class UImage* P2ResolveBar3;
-	UPROPERTY(meta = (BindWidget))
-		class UImage* P2ResolveBar4;
-
-	UPROPERTY(meta = (BindWidget))
-		class UTextBlock* P1CharacterName;
-	UPROPERTY(meta = (BindWidget))
-		class UTextBlock* P2CharacterName;
-	UPROPERTY(meta = (BindWidget))
-		class UTextBlock* TimerText;
-
-	/*UPROPERTY(meta = (BindWidget))
 		class UCanvasPanel* P1ComboMask;
 	UPROPERTY(meta = (BindWidget))
-		class UCanvasPanel* P2ComboMask;*/
+		class UCanvasPanel* P2ComboMask;
 	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* P1ComboCountHitsText;
 	UPROPERTY(meta = (BindWidget))
@@ -77,12 +59,6 @@ public:
 	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* P2CounterText;
 
-	//Widget Animations
-	/*UPROPERTY(meta = (BindWidgetAnim))
-		UWidgetAnimation* BlackScreenFadeIn;
-	UPROPERTY(meta = (BindWidgetAnim))
-		UWidgetAnimation* BlackScreenFadeOut;*/
-
 	//Local Variables
 	UCanvasPanelSlot* P1CanvasSlot;
 	UCanvasPanelSlot* P2CanvasSlot;
@@ -92,5 +68,4 @@ public:
 	//Functions
 	void SetCharacterNames(FString P1Character, FString P2Character);
 	void UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* Player1, ABTCharacterBase* Player2);
-	void UpdateLowerHUD(ABTCharacterBase* Player1, ABTCharacterBase* Player2);
 };

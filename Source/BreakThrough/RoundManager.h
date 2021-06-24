@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "BTCharacterBase.h"
 #include "HUDVisuals.h"
+#include "UpperHUD.h"
+#include "LowerHUD.h"
 #include "Blueprint/UserWidget.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Math/Vector.h"
@@ -89,8 +91,8 @@ public:
 		float XPosBound = 710.0f;
 
 	//HUD Widgets
-	UHUDVisuals* UpperHUD;
-	UHUDVisuals* LowerHUD;
+	UUpperHUD* UpperHUD;
+	ULowerHUD* LowerHUD;
 
 	//ResolveBar Material
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Materials")
@@ -115,17 +117,18 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-
+	//Number of frames -> 1 in-game second
 	int32 gameTime;
 
-	FVector2D P1startPosition;
-	FVector2D P2startPosition;
+	bool bRoundReset;
+	bool bRoundStart;
 
-	bool gameActive;
-	bool lockInputs;
-	bool suddenDeath;
+	//Store class of widget from constructor
+	TSubclassOf<class ULowerHUD> HUDWidgetClass;
 
-	TSubclassOf<class UHUDVisuals> HUDWidgetClass;
+	//UI Animation Delegates
+	FWidgetAnimationDynamicEvent ResetPositionsDelegate;
+	FWidgetAnimationDynamicEvent RoundStartDelegate;
 
 	//Functions
 	void ResetPositions();
@@ -135,4 +138,8 @@ private:
 	void DetermineWinMethod();
 	void ActivateResolveBar(uint8 index, bool bReverse);
 	void UpdateResolveBar(uint8 index);
+	UFUNCTION()
+		void NotifyRoundEnd();
+	UFUNCTION()
+		void NotifyRoundStart();
 };
