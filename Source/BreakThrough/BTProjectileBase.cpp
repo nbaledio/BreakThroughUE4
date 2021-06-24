@@ -574,27 +574,25 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 		Owner->CurrentState.SpecialProration *= Hitbox.ForcedProration; //forced proration is applied as long as the move is used in combo
 
 	//apply damage, damage is scaled by the number of hits in a combo
-	float ComboProration;
+	int32 ComboProration;
 	if (Owner->CurrentState.ComboCount < 3)
-		ComboProration = 1;
+		ComboProration = 10;
 	else if (Owner->CurrentState.ComboCount < 5)
-		ComboProration = .8f;
+		ComboProration = 8;
 	else if (Owner->CurrentState.ComboCount < 6)
-		ComboProration = .7f;
+		ComboProration = 7;
 	else if (Owner->CurrentState.ComboCount < 7)
-		ComboProration = .6f;
+		ComboProration = 6;
 	else if (Owner->CurrentState.ComboCount < 8)
-		ComboProration = .5f;
+		ComboProration = 5;
 	else if (Owner->CurrentState.ComboCount < 9)
-		ComboProration = .4f;
+		ComboProration = 4;
 	else if (Owner->CurrentState.ComboCount < 10)
-		ComboProration = .3f;
-	else if (Owner->CurrentState.ComboCount < 11)
-		ComboProration = .2f;
+		ComboProration = 3;
 	else
-		ComboProration = .1f;
+		ComboProration = 2;
 
-	DamageToApply *= ComboProration;
+	DamageToApply = FMath::FloorToInt(DamageToApply * ComboProration / 10);
 
 	if (Hitbox.AttackProperties & IsSuper)
 		DamageToApply = FMath::Max((int32)(OpponentValor * Hitbox.BaseDamage * .25f), DamageToApply); //Supers will always deal a minimum of 25% their base damage affected by valor
@@ -602,6 +600,9 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 	DamageToApply = FMath::Max(1, DamageToApply); //non-super attacks will always deal a minimum of one damage
 
 	Owner->Opponent->CurrentState.Health -= FMath::Min(DamageToApply, Owner->Opponent->CurrentState.Health);
+
+	if (Owner->Opponent->CurrentState.Health == 0 && Hitbox.AttackProperties & NonFatal)
+		Owner->Opponent->CurrentState.Health = 1;
 
 	//apply hitstun, hitstun is scaled by how much time the opponent has spent in hitstun, supers' hitstun is never scaled
 	if (Owner->Opponent->CurrentState.bIsAirborne && !(Hitbox.AttackProperties & IsSuper))
@@ -758,20 +759,20 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 					}
 
 					if (Hitbox.AttackProperties & IsSuper)
-						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 10);
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 4);
 					else if (Hitbox.AttackProperties & IsSpecial)
-						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 8);
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 3);
 					else
-						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 6);
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 2);
 				}
 				else
 				{
 					if (Hitbox.AttackProperties & IsSuper)
-						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 7);
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 2);
 					else if (Hitbox.AttackProperties & IsSpecial)
-						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 5);
+						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 1.5);
 					else
-						Owner->Opponent->CurrentState.Durability -= (int32)(Hitbox.BaseDamage * 3);
+						Owner->Opponent->CurrentState.Durability -= Hitbox.BaseDamage;
 				}
 
 			}
@@ -794,6 +795,14 @@ void ABTProjectileBase::ContactHit(FHitbox Hitbox, FVector2D HurtboxCenter)
 						ChipDamage = FMath::Min(Owner->Opponent->CurrentState.Health, ChipDamage);
 
 					Owner->Opponent->CurrentState.Health -= ChipDamage;
+
+					if (Owner->Opponent->CurrentState.Health == 0)
+					{
+						if (Hitbox.AttackProperties & NonFatal)
+							Hitbox.AttackProperties -= NonFatal;
+						AttackCalculation(Hitbox, HurtboxCenter);
+						return;
+					}
 				}
 			}
 		}

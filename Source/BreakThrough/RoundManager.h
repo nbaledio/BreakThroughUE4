@@ -82,11 +82,11 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
 		float ZPosMax = 500;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
-		float YPosMax = 2250;
+		float YPosMax = 2200;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
 		float YPosMin = 2100.0f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
-		float XPosBound = 710.0f;
+		float XPosBound;
 
 	//HUD Widgets
 	UHUDVisuals* UpperHUD;

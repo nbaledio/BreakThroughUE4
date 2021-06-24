@@ -192,7 +192,7 @@ void ABlitzImageBase::DrawBlitz()
 		else if (CurrentState.EffectColor == 2) // Breaker BCs are Pink
 			DynamicWaveMaterial->SetVectorParameterValue(FName("Color"), FVector(.65f, 0, .65f));
 		else //Normal BCs are Yellow
-			DynamicWaveMaterial->SetVectorParameterValue(FName("Color"), FVector(.7, .7, 0));
+			DynamicWaveMaterial->SetVectorParameterValue(FName("Color"), FVector(1, 1, 0));
 	}
 	else
 	{

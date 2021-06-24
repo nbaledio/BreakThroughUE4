@@ -2436,7 +2436,10 @@ void ABTCharacterBase::AnimationEvents()
 			else if (IsCurrentAnimation(ExtendBlitz)) //Extend Blitz
 			{
 				if (CurrentState.AnimFrameIndex == 6 && CurrentState.PosePlayTime == 0)
+				{
+					CurrentState.bUsedExtend = true;
 					BlitzImage->ActivateWave();
+				}
 			}
 			else
 			{
@@ -2485,7 +2488,6 @@ void ABTCharacterBase::AnimationEvents()
 		if (IsCurrentAnimation(ExtendBlitz))
 		{
 			Opponent->CurrentState.SlowMoTime = 60;
-			CurrentState.bUsedExtend = true;
 		}
 
 		CurrentState.bHitSuccess = false;
@@ -3405,7 +3407,8 @@ bool ABTCharacterBase::BlitzCancel()
 		CurrentState.HPressed = 0;
 		CurrentState.ResolveRecoverTimer = 0;
 		CurrentState.ResolvePulse *= .65;
-		CurrentState.SpecialProration *= .9; //scales all damage post mid-combo BlitzCancel by 90%
+		if (!(CurrentState.AvailableActions & AcceptMove))
+			CurrentState.SpecialProration *= .9; //scales all damage post mid-combo BlitzCancel by 90% except Focus Blitz Cancel
 
 		if (CurrentState.bIsAirborne && CurrentState.BlockStun == 0)
 		{
@@ -3509,7 +3512,8 @@ bool ABTCharacterBase::BlitzCancel()
 			BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
 			CurrentState.bBlitzing = true;
 
-			if (Opponent->CurrentState.HitStun > 0 && !CurrentState.bUsedExtend)
+			if ((Opponent->CurrentState.HitStun > 0 || Opponent->CurrentState.CurrentAnimFrame.Invincibility == FaceDown || Opponent->CurrentState.CurrentAnimFrame.Invincibility == FaceUp) 
+				&& !CurrentState.bUsedExtend)
 				return EnterNewAnimation(ExtendBlitz);
 			else
 				return EnterNewAnimation(MidJump);
@@ -3533,7 +3537,8 @@ bool ABTCharacterBase::BlitzCancel()
 			BlitzImage->Activate(CurrentState.Position, CurrentState.CurrentAnimFrame.Pose, CurrentState.bFacingRight, 0);
 			CurrentState.bBlitzing = true;
 
-			if (Opponent->CurrentState.HitStun > 0 && !CurrentState.bUsedExtend)
+			if ((Opponent->CurrentState.HitStun > 0 || Opponent->CurrentState.CurrentAnimFrame.Invincibility == FaceDown || Opponent->CurrentState.CurrentAnimFrame.Invincibility == FaceUp)
+				&& !CurrentState.bUsedExtend)
 				return EnterNewAnimation(ExtendBlitz);
 			else
 				return EnterNewAnimation(IdleStand);

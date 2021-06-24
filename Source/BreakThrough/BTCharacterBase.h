@@ -522,6 +522,7 @@ public:
 	float DepthOffset;
 	float LineThickness; //0-1 during cinematics, 3 during normal gameplay or Lerp from (0,1) to 3 based on camera's distance from character
 	FVector2D IntersectCenter;
+	float StageBounds = 800;
 
 	//Blitz Cancel
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BC Anims")
@@ -698,7 +699,6 @@ protected:
 	//number of frames that an input is active for
 		uint8 InputTime = 5;
 		uint8 DirInputTime = 12;
-		float StageBounds = 900;
 
 public:
 	//Idle Stance Animations
