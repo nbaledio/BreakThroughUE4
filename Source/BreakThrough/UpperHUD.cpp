@@ -2,6 +2,7 @@
 
 #include "UpperHUD.h"
 #include "Slate.h"
+#include "SlateCore/Public/Fonts/SlateFontInfo.h"
 
 void UUpperHUD::SetCharacterNames(FString P1Character, FString P2Character)
 {
@@ -103,46 +104,66 @@ void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* P
 	if (Player1->CurrentState.ComboCount > 1)
 	{
 		P1ComboCountNumber->SetText(FText::AsNumber(Player1->CurrentState.ComboCount));
+		P1ComboCountNumberBackgroundNotTrue->SetText(FText::AsNumber(Player1->CurrentState.ComboCount));
+		P1ComboCountNumberBackgroundTrue->SetText(FText::AsNumber(Player1->CurrentState.ComboCount));
 		P1ComboCountHitsText->SetVisibility(ESlateVisibility::Visible);
 		//Set true combo colors
 		if (Player1->CurrentState.bTrueCombo)
 		{
 			P1ComboCountNumber->SetColorAndOpacity(FSlateColor(FLinearColor(0.625f, 0.0f, 0.0f, 1.0f)));
 			P1ComboCountHitsText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)));
+			P1ComboBackgroundTrue->SetVisibility(ESlateVisibility::Visible);
+			P1ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Hidden);
 		}
 		else
 		{
 			P1ComboCountNumber->SetColorAndOpacity(FSlateColor(FLinearColor(0.04f, 0.04f, 0.04f, 1.0f)));
 			P1ComboCountHitsText->SetColorAndOpacity(FSlateColor(FLinearColor(0.95f, 0.95f, 0.95f, 1.0f)));
+			P1ComboBackgroundTrue->SetVisibility(ESlateVisibility::Hidden);
+			P1ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Visible);
 		}
 	}
 	else if (Player1->CurrentState.ComboCount == 0)
 	{
 		P1ComboCountHitsText->SetVisibility(ESlateVisibility::Hidden);
 		P1ComboCountNumber->SetText(FText::FromString(("")));
+		P1ComboBackgroundTrue->SetVisibility(ESlateVisibility::Hidden);
+		P1ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Hidden);
+		P1ComboCountNumberBackgroundTrue->SetText(FText::FromString(("")));
+		P1ComboCountNumberBackgroundNotTrue->SetText(FText::FromString(("")));
 	}
 
 	//Set Player2 Combo Text
 	if (Player2->CurrentState.ComboCount > 1)
 	{
 		P2ComboCountNumber->SetText(FText::AsNumber(Player2->CurrentState.ComboCount));
+		P2ComboCountNumberBackgroundNotTrue->SetText(FText::AsNumber(Player2->CurrentState.ComboCount));
+		P2ComboCountNumberBackgroundTrue->SetText(FText::AsNumber(Player2->CurrentState.ComboCount));
 		P2ComboCountHitsText->SetVisibility(ESlateVisibility::Visible);
 		//Set true combo colors
 		if (Player2->CurrentState.bTrueCombo)
 		{
 			P2ComboCountNumber->SetColorAndOpacity(FSlateColor(FLinearColor(0.625f, 0.0f, 0.0f, 1.0f)));
 			P2ComboCountHitsText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)));
+			P2ComboBackgroundTrue->SetVisibility(ESlateVisibility::Visible);
+			P2ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Hidden);
 		}
 		else
 		{
 			P2ComboCountNumber->SetColorAndOpacity(FSlateColor(FLinearColor(0.04f, 0.04f, 0.04f, 1.0f)));
 			P2ComboCountHitsText->SetColorAndOpacity(FSlateColor(FLinearColor(0.95f, 0.95f, 0.95f, 1.0f)));
+			P2ComboBackgroundTrue->SetVisibility(ESlateVisibility::Hidden);
+			P2ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Visible);
 		}
 	}
 	else if (Player2->CurrentState.ComboCount == 0)
 	{
 		P2ComboCountHitsText->SetVisibility(ESlateVisibility::Hidden);
 		P2ComboCountNumber->SetText(FText::FromString(("")));
+		P2ComboBackgroundTrue->SetVisibility(ESlateVisibility::Hidden);
+		P2ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Hidden);
+		P2ComboCountNumberBackgroundTrue->SetText(FText::FromString(("")));
+		P2ComboCountNumberBackgroundNotTrue->SetText(FText::FromString(("")));
 	}
 
 	//Set combo timers

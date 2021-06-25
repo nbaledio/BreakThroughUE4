@@ -70,12 +70,6 @@ void ARoundManager::BeginPlay()
 
 	CurrentState.CameraRotation = FRotator(0.0f, -90.0f, 0.0f);
 
-	//Bind UI Animation Evens
-	ResetPositionsDelegate.BindDynamic(this, &ARoundManager::NotifyRoundEnd);
-	LowerHUD->BindToAnimationFinished(LowerHUD->BlackScreenFadeIn, ResetPositionsDelegate);
-	RoundStartDelegate.BindDynamic(this, &ARoundManager::NotifyRoundStart);
-	LowerHUD->BindToAnimationFinished(LowerHUD->BlackScreenFadeOut, RoundStartDelegate);
-
 	/*Assume 60 FPS. Change number if a longer/short in game second is desired
 	60 * (Real world seconds length) = Number of frames to check*/
 	gameTime = 60;
@@ -234,11 +228,10 @@ void ARoundManager::UpdateCameraPosition()
 //Update function to be used by GameState
 void ARoundManager::UpdateTimer()
 {
-	//Check for round start notification
-	if (bRoundStart)
+	//Check for round reset
+	if (CurrentState.bResetRound) 
 	{
-		bRoundStart = false;
-		RoundStart();
+		UpdateBlackScreen();
 	}
 
 	//Decrement Timer (Moved outside of gameactive check so health bar can still flash regardless)
@@ -256,8 +249,22 @@ void ARoundManager::UpdateTimer()
 	//Check if a win condition is met
 	if (CurrentState.bIsGameActive)
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("CurrentState.bIsGameActive"));
 		DetermineWinMethod();
+	}
+
+	//One shot if in Sudden Death
+	if (CurrentState.bSuddenDeath) 
+	{
+		if (Player1Base->CurrentState.ComboCount > 0) 
+		{
+			Player2Base->CurrentState.Health = 0;
+			CurrentState.bSuddenDeath = false;
+		}
+		if (Player2Base->CurrentState.ComboCount > 0)
+		{
+			Player1Base->CurrentState.Health = 0;
+			CurrentState.bSuddenDeath = false;
+		}
 	}
 
 	UpdateCameraPosition();
@@ -316,13 +323,6 @@ void ARoundManager::UpdateTimer()
 		for (uint8 i = 0; i < 8; i++)
 			UpdateResolveBar(i);
 	}
-
-	//Check for round reset notification
-	if (bRoundReset)
-	{
-		bRoundReset = false;
-		ResetPositions();
-	}
 }
 
 void ARoundManager::DrawScreen()
@@ -330,6 +330,12 @@ void ARoundManager::DrawScreen()
 	//Draw HUD updates
 	UpperHUD->UpdateUpperHUD(CurrentState.FrameCount, CurrentState.RoundTimer, Player1Base, Player2Base);
 	LowerHUD->UpdateLowerHUD(Player1Base, Player2Base);
+
+	//Play fade in/out if round is currently transitioning
+	if (CurrentState.bResetRound) 
+	{
+		LowerHUD->PlayBlackScreenFade(BlackScreenState.FramePlayTime, BlackScreenState.bReverse);
+	}
 
 	if (CurrentState.ResolveStates[3].AnimFrameIndex < 11)
 	{
@@ -401,16 +407,6 @@ void ARoundManager::DrawScreen()
 	MainCamera->SetRelativeRotation(CurrentState.CameraRotation);
 }
 
-void ARoundManager::NotifyRoundEnd()
-{
-	bRoundReset = true;
-}
-
-void ARoundManager::NotifyRoundStart()
-{
-	bRoundStart = true;
-}
-
 void ARoundManager::ResetPositions()
 {
 	CurrentState.FrameCount = 0;
@@ -420,11 +416,11 @@ void ARoundManager::ResetPositions()
 	Player1Base->CurrentState.Health = Player1Base->MaxHealth;
 	Player2Base->CurrentState.Position = FVector2D(80.0f, 0.0f);
 	Player2Base->CurrentState.Health = Player2Base->MaxHealth;
-	LowerHUD->PlayAnimation(LowerHUD->BlackScreenFadeOut, 1.0f, 1, EUMGSequencePlayMode::Forward, 1.0f, false);
 }
 
 void ARoundManager::RoundStart()
 {
+	CurrentState.FrameCount = 0;
 	CurrentState.bIsGameActive = true;
 	CurrentState.bLockInputs = false;
 }
@@ -455,7 +451,6 @@ void ARoundManager::DetermineWinMethod()
 		RoundStop();
 		CurrentState.bSuddenDeath = true;
 		//Play Sudden Death Animation
-		//UE_LOG(LogTemp, Warning, TEXT("Sudden Death"));
 		RoundStart();
 	}
 	else if (!CurrentState.bSuddenDeath && CurrentState.RoundTimer <= 0 && Player1Base->CurrentState.Health > 0 && Player2Base->CurrentState.Health > 0 && Player1Base->CurrentState.Health != Player2Base->CurrentState.Health)
@@ -471,7 +466,7 @@ void ARoundManager::DetermineWinMethod()
 		{
 			CurrentState.P2Wins++;
 		}
-		LowerHUD->PlayAnimation(LowerHUD->BlackScreenFadeIn, 1.0f, 1, EUMGSequencePlayMode::Forward, 1.0f, false);
+		ActivateBlackScreen();
 	}
 	else if ((Player1Base->CurrentState.Health == Player1Base->MaxHealth && Player2Base->CurrentState.Health <= 0) || 
 		(Player2Base->CurrentState.Health == Player2Base->MaxHealth && Player1Base->CurrentState.Health <= 0))
@@ -487,8 +482,7 @@ void ARoundManager::DetermineWinMethod()
 		{
 			CurrentState.P2Wins++;
 		}
-		LowerHUD->PlayAnimation(LowerHUD->BlackScreenFadeIn, 1.0f, 1, EUMGSequencePlayMode::Forward, 1.0f, false);
-
+		ActivateBlackScreen();
 	}
 	else if ((Player1Base->CurrentState.Health > 0 && Player2Base->CurrentState.Health <= 0) || (Player2Base->CurrentState.Health > 0 && Player1Base->CurrentState.Health <= 0))
 	{
@@ -503,15 +497,13 @@ void ARoundManager::DetermineWinMethod()
 		{
 			CurrentState.P2Wins++;
 		}
-		LowerHUD->PlayAnimation(LowerHUD->BlackScreenFadeIn, 1.0f, 1, EUMGSequencePlayMode::Forward, 1.0f, false);
-
+		ActivateBlackScreen();
 	}
 	else if (Player1Base->CurrentState.Health <= 0 && Player2Base->CurrentState.Health <= 0)
 	{
 		RoundStop();
 		//Play Double KO Animation
-		LowerHUD->PlayAnimation(LowerHUD->BlackScreenFadeIn, 1.0f, 1, EUMGSequencePlayMode::Forward, 1.0f, false);
-
+		ActivateBlackScreen();
 	}
 }
 
@@ -551,5 +543,36 @@ void ARoundManager::UpdateResolveBar(uint8 index)
 			}
 		}
 	}
+}
+
+void ARoundManager::UpdateBlackScreen() 
+{
+	//Increment black screen animation
+	if (BlackScreenState.FramePlayTime < 180)
+	{
+		BlackScreenState.FramePlayTime++;
+	}
+
+	//Reset positions on fade in finish
+	if (BlackScreenState.FramePlayTime == 180 && !BlackScreenState.bReverse)
+	{
+		ResetPositions();
+		BlackScreenState.bReverse = true;
+		BlackScreenState.FramePlayTime = 0;
+	}
+	//Turn off animation on fade out finished
+	else if (BlackScreenState.FramePlayTime == 180 && BlackScreenState.bReverse)
+	{
+		CurrentState.bResetRound = false;
+		BlackScreenState.bReverse = false;
+		BlackScreenState.FramePlayTime = 0;
+		RoundStart();
+	}
+}
+
+void ARoundManager::ActivateBlackScreen() 
+{
+	CurrentState.bResetRound = true;
+	BlackScreenState.FramePlayTime = 0;
 }
 

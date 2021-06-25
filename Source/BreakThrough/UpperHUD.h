@@ -47,6 +47,22 @@ public:
 	UPROPERTY(meta = (BindWidget))
 		class UCanvasPanel* P2ComboMask;
 	UPROPERTY(meta = (BindWidget))
+		class UCanvasPanel* P1ComboBackgroundTrue;
+	UPROPERTY(meta = (BindWidget))
+		class UCanvasPanel* P1ComboBackgroundNotTrue;
+	UPROPERTY(meta = (BindWidget))
+		class UTextBlock* P1ComboCountNumberBackgroundTrue;
+	UPROPERTY(meta = (BindWidget))
+		class UTextBlock* P1ComboCountNumberBackgroundNotTrue;
+	UPROPERTY(meta = (BindWidget))
+		class UCanvasPanel* P2ComboBackgroundTrue;
+	UPROPERTY(meta = (BindWidget))
+		class UCanvasPanel* P2ComboBackgroundNotTrue;
+	UPROPERTY(meta = (BindWidget))
+		class UTextBlock* P2ComboCountNumberBackgroundTrue;
+	UPROPERTY(meta = (BindWidget))
+		class UTextBlock* P2ComboCountNumberBackgroundNotTrue;
+	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* P1ComboCountHitsText;
 	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* P2ComboCountHitsText;
