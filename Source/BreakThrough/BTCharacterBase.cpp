@@ -3065,15 +3065,18 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 	DamageToApply = FMath::FloorToInt(DamageToApply * ComboProration / 10);
 
-	if (Hitbox.AttackProperties & IsSuper)
-		DamageToApply = FMath::Max(FMath::FloorToInt(OpponentValor * Hitbox.BaseDamage / 4), DamageToApply); //Supers will always deal a minimum of 25% their base damage affected by valor
+	if (Hitbox.BaseDamage > 0)
+	{
+		if (Hitbox.AttackProperties & IsSuper)
+			DamageToApply = FMath::Max(FMath::FloorToInt(OpponentValor * Hitbox.BaseDamage / 4), DamageToApply); //Supers will always deal a minimum of 25% their base damage affected by valor
 
-	DamageToApply = FMath::Max(1, DamageToApply); //non-super attacks will always deal a minimum of one damage
+		DamageToApply = FMath::Max(1, DamageToApply); //non-super attacks will always deal a minimum of one damage
 
-	Opponent->CurrentState.Health -= FMath::Min(DamageToApply, Opponent->CurrentState.Health);
+		Opponent->CurrentState.Health -= FMath::Min(DamageToApply, Opponent->CurrentState.Health);
 
-	if (Opponent->CurrentState.Health == 0 && Hitbox.AttackProperties & NonFatal)
-		Opponent->CurrentState.Health = 1;
+		if (Opponent->CurrentState.Health == 0 && Hitbox.AttackProperties & NonFatal)
+			Opponent->CurrentState.Health = 1;
+	}
 
 	//apply hitstun, hitstun is scaled by how much time the opponent has spent in hitstun, supers' hitstun is never scaled
 	if (Opponent->CurrentState.bIsAirborne && !(Hitbox.AttackProperties & IsSuper))

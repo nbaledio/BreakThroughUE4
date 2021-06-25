@@ -14,6 +14,7 @@
 #include "Runtime/CinematicCamera/Public/CineCameraComponent.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "Components/WidgetComponent.h"
+#include "Particles/ParticleSystemComponent.h"
 #include "RoundManager.generated.h"
 
 USTRUCT(BlueprintType)
@@ -43,6 +44,8 @@ struct FRoundManagerState
 	uint8 RoundTimer;
 	uint8 P1Wins;
 	uint8 P2Wins;
+	int32 P1Health;
+	int32 P2Health;
 	uint8 MaxRounds;
 	uint8 UniversalHitStop;
 
@@ -70,6 +73,10 @@ public:
 		USceneCaptureComponent2D* SceneCapture;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UWidgetComponent* HUDWidgetComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UParticleSystemComponent* P1Particles;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UParticleSystemComponent* P2Particles;
 
 	FRoundManagerState CurrentState;
 

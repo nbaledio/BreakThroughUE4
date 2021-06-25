@@ -38,10 +38,6 @@ protected:
 		UMaterialInterface* GlassMaterial;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
-		UTexture* ShatterWholeTexture;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
-		UTexture* ShatterBrokenTexture;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
 		UTexture* ShatterWholeOffsets;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
 		UTexture* ShatterBrokenOffsets;

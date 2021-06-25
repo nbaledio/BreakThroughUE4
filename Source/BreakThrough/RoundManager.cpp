@@ -26,6 +26,12 @@ ARoundManager::ARoundManager()
 	HUDWidgetComponent = CreateDefaultSubobject<UWidgetComponent>("UpperHUD");
 	HUDWidgetComponent->SetupAttachment(MainCamera);
 
+	P1Particles = CreateDefaultSubobject<UParticleSystemComponent>("P1Particles");
+	P1Particles->SetupAttachment(HUDWidgetComponent);
+
+	P2Particles = CreateDefaultSubobject<UParticleSystemComponent>("P2Particles");
+	P2Particles->SetupAttachment(HUDWidgetComponent);
+
 	//Possess the default player
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 }
@@ -39,6 +45,9 @@ void ARoundManager::BeginPlay()
 	LowerHUD = CreateWidget<ULowerHUD>(GetWorld()->GetGameInstance(), HUDWidgetClass);
 	LowerHUD->AddToViewport(0);
 	UpperHUD = Cast<UUpperHUD>(HUDWidgetComponent->GetUserWidgetObject());
+
+	P1Particles->Deactivate();
+	P2Particles->Deactivate();
 
 	if (ResolveBar != nullptr)
 	{
@@ -112,6 +121,8 @@ void ARoundManager::SceneCaptureList()
 		{
 			SceneCapture->ShowOnlyActorComponents(VFX, true);
 		}
+
+		CurrentState.P1Health = Player1Base->CurrentState.Health;
 	}
 
 	if (Player2Base)
@@ -133,6 +144,8 @@ void ARoundManager::SceneCaptureList()
 		{
 			SceneCapture->ShowOnlyActorComponents(VFX, true);
 		}
+
+		CurrentState.P2Health = Player2Base->CurrentState.Health;
 	}
 	//add stage actor to list as well
 }
@@ -168,7 +181,7 @@ void ARoundManager::UpdateCameraPosition()
 		else
 		{
 			//CurrentState.CameraPosition.X = FMath::Lerp(CurrentState.CameraPosition.X, TargetPosition.X, .15f);
-			CurrentState.CameraPosition = FMath::Lerp(CurrentState.CameraPosition, TargetPosition, .075f);
+			CurrentState.CameraPosition = FMath::Lerp(CurrentState.CameraPosition, TargetPosition, .05f);
 			//CurrentState.CameraPosition.Z = FMath::Lerp(CurrentState.CameraPosition.Z, TargetPosition.Z, .1f);
 		}
 	}
@@ -185,7 +198,7 @@ void ARoundManager::UpdateCameraPosition()
 		else
 		{
 			//CurrentState.CameraPosition.X = FMath::Lerp(CurrentState.CameraPosition.X, TargetPosition.X, .15f);
-			CurrentState.CameraPosition = FMath::Lerp(CurrentState.CameraPosition, TargetPosition, .075f);
+			CurrentState.CameraPosition = FMath::Lerp(CurrentState.CameraPosition, TargetPosition, .05f);
 			//CurrentState.CameraPosition.Z = FMath::Lerp(CurrentState.CameraPosition.Z, TargetPosition.Z, .1f);
 		}
 	}
@@ -206,7 +219,7 @@ void ARoundManager::UpdateCameraPosition()
 		//Decide whether to zoom in or out based on characters' distance from each other
 		TargetPosition.Y = FMath::Lerp(YPosMin, YPosMax, (FMath::Max((FMath::Abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X) - 200), 0.f)/(PlayerMaxDistance - 200)));
 
-		if (CurrentState.CameraPosition.Y < YPosMin)
+		if (CurrentState.CameraPosition.Y < YPosMin || CurrentState.CameraPosition.X < -XPosBound || CurrentState.CameraPosition.X > XPosBound)
 		{
 			CurrentState.CameraPosition.X = FMath::Lerp(CurrentState.CameraPosition.X, TargetPosition.X, .175f);
 			CurrentState.CameraPosition.Y = FMath::Lerp(CurrentState.CameraPosition.Y, TargetPosition.Y, .075f);
@@ -342,6 +355,20 @@ void ARoundManager::UpdateTimer()
 			UpdateResolveBar(i);
 	}
 
+	if (CurrentState.P1Health > Player1Base->CurrentState.Health)
+	{
+		CurrentState.P1Health = Player1Base->CurrentState.Health;
+		P1Particles->SetRelativeLocation(FVector(20, FMath::Lerp(120, 780, (float)(Player1Base->CurrentState.Health - 10) / (float)Player1Base->MaxHealth), 440));
+		P1Particles->Activate(true);
+	}
+
+	if (CurrentState.P2Health > Player2Base->CurrentState.Health)
+	{
+		CurrentState.P2Health = Player2Base->CurrentState.Health;
+		P2Particles->SetRelativeLocation(FVector(20, FMath::Lerp(-120, -780, (float)(Player2Base->CurrentState.Health - 10) / (float)Player2Base->MaxHealth), 440));
+		P2Particles->Activate(true);
+	}
+
 	//Check for round reset notification
 	if (bRoundReset)
 	{
@@ -355,6 +382,9 @@ void ARoundManager::DrawScreen()
 	//Draw HUD updates
 	UpperHUD->UpdateUpperHUD(CurrentState.FrameCount, CurrentState.RoundTimer, Player1Base, Player2Base);
 	LowerHUD->UpdateLowerHUD(Player1Base, Player2Base);
+
+	
+	
 
 	if (CurrentState.ResolveStates[3].AnimFrameIndex < 11)
 	{

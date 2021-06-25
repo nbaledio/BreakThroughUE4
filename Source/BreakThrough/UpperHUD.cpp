@@ -79,7 +79,7 @@ void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* P
 	{
 		if (P1HealthRedBar->Percent > P1CurrentHealthPercent)
 		{
-			P1HealthRedBar->SetPercent(P1HealthRedBar->Percent - .01f);
+			P1HealthRedBar->SetPercent(P1HealthRedBar->Percent - .015f);
 		}
 		else if (P1HealthRedBar->Percent < P1CurrentHealthPercent)
 		{
@@ -90,7 +90,7 @@ void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* P
 	{
 		if (P2HealthRedBar->Percent > P2CurrentHealthPercent)
 		{
-			P2HealthRedBar->SetPercent(P2HealthRedBar->Percent - .01f);
+			P2HealthRedBar->SetPercent(P2HealthRedBar->Percent - .015f);
 		}
 		else if (P2HealthRedBar->Percent < P2CurrentHealthPercent)
 		{
