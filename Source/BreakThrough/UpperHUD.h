@@ -80,6 +80,8 @@ public:
 	UCanvasPanelSlot* P2CanvasSlot;
 	FVector2D position;
 	FVector2D size;
+	float P1DrainPoint;
+	float P2DrainPoint;
 
 	//Functions
 	void SetCharacterNames(FString P1Character, FString P2Character);

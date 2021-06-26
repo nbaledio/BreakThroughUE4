@@ -76,27 +76,40 @@ void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* P
 		P2HealthBarFlash->SetVisibility(ESlateVisibility::Hidden);
 
 	//Set damage health bar once a character's combo ends
-	if (Player2->CurrentState.ComboCount == 0)
+	//Set P1 drain point 
+	if (Player2->CurrentState.ComboCount == 0 || Player1->CurrentState.Health == 0)
 	{
-		if (P1HealthRedBar->Percent > P1CurrentHealthPercent)
-		{
-			P1HealthRedBar->SetPercent(P1HealthRedBar->Percent - .01f);
-		}
-		else if (P1HealthRedBar->Percent < P1CurrentHealthPercent)
-		{
-			P1HealthRedBar->SetPercent(P1CurrentHealthPercent);
-		}
+		P1DrainPoint = P1CurrentHealthPercent;
 	}
-	if (Player1->CurrentState.ComboCount == 0)
+	if (P1HealthRedBar->Percent > P1DrainPoint)
 	{
-		if (P2HealthRedBar->Percent > P2CurrentHealthPercent)
-		{
-			P2HealthRedBar->SetPercent(P2HealthRedBar->Percent - .01f);
-		}
-		else if (P2HealthRedBar->Percent < P2CurrentHealthPercent)
-		{
-			P2HealthRedBar->SetPercent(P2CurrentHealthPercent);
-		}
+		P1HealthRedBar->SetPercent(P1HealthRedBar->Percent - .01f);
+	}
+	else if (P1HealthRedBar->Percent < P1DrainPoint)
+	{
+		P1HealthRedBar->SetPercent(P1DrainPoint);
+	}
+	if (P1HealthRedBar->Percent < P1CurrentHealthPercent)
+	{
+		P1HealthRedBar->SetPercent(P1CurrentHealthPercent);
+	}
+
+	//Set P2 drain point
+	if (Player1->CurrentState.ComboCount == 0 || Player2->CurrentState.Health == 0)
+	{
+		P2DrainPoint = P2CurrentHealthPercent;
+	}
+	if (P2HealthRedBar->Percent > P2DrainPoint)
+	{
+		P2HealthRedBar->SetPercent(P2HealthRedBar->Percent - .01f);
+	}
+	else if (P2HealthRedBar->Percent < P2DrainPoint)
+	{
+		P2HealthRedBar->SetPercent(P2DrainPoint);
+	}
+	if (P2HealthRedBar->Percent < P2CurrentHealthPercent)
+	{
+		P2HealthRedBar->SetPercent(P2CurrentHealthPercent);
 	}
 
 	//Set combo text
@@ -174,20 +187,20 @@ void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* P
 	{
 		if (Player2->CurrentState.HitStun > 10)
 		{
-			P1CanvasSlot->SetPosition(FVector2D(position.X, -130.0f));
-			P1CanvasSlot->SetSize(FVector2D(size.X, 130.0f));
+			P1CanvasSlot->SetPosition(FVector2D(position.X, -225.0f));
+			P1CanvasSlot->SetSize(FVector2D(size.X, 150.0f));
 		}
 		else if (size.Y > 0)
 		{
-			P1CanvasSlot->SetPosition(FVector2D(position.X, Player2->CurrentState.HitStun * -13.0f));
-			P1CanvasSlot->SetSize(FVector2D(size.X, Player2->CurrentState.HitStun * 13.0f));
+			P1CanvasSlot->SetPosition(FVector2D(position.X, (Player2->CurrentState.HitStun * -15.0f) - 75.0f));
+			P1CanvasSlot->SetSize(FVector2D(size.X, Player2->CurrentState.HitStun * 15.0f));
 		}
 	}
 	//Still drain text if hitstun instantly drops to 0 (To prevent it from instantly disappearing)
 	else if (size.Y > 0)
 	{
-		P1CanvasSlot->SetPosition(FVector2D(position.X, position.Y + 13.0f));
-		P1CanvasSlot->SetSize(FVector2D(size.X, size.Y - 13.0f));
+		P1CanvasSlot->SetPosition(FVector2D(position.X, position.Y + 15.0f));
+		P1CanvasSlot->SetSize(FVector2D(size.X, size.Y - 15.0f));
 	}
 
 	//Set Player2 combo timer
@@ -197,20 +210,20 @@ void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* P
 	{
 		if (Player1->CurrentState.HitStun > 10)
 		{
-			P2CanvasSlot->SetPosition(FVector2D(position.X, -130.0f));
-			P2CanvasSlot->SetSize(FVector2D(size.X, 130.0f));
+			P2CanvasSlot->SetPosition(FVector2D(position.X, -225.0f));
+			P2CanvasSlot->SetSize(FVector2D(size.X, 150.0f));
 		}
 		else if (size.Y > 0)
 		{
-			P2CanvasSlot->SetPosition(FVector2D(position.X, Player1->CurrentState.HitStun * -13.0f));
-			P2CanvasSlot->SetSize(FVector2D(size.X, Player1->CurrentState.HitStun * 13.0f));
+			P2CanvasSlot->SetPosition(FVector2D(position.X, (Player1->CurrentState.HitStun * -15.0f) - 75.0f));
+			P2CanvasSlot->SetSize(FVector2D(size.X, Player1->CurrentState.HitStun * 15.0f));
 		}
 	}
 	//Still drain text if hitstun instantly drops to 0 (To prevent it from instantly disappearing)
 	else if (size.Y > 0)
 	{
-		P2CanvasSlot->SetPosition(FVector2D(position.X, position.Y + 13.0f));
-		P2CanvasSlot->SetSize(FVector2D(size.X, size.Y - 13.0f));
+		P2CanvasSlot->SetPosition(FVector2D(position.X, position.Y + 15.0f));
+		P2CanvasSlot->SetSize(FVector2D(size.X, size.Y - 15.0f));
 	}
 
 	//Set counter hit display

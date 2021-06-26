@@ -75,6 +75,7 @@ void ARoundManager::BeginPlay()
 	gameTime = 60;
 	CurrentState.RoundTimer = 99;
 	//Change any values here based on player settings (ex: max rounds or round time)
+	CurrentState.MaxRounds = 3;
 	RoundStart(); //Temporary, remove this when there's a round start animation
 }
 
@@ -466,7 +467,11 @@ void ARoundManager::DetermineWinMethod()
 		{
 			CurrentState.P2Wins++;
 		}
-		ActivateBlackScreen();
+		//Reset round if match is not won by either player
+		if (CurrentState.P1Wins != CurrentState.MaxRounds && CurrentState.P2Wins != CurrentState.MaxRounds)
+		{
+			ActivateBlackScreen();
+		}
 	}
 	else if ((Player1Base->CurrentState.Health == Player1Base->MaxHealth && Player2Base->CurrentState.Health <= 0) || 
 		(Player2Base->CurrentState.Health == Player2Base->MaxHealth && Player1Base->CurrentState.Health <= 0))
@@ -482,7 +487,11 @@ void ARoundManager::DetermineWinMethod()
 		{
 			CurrentState.P2Wins++;
 		}
-		ActivateBlackScreen();
+		//Reset round if match is not won by either player
+		if (CurrentState.P1Wins != CurrentState.MaxRounds && CurrentState.P2Wins != CurrentState.MaxRounds)
+		{
+			ActivateBlackScreen();
+		}
 	}
 	else if ((Player1Base->CurrentState.Health > 0 && Player2Base->CurrentState.Health <= 0) || (Player2Base->CurrentState.Health > 0 && Player1Base->CurrentState.Health <= 0))
 	{
@@ -497,13 +506,21 @@ void ARoundManager::DetermineWinMethod()
 		{
 			CurrentState.P2Wins++;
 		}
-		ActivateBlackScreen();
+		//Reset round if match is not won by either player
+		if (CurrentState.P1Wins != CurrentState.MaxRounds && CurrentState.P2Wins != CurrentState.MaxRounds)
+		{
+			ActivateBlackScreen();
+		}
 	}
 	else if (Player1Base->CurrentState.Health <= 0 && Player2Base->CurrentState.Health <= 0)
 	{
 		RoundStop();
 		//Play Double KO Animation
-		ActivateBlackScreen();
+				//Reset round if match is not won by either player
+		if (CurrentState.P1Wins != CurrentState.MaxRounds && CurrentState.P2Wins != CurrentState.MaxRounds)
+		{
+			ActivateBlackScreen();
+		}
 	}
 }
 
