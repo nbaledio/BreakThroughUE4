@@ -379,13 +379,6 @@ void ARoundManager::UpdateTimer()
 		P2Particles->SetRelativeLocation(FVector(20, FMath::Lerp(-120, -780, (float)(Player2Base->CurrentState.Health - 10) / (float)Player2Base->MaxHealth), 440));
 		P2Particles->Activate(true);
 	}
-
-	//Check for round reset notification
-	if (bRoundReset)
-	{
-		bRoundReset = false;
-		ResetPositions();
-	}
 }
 
 void ARoundManager::DrawScreen()
@@ -479,6 +472,8 @@ void ARoundManager::ResetPositions()
 	Player1Base->CurrentState.Health = Player1Base->MaxHealth;
 	Player2Base->CurrentState.Position = FVector2D(80.0f, 0.0f);
 	Player2Base->CurrentState.Health = Player2Base->MaxHealth;
+	CurrentState.P1Health = Player1Base->CurrentState.Health;
+	CurrentState.P2Health = Player2Base->CurrentState.Health;
 }
 
 void ARoundManager::RoundStart()
