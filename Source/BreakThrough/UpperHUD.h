@@ -85,5 +85,5 @@ public:
 
 	//Functions
 	void SetCharacterNames(FString P1Character, FString P2Character);
-	void UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* Player1, ABTCharacterBase* Player2);
+	void UpdateUpperHUD(uint8 frameCount, uint8 time, uint8 P1ComboCountPlayTime, uint8 P2ComboCountPlayTime, ABTCharacterBase* Player1, ABTCharacterBase* Player2);
 };

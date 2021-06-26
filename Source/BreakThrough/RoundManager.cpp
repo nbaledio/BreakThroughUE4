@@ -247,6 +247,9 @@ void ARoundManager::UpdateTimer()
 		CurrentState.RoundTimer--;
 	}
 
+	//Set animation for combo timer
+	UpdateComboTimerAnimation();
+
 	//Check if a win condition is met
 	if (CurrentState.bIsGameActive)
 	{
@@ -329,13 +332,13 @@ void ARoundManager::UpdateTimer()
 void ARoundManager::DrawScreen()
 {
 	//Draw HUD updates
-	UpperHUD->UpdateUpperHUD(CurrentState.FrameCount, CurrentState.RoundTimer, Player1Base, Player2Base);
+	UpperHUD->UpdateUpperHUD(CurrentState.FrameCount, CurrentState.RoundTimer, CurrentState.P1ComboCountAnimationState.FramePlayTime, CurrentState.P2ComboCountAnimationState.FramePlayTime, Player1Base, Player2Base);
 	LowerHUD->UpdateLowerHUD(Player1Base, Player2Base);
 
 	//Play fade in/out if round is currently transitioning
 	if (CurrentState.bResetRound) 
 	{
-		LowerHUD->PlayBlackScreenFade(BlackScreenState.FramePlayTime, BlackScreenState.bReverse);
+		LowerHUD->PlayBlackScreenFade(CurrentState.BlackScreenState.FramePlayTime, CurrentState.BlackScreenState.bReverse);
 	}
 
 	if (CurrentState.ResolveStates[3].AnimFrameIndex < 11)
@@ -565,24 +568,24 @@ void ARoundManager::UpdateResolveBar(uint8 index)
 void ARoundManager::UpdateBlackScreen() 
 {
 	//Increment black screen animation
-	if (BlackScreenState.FramePlayTime < 180)
+	if (CurrentState.BlackScreenState.FramePlayTime < 180)
 	{
-		BlackScreenState.FramePlayTime++;
+		CurrentState.BlackScreenState.FramePlayTime++;
 	}
 
 	//Reset positions on fade in finish
-	if (BlackScreenState.FramePlayTime == 180 && !BlackScreenState.bReverse)
+	if (CurrentState.BlackScreenState.FramePlayTime == 180 && !CurrentState.BlackScreenState.bReverse)
 	{
 		ResetPositions();
-		BlackScreenState.bReverse = true;
-		BlackScreenState.FramePlayTime = 0;
+		CurrentState.BlackScreenState.bReverse = true;
+		CurrentState.BlackScreenState.FramePlayTime = 0;
 	}
 	//Turn off animation on fade out finished
-	else if (BlackScreenState.FramePlayTime == 180 && BlackScreenState.bReverse)
+	else if (CurrentState.BlackScreenState.FramePlayTime == 180 && CurrentState.BlackScreenState.bReverse)
 	{
 		CurrentState.bResetRound = false;
-		BlackScreenState.bReverse = false;
-		BlackScreenState.FramePlayTime = 0;
+		CurrentState.BlackScreenState.bReverse = false;
+		CurrentState.BlackScreenState.FramePlayTime = 0;
 		RoundStart();
 	}
 }
@@ -590,6 +593,33 @@ void ARoundManager::UpdateBlackScreen()
 void ARoundManager::ActivateBlackScreen() 
 {
 	CurrentState.bResetRound = true;
-	BlackScreenState.FramePlayTime = 0;
+	CurrentState.BlackScreenState.FramePlayTime = 0;
+}
+
+void ARoundManager::UpdateComboTimerAnimation() 
+{
+	if (Player1Base->CurrentState.ComboCount > 1) 
+	{
+		CurrentState.P1ComboCountAnimationState.FramePlayTime = 0;
+	}
+	else if (Player1Base->CurrentState.ComboCount == 0)
+	{
+		if (CurrentState.P1ComboCountAnimationState.FramePlayTime < 45)
+		{
+			CurrentState.P1ComboCountAnimationState.FramePlayTime++;
+		}
+	}
+
+	if (Player2Base->CurrentState.ComboCount > 1)
+	{
+		CurrentState.P2ComboCountAnimationState.FramePlayTime = 0;
+	}
+	else if (Player2Base->CurrentState.ComboCount == 0)
+	{
+		if (CurrentState.P2ComboCountAnimationState.FramePlayTime < 45)
+		{
+			CurrentState.P2ComboCountAnimationState.FramePlayTime++;
+		}
+	}
 }
 

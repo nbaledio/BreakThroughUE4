@@ -40,6 +40,14 @@ struct FBlackScreenState
 };
 
 USTRUCT(BlueprintType)
+struct FComboCountAnimationState
+{
+	GENERATED_BODY()
+
+	uint8 FramePlayTime;
+};
+
+USTRUCT(BlueprintType)
 struct FRoundManagerState
 {
 	GENERATED_BODY()
@@ -61,6 +69,10 @@ struct FRoundManagerState
 	bool bLockInputs;
 	bool bSuddenDeath;
 	bool bResetRound;
+
+	FBlackScreenState BlackScreenState;
+	FComboCountAnimationState P1ComboCountAnimationState;
+	FComboCountAnimationState P2ComboCountAnimationState;
 
 	TArray<FResolveBarState> ResolveStates;
 };
@@ -84,7 +96,6 @@ public:
 		UWidgetComponent* HUDWidgetComponent;
 
 	FRoundManagerState CurrentState;
-	FBlackScreenState BlackScreenState;
 
 	//References for character variables
 	ABTCharacterBase* Player1Base;
@@ -150,4 +161,5 @@ private:
 	void UpdateResolveBar(uint8 index);
 	void UpdateBlackScreen();
 	void ActivateBlackScreen();
+	void UpdateComboTimerAnimation();
 };

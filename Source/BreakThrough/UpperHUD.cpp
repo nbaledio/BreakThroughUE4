@@ -9,7 +9,7 @@ void UUpperHUD::SetCharacterNames(FString P1Character, FString P2Character)
 	//Read character info and set name here
 }
 
-void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* Player1, ABTCharacterBase* Player2)
+void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, uint8 P1ComboCountPlayTime, uint8 P2ComboCountPlayTime, ABTCharacterBase* Player1, ABTCharacterBase* Player2)
 {
 	//Get canvas slots
 	P1CanvasSlot = Cast<UCanvasPanelSlot>(P1ComboMask->Slot);
@@ -140,10 +140,12 @@ void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* P
 	{
 		P1ComboCountHitsText->SetVisibility(ESlateVisibility::Hidden);
 		P1ComboCountNumber->SetText(FText::FromString(("")));
-		P1ComboBackgroundTrue->SetVisibility(ESlateVisibility::Hidden);
-		P1ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Hidden);
-		P1ComboCountNumberBackgroundTrue->SetText(FText::FromString(("")));
-		P1ComboCountNumberBackgroundNotTrue->SetText(FText::FromString(("")));
+
+		if (P1ComboCountPlayTime == 45) 
+		{
+			P1ComboBackgroundTrue->SetVisibility(ESlateVisibility::Hidden);
+			P1ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Hidden);
+		}
 	}
 
 	//Set Player2 Combo Text
@@ -173,10 +175,12 @@ void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* P
 	{
 		P2ComboCountHitsText->SetVisibility(ESlateVisibility::Hidden);
 		P2ComboCountNumber->SetText(FText::FromString(("")));
-		P2ComboBackgroundTrue->SetVisibility(ESlateVisibility::Hidden);
-		P2ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Hidden);
-		P2ComboCountNumberBackgroundTrue->SetText(FText::FromString(("")));
-		P2ComboCountNumberBackgroundNotTrue->SetText(FText::FromString(("")));
+
+		if (P2ComboCountPlayTime == 45)
+		{
+			P2ComboBackgroundTrue->SetVisibility(ESlateVisibility::Hidden);
+			P2ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Hidden);
+		}
 	}
 
 	//Set combo timers
