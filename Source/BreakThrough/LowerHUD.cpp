@@ -39,4 +39,20 @@ void ULowerHUD::UpdateLowerHUD(ABTCharacterBase* Player1, ABTCharacterBase* Play
 		P2DurabilityBar->SetFillColorAndOpacity(FLinearColor(255.0f / 255.0f, 0.0f / 255.0f, 85.0f / 255.0f, 255.0f / 255.0f));
 	}
 
-};
+}
+
+void ULowerHUD::PlayBlackScreenFade(uint8 FramePlayTime, bool bReverse) 
+{
+	//Play fade in
+	if (FramePlayTime >= 120 && !bReverse)
+	{
+		BlackScreen->SetColorAndOpacity(FLinearColor(0.0f, 0.0f, 0.0f, ((static_cast<float>(FramePlayTime) - 120.0f) / 60.0f)));
+	}
+	//Play fade out
+	else if (FramePlayTime >= 120 && bReverse)
+	{
+		BlackScreen->SetColorAndOpacity(FLinearColor(0.0f, 0.0f, 0.0f, ((180.0f - static_cast<float>(FramePlayTime)) / 60.0f)));
+	}
+}
+
+
