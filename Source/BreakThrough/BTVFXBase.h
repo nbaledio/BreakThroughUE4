@@ -16,6 +16,7 @@ enum Interactions
 	Clash,
 	Deflect,
 	AirDash,
+	KO,
 };
 
 class ABTCharacterBase;

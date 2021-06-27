@@ -19,6 +19,8 @@ public:
 	// Sets default values for this actor's properties
 	ABTShatterVFX();
 
+	virtual void BeginPlay() override;
+
 	virtual void Activate(FVector2D Location, bool bFacingRight, int32 HitInfo = 0, uint8 InteractType = 0) override;
 
 	virtual void Update() override;
@@ -27,12 +29,18 @@ public:
 
 	virtual void CreateMaterials() override;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UParticleSystemComponent* GlassParticlesLeft;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UParticleSystemComponent* GlassParticlesRight;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UParticleSystemComponent* GlassParticlesKO;
+
 protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UStaticMeshComponent* Glass;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		UParticleSystemComponent* GlassParticles;
+	
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
 		UMaterialInterface* GlassMaterial;

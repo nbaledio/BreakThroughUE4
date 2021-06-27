@@ -35,6 +35,7 @@ struct FRoundManagerState
 	GENERATED_BODY()
 
 	FVector Position;
+	FRotator Rotation;
 	FVector CameraPosition;
 	FRotator CameraRotation;
 
@@ -48,6 +49,8 @@ struct FRoundManagerState
 	int32 P2Health;
 	uint8 MaxRounds;
 	uint8 UniversalHitStop;
+
+	float KOAlpha = 0;
 
 	bool bIsGameActive;
 	bool bLockInputs;
@@ -96,6 +99,8 @@ public:
 		float YPosMin = 2100.0f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
 		float XPosBound;
+
+	bool bCinematicCamera;
 
 	//HUD Widgets
 	UUpperHUD* UpperHUD;
