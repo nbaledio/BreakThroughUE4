@@ -40,6 +40,14 @@ enum ACHValues  //keeps track of index for Achealis' unique variables
 	WCDuration,
 };
 
+enum ACHFX  //keeps track of index for Achealis' unique visual effects
+{
+	LevelHellWake = 3,
+	HeavenHellSlash,
+	//WCActive,
+	//WCDuration,
+};
+
 UCLASS()
 class BREAKTHROUGH_API ABTCharacterACH : public ABTCharacterBase
 {

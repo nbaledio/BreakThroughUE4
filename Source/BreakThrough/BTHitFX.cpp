@@ -178,7 +178,7 @@ void ABTHitFX::DrawEffect()
 		{
 			if (Owner->RoundManager)
 			{
-				FRotator EffectRotation = FRotator(Owner->RoundManager->CurrentState.CameraRotation);
+				FRotator EffectRotation = Owner->RoundManager->MainCamera->GetComponentRotation();
 				EffectRotation.Yaw += 90;
 				SetActorRotation(EffectRotation);
 			}

@@ -474,6 +474,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
 		TSubclassOf<class ABTVFXBase> GuardFXBlueprint;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
+		TSubclassOf<class ABTVFXBase> ShatterFXBlueprint;
+
 	ABTCharacterBase* Opponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "State")
