@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/ProgressBar.h"
+#include "Components/Image.h"
 #include "BTCharacterBase.h"
 #include "LowerHUD.generated.h"
 
@@ -39,13 +40,11 @@ public:
 	UPROPERTY(meta = (BindWidget))
 		class UImage* P2ResolveBar4;
 
-	//Widget Animations
-	UPROPERTY(meta = (BindWidgetAnim))
-		UWidgetAnimation* BlackScreenFadeIn;
-	UPROPERTY(meta = (BindWidgetAnim))
-		UWidgetAnimation* BlackScreenFadeOut;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* BlackScreen;
 
 	//Functions
 	void UpdateLowerHUD(ABTCharacterBase* Player1, ABTCharacterBase* Player2);
+	void PlayBlackScreenFade(uint8 FramePlayTime, bool bReverse);
 };
 

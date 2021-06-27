@@ -30,6 +30,25 @@ struct FResolveBarState
 };
 
 USTRUCT(BlueprintType)
+struct FBlackScreenState
+{
+	GENERATED_BODY()
+
+	bool bIsActive;
+	bool bReverse;
+
+	uint8 FramePlayTime;
+};
+
+USTRUCT(BlueprintType)
+struct FComboCountAnimationState
+{
+	GENERATED_BODY()
+
+	uint8 FramePlayTime;
+};
+
+USTRUCT(BlueprintType)
 struct FRoundManagerState
 {
 	GENERATED_BODY()
@@ -55,6 +74,11 @@ struct FRoundManagerState
 	bool bIsGameActive;
 	bool bLockInputs;
 	bool bSuddenDeath;
+	bool bResetRound;
+
+	FBlackScreenState BlackScreenState;
+	FComboCountAnimationState P1ComboCountAnimationState;
+	FComboCountAnimationState P2ComboCountAnimationState;
 
 	TArray<FResolveBarState> ResolveStates;
 };
@@ -132,9 +156,6 @@ private:
 	//Number of frames -> 1 in-game second
 	int32 gameTime;
 
-	bool bRoundReset;
-	bool bRoundStart;
-
 	//Store class of widget from constructor
 	TSubclassOf<class ULowerHUD> HUDWidgetClass;
 
@@ -150,8 +171,7 @@ private:
 	void DetermineWinMethod();
 	void ActivateResolveBar(uint8 index, bool bReverse);
 	void UpdateResolveBar(uint8 index);
-	UFUNCTION()
-		void NotifyRoundEnd();
-	UFUNCTION()
-		void NotifyRoundStart();
+	void UpdateBlackScreen();
+	void ActivateBlackScreen();
+	void UpdateComboTimerAnimation();
 };

@@ -2,13 +2,14 @@
 
 #include "UpperHUD.h"
 #include "Slate.h"
+#include "SlateCore/Public/Fonts/SlateFontInfo.h"
 
 void UUpperHUD::SetCharacterNames(FString P1Character, FString P2Character)
 {
 	//Read character info and set name here
 }
 
-void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* Player1, ABTCharacterBase* Player2)
+void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, uint8 P1ComboCountPlayTime, uint8 P2ComboCountPlayTime, ABTCharacterBase* Player1, ABTCharacterBase* Player2)
 {
 	//Get canvas slots
 	P1CanvasSlot = Cast<UCanvasPanelSlot>(P1ComboMask->Slot);
@@ -75,27 +76,40 @@ void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* P
 		P2HealthBarFlash->SetVisibility(ESlateVisibility::Hidden);
 
 	//Set damage health bar once a character's combo ends
-	if (Player2->CurrentState.ComboCount == 0)
+	//Set P1 drain point 
+	if (Player2->CurrentState.ComboCount == 0 || Player1->CurrentState.Health == 0)
 	{
-		if (P1HealthRedBar->Percent > P1CurrentHealthPercent)
-		{
-			P1HealthRedBar->SetPercent(P1HealthRedBar->Percent - .015f);
-		}
-		else if (P1HealthRedBar->Percent < P1CurrentHealthPercent)
-		{
-			P1HealthRedBar->SetPercent(P1CurrentHealthPercent);
-		}
+		P1DrainPoint = P1CurrentHealthPercent;
 	}
-	if (Player1->CurrentState.ComboCount == 0)
+	if (P1HealthRedBar->Percent > P1DrainPoint)
 	{
-		if (P2HealthRedBar->Percent > P2CurrentHealthPercent)
-		{
-			P2HealthRedBar->SetPercent(P2HealthRedBar->Percent - .015f);
-		}
-		else if (P2HealthRedBar->Percent < P2CurrentHealthPercent)
-		{
-			P2HealthRedBar->SetPercent(P2CurrentHealthPercent);
-		}
+		P1HealthRedBar->SetPercent(P1HealthRedBar->Percent - .01f);
+	}
+	else if (P1HealthRedBar->Percent < P1DrainPoint)
+	{
+		P1HealthRedBar->SetPercent(P1DrainPoint);
+	}
+	if (P1HealthRedBar->Percent < P1CurrentHealthPercent)
+	{
+		P1HealthRedBar->SetPercent(P1CurrentHealthPercent);
+	}
+
+	//Set P2 drain point
+	if (Player1->CurrentState.ComboCount == 0 || Player2->CurrentState.Health == 0)
+	{
+		P2DrainPoint = P2CurrentHealthPercent;
+	}
+	if (P2HealthRedBar->Percent > P2DrainPoint)
+	{
+		P2HealthRedBar->SetPercent(P2HealthRedBar->Percent - .01f);
+	}
+	else if (P2HealthRedBar->Percent < P2DrainPoint)
+	{
+		P2HealthRedBar->SetPercent(P2DrainPoint);
+	}
+	if (P2HealthRedBar->Percent < P2CurrentHealthPercent)
+	{
+		P2HealthRedBar->SetPercent(P2CurrentHealthPercent);
 	}
 
 	//Set combo text
@@ -103,46 +117,70 @@ void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* P
 	if (Player1->CurrentState.ComboCount > 1)
 	{
 		P1ComboCountNumber->SetText(FText::AsNumber(Player1->CurrentState.ComboCount));
+		P1ComboCountNumberBackgroundNotTrue->SetText(FText::AsNumber(Player1->CurrentState.ComboCount));
+		P1ComboCountNumberBackgroundTrue->SetText(FText::AsNumber(Player1->CurrentState.ComboCount));
 		P1ComboCountHitsText->SetVisibility(ESlateVisibility::Visible);
 		//Set true combo colors
 		if (Player1->CurrentState.bTrueCombo)
 		{
 			P1ComboCountNumber->SetColorAndOpacity(FSlateColor(FLinearColor(0.625f, 0.0f, 0.0f, 1.0f)));
 			P1ComboCountHitsText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)));
+			P1ComboBackgroundTrue->SetVisibility(ESlateVisibility::Visible);
+			P1ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Hidden);
 		}
 		else
 		{
 			P1ComboCountNumber->SetColorAndOpacity(FSlateColor(FLinearColor(0.04f, 0.04f, 0.04f, 1.0f)));
 			P1ComboCountHitsText->SetColorAndOpacity(FSlateColor(FLinearColor(0.95f, 0.95f, 0.95f, 1.0f)));
+			P1ComboBackgroundTrue->SetVisibility(ESlateVisibility::Hidden);
+			P1ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Visible);
 		}
 	}
 	else if (Player1->CurrentState.ComboCount == 0)
 	{
 		P1ComboCountHitsText->SetVisibility(ESlateVisibility::Hidden);
 		P1ComboCountNumber->SetText(FText::FromString(("")));
+
+		if (P1ComboCountPlayTime == 45) 
+		{
+			P1ComboBackgroundTrue->SetVisibility(ESlateVisibility::Hidden);
+			P1ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Hidden);
+		}
 	}
 
 	//Set Player2 Combo Text
 	if (Player2->CurrentState.ComboCount > 1)
 	{
 		P2ComboCountNumber->SetText(FText::AsNumber(Player2->CurrentState.ComboCount));
+		P2ComboCountNumberBackgroundNotTrue->SetText(FText::AsNumber(Player2->CurrentState.ComboCount));
+		P2ComboCountNumberBackgroundTrue->SetText(FText::AsNumber(Player2->CurrentState.ComboCount));
 		P2ComboCountHitsText->SetVisibility(ESlateVisibility::Visible);
 		//Set true combo colors
 		if (Player2->CurrentState.bTrueCombo)
 		{
 			P2ComboCountNumber->SetColorAndOpacity(FSlateColor(FLinearColor(0.625f, 0.0f, 0.0f, 1.0f)));
 			P2ComboCountHitsText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)));
+			P2ComboBackgroundTrue->SetVisibility(ESlateVisibility::Visible);
+			P2ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Hidden);
 		}
 		else
 		{
 			P2ComboCountNumber->SetColorAndOpacity(FSlateColor(FLinearColor(0.04f, 0.04f, 0.04f, 1.0f)));
 			P2ComboCountHitsText->SetColorAndOpacity(FSlateColor(FLinearColor(0.95f, 0.95f, 0.95f, 1.0f)));
+			P2ComboBackgroundTrue->SetVisibility(ESlateVisibility::Hidden);
+			P2ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Visible);
 		}
 	}
 	else if (Player2->CurrentState.ComboCount == 0)
 	{
 		P2ComboCountHitsText->SetVisibility(ESlateVisibility::Hidden);
 		P2ComboCountNumber->SetText(FText::FromString(("")));
+
+		if (P2ComboCountPlayTime == 45)
+		{
+			P2ComboBackgroundTrue->SetVisibility(ESlateVisibility::Hidden);
+			P2ComboBackgroundNotTrue->SetVisibility(ESlateVisibility::Hidden);
+		}
 	}
 
 	//Set combo timers
@@ -153,20 +191,20 @@ void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* P
 	{
 		if (Player2->CurrentState.HitStun > 10)
 		{
-			P1CanvasSlot->SetPosition(FVector2D(position.X, -130.0f));
-			P1CanvasSlot->SetSize(FVector2D(size.X, 130.0f));
+			P1CanvasSlot->SetPosition(FVector2D(position.X, -225.0f));
+			P1CanvasSlot->SetSize(FVector2D(size.X, 150.0f));
 		}
 		else if (size.Y > 0)
 		{
-			P1CanvasSlot->SetPosition(FVector2D(position.X, Player2->CurrentState.HitStun * -13.0f));
-			P1CanvasSlot->SetSize(FVector2D(size.X, Player2->CurrentState.HitStun * 13.0f));
+			P1CanvasSlot->SetPosition(FVector2D(position.X, (Player2->CurrentState.HitStun * -15.0f) - 75.0f));
+			P1CanvasSlot->SetSize(FVector2D(size.X, Player2->CurrentState.HitStun * 15.0f));
 		}
 	}
 	//Still drain text if hitstun instantly drops to 0 (To prevent it from instantly disappearing)
 	else if (size.Y > 0)
 	{
-		P1CanvasSlot->SetPosition(FVector2D(position.X, position.Y + 13.0f));
-		P1CanvasSlot->SetSize(FVector2D(size.X, size.Y - 13.0f));
+		P1CanvasSlot->SetPosition(FVector2D(position.X, position.Y + 15.0f));
+		P1CanvasSlot->SetSize(FVector2D(size.X, size.Y - 15.0f));
 	}
 
 	//Set Player2 combo timer
@@ -176,20 +214,20 @@ void UUpperHUD::UpdateUpperHUD(uint8 frameCount, uint8 time, ABTCharacterBase* P
 	{
 		if (Player1->CurrentState.HitStun > 10)
 		{
-			P2CanvasSlot->SetPosition(FVector2D(position.X, -130.0f));
-			P2CanvasSlot->SetSize(FVector2D(size.X, 130.0f));
+			P2CanvasSlot->SetPosition(FVector2D(position.X, -225.0f));
+			P2CanvasSlot->SetSize(FVector2D(size.X, 150.0f));
 		}
 		else if (size.Y > 0)
 		{
-			P2CanvasSlot->SetPosition(FVector2D(position.X, Player1->CurrentState.HitStun * -13.0f));
-			P2CanvasSlot->SetSize(FVector2D(size.X, Player1->CurrentState.HitStun * 13.0f));
+			P2CanvasSlot->SetPosition(FVector2D(position.X, (Player1->CurrentState.HitStun * -15.0f) - 75.0f));
+			P2CanvasSlot->SetSize(FVector2D(size.X, Player1->CurrentState.HitStun * 15.0f));
 		}
 	}
 	//Still drain text if hitstun instantly drops to 0 (To prevent it from instantly disappearing)
 	else if (size.Y > 0)
 	{
-		P2CanvasSlot->SetPosition(FVector2D(position.X, position.Y + 13.0f));
-		P2CanvasSlot->SetSize(FVector2D(size.X, size.Y - 13.0f));
+		P2CanvasSlot->SetPosition(FVector2D(position.X, position.Y + 15.0f));
+		P2CanvasSlot->SetSize(FVector2D(size.X, size.Y - 15.0f));
 	}
 
 	//Set counter hit display
