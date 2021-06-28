@@ -1123,15 +1123,13 @@ bool ABTCharacterACH::SpecialAttacks()
 	{
 		if (!CurrentState.bIsAirborne)
 		{
-			if ((QCB() && (CurrentState.LPressed >= InputTime - 1  || CurrentState.MPressed >= InputTime - 1)) && !(CurrentState.MoveList & SpTowerLeap))
+			if ((CurrentState.QCB > 0 && ((CurrentState.LPressed > 0 && CurrentState.QCB <= CurrentState.LPressed) || CurrentState.MPressed >= 0 && CurrentState.QCB <= CurrentState.MPressed)) && !(CurrentState.MoveList & SpTowerLeap))
 			{
 				CurrentState.MoveList |= SpTowerLeap;
 
 				CurrentState.SpecialVariables[MTowerLeap] = (CurrentState.MPressed >= CurrentState.LPressed);
 
-				CurrentState.Dir2 = 0;
-				CurrentState.Dir1 = 0;
-				CurrentState.Dir4 = 0;
+				CurrentState.QCB = 0;
 				CurrentState.LPressed = 0;
 				CurrentState.MPressed = 0;
 				return EnterNewAnimation(TowerLeap);

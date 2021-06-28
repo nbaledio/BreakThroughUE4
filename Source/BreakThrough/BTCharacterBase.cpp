@@ -41,6 +41,8 @@ void ABTCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
 	CurrentState.Health = MaxHealth;
+	CurrentState.Resolve = 2;
+	CurrentState.Durability = 750;
 	CreateMaterials();
 	CreateVariables();
 	SpawnPBS();
@@ -323,11 +325,12 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 
 	if (CurrentState.HitStop == 0)
 	{
-		if (CurrentState.SlowMoTime % 2 == 0) //animation speed is halved and stun values decrease at half speed while in slow motion
+		if (CurrentState.SlowMoTime % 2 == 0) //animation speed is halved and stun values decrease at half speed while in slow motion or when shattered
 		{
 			if (CurrentState.HitStun > 0 && !IsCurrentAnimation(Sweep) && !IsCurrentAnimation(Tumble) && !IsCurrentAnimation(GroundBounce) && !IsCurrentAnimation(WallBounce))
 			{
-				CurrentState.HitStun--;
+				if (!CurrentState.bIsAirborne|| (CurrentState.ShatteredTime == 0 && CurrentState.bIsAirborne))
+					CurrentState.HitStun--;
 			}
 			if (CurrentState.BlockStun > 0)
 				CurrentState.BlockStun--;
@@ -337,8 +340,10 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 
 		if (CurrentState.PosePlayTime < CurrentState.CurrentAnimFrame.PlayDuration)
 		{
-			if ((CurrentState.SlowMoTime > 0 || (CurrentState.ShatteredTime > 0 && !CurrentState.bIsAirborne)) && !CurrentState.CurrentAnimFrame.bSuperFlash && !CurrentState.CurrentAnimFrame.bCinematic)
+			if ((CurrentState.SlowMoTime > 0) && !CurrentState.CurrentAnimFrame.bSuperFlash && !CurrentState.CurrentAnimFrame.bCinematic)
 				CurrentState.PosePlayTime += .5f;
+			else if ((CurrentState.ShatteredTime > 0 || CurrentState.Health == 0) && IsCurrentAnimation(Crumple))
+				CurrentState.PosePlayTime += .75f;
 			else
 				CurrentState.PosePlayTime++;
 		}
@@ -397,15 +402,15 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 		if (CurrentState.ShatteredTime > 120)
 		{
 			FVector CurrentPosition = BaseMesh->GetRelativeLocation();
-			CurrentPosition.X += CurrentState.KnockBack.X * .75;
-			CurrentPosition.Z += CurrentState.KnockBack.Y * .75;
+			CurrentPosition.X += CurrentState.KnockBack.X * .5;
+			CurrentPosition.Z += CurrentState.KnockBack.Y * .5;
 			BaseMesh->SetRelativeLocation(CurrentPosition);
 		}
 		else if (Opponent->CurrentState.ShatteredTime > 120)
 		{
 			FVector CurrentPosition = BaseMesh->GetRelativeLocation();
-			CurrentPosition.X += CurrentState.Velocity.X * .75;
-			CurrentPosition.Z += CurrentState.Velocity.Y * .75;
+			CurrentPosition.X += CurrentState.Velocity.X * .35;
+			CurrentPosition.Z += CurrentState.Velocity.Y * .35;
 			BaseMesh->SetRelativeLocation(CurrentPosition);
 		}
 		CurrentState.HitStop--;
@@ -1745,6 +1750,14 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 			}
 		}
 	}
+
+	//Check for motion commands
+	DP();
+	RDP();
+	HCF();
+	HCB();
+	QCF();
+	QCB();
 }
 
 void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button inputs based on the inputs read
@@ -1863,6 +1876,19 @@ void ABTCharacterBase::InputCountdown() //decrement input values
 		CurrentState.Dir9--;
 	if (CurrentState.AirJump > 0)
 		CurrentState.AirJump--;
+
+	if (CurrentState.DP > 0)
+		CurrentState.DP--;
+	if (CurrentState.RDP > 0)
+		CurrentState.RDP--;
+	if (CurrentState.HCF > 0)
+		CurrentState.HCF--;
+	if (CurrentState.HCB > 0)
+		CurrentState.HCB--;
+	if (CurrentState.QCF > 0)
+		CurrentState.QCF--;
+	if (CurrentState.QCB > 0)
+		CurrentState.QCB--;
 
 	if (CurrentState.DoubleDir2 > 0)
 		CurrentState.DoubleDir2--;
@@ -2391,7 +2417,7 @@ bool ABTCharacterBase::ExitTimeTransitions()
 		if (CurrentState.Resolve == 0)
 		{
 			CurrentState.Resolve = 1;
-			CurrentState.Durability = 80;
+			CurrentState.Durability = 800;
 		}
 		return EnterNewAnimation(WakeUpFaceDown);
 	}
@@ -2401,7 +2427,7 @@ bool ABTCharacterBase::ExitTimeTransitions()
 		if (CurrentState.Resolve == 0)
 		{
 			CurrentState.Resolve = 1;
-			CurrentState.Durability = 80;
+			CurrentState.Durability = 800;
 		}
 		return EnterNewAnimation(WakeUpFaceUp);
 	}
@@ -2512,39 +2538,60 @@ void ABTCharacterBase::AnimationEvents()
 	}
 }
 
-bool ABTCharacterBase::QCF()
+void ABTCharacterBase::QCF()
 {
-	return (CurrentState.Dir2 > 0 && CurrentState.Dir3 > 0 && CurrentState.Dir6 > 0 && CurrentState.Dir6 > CurrentState.Dir3 && CurrentState.Dir3 > CurrentState.Dir2);
+	if (CurrentState.Dir2 > 0 && CurrentState.Dir3 > 0 && CurrentState.Dir6 > 0 && CurrentState.Dir6 > CurrentState.Dir3 && CurrentState.Dir3 > CurrentState.Dir2)
+	{
+		CurrentState.Dir2 = 0;
+		CurrentState.Dir3 = 0;
+		CurrentState.Dir6 = 0;
+		CurrentState.QCF = InputTime + CurrentState.HitStop;
+	}
 }
 
-bool ABTCharacterBase::QCB()
+void ABTCharacterBase::QCB()
 {
-	return (CurrentState.Dir2 > 0 && CurrentState.Dir1 > 0 && CurrentState.Dir4 > 0 && CurrentState.Dir4 > CurrentState.Dir1 && CurrentState.Dir1 > CurrentState.Dir2);
+	if (CurrentState.Dir2 > 0 && CurrentState.Dir1 > 0 && CurrentState.Dir4 > 0 && CurrentState.Dir4 > CurrentState.Dir1 && CurrentState.Dir1 > CurrentState.Dir2)
+	{
+		CurrentState.Dir2 = 0;
+		CurrentState.Dir1 = 0;
+		CurrentState.Dir4 = 0;
+		CurrentState.QCB = InputTime + CurrentState.HitStop;
+	}
 }
 
-bool ABTCharacterBase::HCF()
+void ABTCharacterBase::HCF()
 {
-	return (CurrentState.Dir4 > 0 && CurrentState.Dir2 > 0 && CurrentState.Dir6 > 0 && CurrentState.Dir6 > CurrentState.Dir2 && CurrentState.Dir2 > CurrentState.Dir4);
+	if (CurrentState.Dir4 > 0 && CurrentState.Dir1 > 0 && CurrentState.Dir2 > 0 && CurrentState.Dir3 > 0 && CurrentState.Dir6 > 0 &&
+		CurrentState.Dir6 > CurrentState.Dir3 && CurrentState.Dir3 > CurrentState.Dir2 && CurrentState.Dir2 > CurrentState.Dir1 && CurrentState.Dir1 > CurrentState.Dir4)
+	{
+		CurrentState.HCF = InputTime + CurrentState.HitStop;
+	}
 }
 
-bool ABTCharacterBase::HCB()
+void ABTCharacterBase::HCB()
 {
-	return (CurrentState.Dir4 > 0 && CurrentState.Dir2 > 0 && CurrentState.Dir6 > 0 && CurrentState.Dir6 < CurrentState.Dir2 && CurrentState.Dir2 < CurrentState.Dir4);
+	if (CurrentState.Dir4 > 0 && CurrentState.Dir1 > 0 && CurrentState.Dir2 > 0 && CurrentState.Dir3 > 0 && CurrentState.Dir6 > 0 &&
+		CurrentState.Dir6 < CurrentState.Dir3 && CurrentState.Dir3 < CurrentState.Dir2 && CurrentState.Dir2 < CurrentState.Dir1 && CurrentState.Dir1 < CurrentState.Dir4)
+	{
+		CurrentState.HCB = InputTime + CurrentState.HitStop;
+	}
 }
 
-bool ABTCharacterBase::DP()
+void ABTCharacterBase::DP()
 {
-	return (CurrentState.Dir6 > 0 && CurrentState.Dir2 > 0 && CurrentState.Dir3 > 0 && CurrentState.Dir3 > CurrentState.Dir2 && CurrentState.Dir2 > CurrentState.Dir6);
+	if (CurrentState.Dir6 > 0 && CurrentState.Dir2 > 0 && CurrentState.Dir3 > 0 && CurrentState.Dir3 > CurrentState.Dir2 && CurrentState.Dir2 > CurrentState.Dir6)
+	{
+		CurrentState.DP = InputTime + CurrentState.HitStop;
+	}
 }
 
-bool ABTCharacterBase::RDP()
+void ABTCharacterBase::RDP()
 {
-	return (CurrentState.Dir4 > 0 && CurrentState.Dir2 > 0 && CurrentState.Dir1 > 0 && CurrentState.Dir1 > CurrentState.Dir2 && CurrentState.Dir2 > CurrentState.Dir4);
-}
-
-bool ABTCharacterBase::FC()
-{
-	return (CurrentState.Dir4 > 0 && CurrentState.Dir2 > 0 && CurrentState.Dir6 > 0 && CurrentState.Dir8) && ((CurrentState.Dir8 > CurrentState.Dir4 && CurrentState.Dir4 > CurrentState.Dir2 && CurrentState.Dir2 > CurrentState.Dir6) || (CurrentState.Dir8 > CurrentState.Dir6 && CurrentState.Dir6 > CurrentState.Dir2 && CurrentState.Dir2 > CurrentState.Dir4));
+	if (CurrentState.Dir4 > 0 && CurrentState.Dir2 > 0 && CurrentState.Dir1 > 0 && CurrentState.Dir1 > CurrentState.Dir2 && CurrentState.Dir2 > CurrentState.Dir4)
+	{
+		CurrentState.RDP = InputTime + CurrentState.HitStop;
+	}
 }
 
 void ABTCharacterBase::RefreshMovelist()
@@ -2976,7 +3023,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			IsCurrentAnimation(AirResoluteCounter) || IsCurrentAnimation(ResoluteCounter)) && Hitbox.AttackProperties & Shatter)//(Hitbox.AttackHeight < Throw)
 		{
 			HitStunToApply *= 1.2f;
-			HitStopToApply = 30;
+			HitStopToApply = 36;
 
 			//Opponent's penalty for getting shattered
 			Opponent->CurrentState.ShatteredTime = 120 + HitStopToApply;
