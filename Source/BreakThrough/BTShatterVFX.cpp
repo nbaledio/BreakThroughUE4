@@ -75,7 +75,7 @@ void ABTShatterVFX::Update()
 			if (CurrentState.AnimFrameIndex > 0)
 				CurrentState.HitStop = Owner->CurrentState.HitStop;
 
-			if ((CurrentState.AnimFrameIndex == 0 && CurrentState.FramePlayTime > 18) || (CurrentState.AnimFrameIndex == 1 && CurrentState.FramePlayTime > 10) || (CurrentState.AnimFrameIndex == 2 && CurrentState.FramePlayTime > 20))
+			if ((CurrentState.AnimFrameIndex == 0 && CurrentState.FramePlayTime > 20) || (CurrentState.AnimFrameIndex == 1 && CurrentState.FramePlayTime > 10) || (CurrentState.AnimFrameIndex == 2 && CurrentState.FramePlayTime > 20))
 			{
 				CurrentState.AnimFrameIndex++;
 				CurrentState.FramePlayTime = 0;
@@ -126,7 +126,7 @@ void ABTShatterVFX::DrawEffect()
 		}
 
 		if (CurrentState.AnimFrameIndex == 0)
-			DynamicGlassMaterial->SetScalarParameterValue(FName("Alpha"), FMath::Lerp(0.f, 1.f, ((float)CurrentState.FramePlayTime) / 18));
+			DynamicGlassMaterial->SetScalarParameterValue(FName("Alpha"), FMath::Lerp(0.f, 1.f, ((float)CurrentState.FramePlayTime) / 20));
 		else if (CurrentState.AnimFrameIndex == 2)
 			DynamicGlassMaterial->SetScalarParameterValue(FName("Alpha"), FMath::Lerp(0.f, 1.f, ((float)CurrentState.FramePlayTime) / 20));
 		else

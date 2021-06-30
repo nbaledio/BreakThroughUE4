@@ -50,6 +50,13 @@ void ARoundManager::BeginPlay()
 	P1Particles->Deactivate();
 	P2Particles->Deactivate();
 
+	if (ShatterTextBlueprint && GetWorld())
+	{
+		FActorSpawnParameters SpawnParams;
+		ShatterText = GetWorld()->SpawnActor<ABTVFXBase>(ShatterTextBlueprint, GetActorLocation(), FRotator(0), SpawnParams);
+		CurrentState.ShatterTextState = ShatterText->CurrentState;
+	}
+
 	if (ResolveBar != nullptr)
 	{
 		for (uint8 i = 0; i < 8; i++)
@@ -149,13 +156,21 @@ void ARoundManager::SceneCaptureList()
 
 		CurrentState.P2Health = Player2Base->CurrentState.Health;
 	}
+
+	if (ShatterText)
+		SceneCapture->ShowOnlyActorComponents(ShatterText, true);
 	//add stage actor to list as well
 }
 
 void ARoundManager::UpdateCameraPosition() 
 {
 	if (XPosBound == 0 && Player1Base)
+	{
+		ShatterText->AssignOwner(Player1Base);
 		XPosBound = Player1Base->StageBounds - 200;
+	}
+
+	ShatterText->Update();
 
 	FVector TargetPosition = FVector(0);
 	bCinematicCamera = false;
@@ -186,6 +201,11 @@ void ARoundManager::UpdateCameraPosition()
 			TargetPosition.Z = FMath::Lerp(Player1Base->CurrentState.Position.Y + .5f * Player1Base->CrouchingPushBoxHeight, Player2Base->CurrentState.Position.Y + Player2Base->AirPushboxVerticalOffset, .9);
 		else if (Player1Base->CurrentState.bIsAirborne)
 			TargetPosition.Z = FMath::Lerp(Player2Base->CurrentState.Position.Y + .5f * Player2Base->CrouchingPushBoxHeight, Player1Base->CurrentState.Position.Y + Player1Base->AirPushboxVerticalOffset, .9);
+
+		if (Player1Base->CurrentState.ShatteredTime == 155)
+			ShatterText->Activate(FVector2D(TargetPosition.X, TargetPosition.Z), Player2Base->CurrentState.bFacingRight);
+		else if (Player2Base->CurrentState.ShatteredTime == 155)
+			ShatterText->Activate(FVector2D(TargetPosition.X, TargetPosition.Z), Player1Base->CurrentState.bFacingRight);
 
 		if (TargetPosition.Z < ZPosMin - 20) //limit camera vertical position
 			TargetPosition.Z = ZPosMin - 20;
@@ -458,14 +478,14 @@ void ARoundManager::UpdateTimer()
 	if (CurrentState.P1Health > Player1Base->CurrentState.Health)
 	{
 		CurrentState.P1Health = Player1Base->CurrentState.Health;
-		P1Particles->SetRelativeLocation(FVector(20, FMath::Lerp(120, 780, (float)(Player1Base->CurrentState.Health - 10) / (float)Player1Base->MaxHealth), 435));
+		P1Particles->SetRelativeLocation(FVector(20, FMath::Lerp(120, 780, (float)(Player1Base->CurrentState.Health - 5) / (float)Player1Base->MaxHealth), 435));
 		P1Particles->Activate(true);
 	}
 
 	if (CurrentState.P2Health > Player2Base->CurrentState.Health)
 	{
 		CurrentState.P2Health = Player2Base->CurrentState.Health;
-		P2Particles->SetRelativeLocation(FVector(20, FMath::Lerp(-120, -780, (float)(Player2Base->CurrentState.Health - 10) / (float)Player2Base->MaxHealth), 435));
+		P2Particles->SetRelativeLocation(FVector(20, FMath::Lerp(-120, -780, (float)(Player2Base->CurrentState.Health - 5) / (float)Player2Base->MaxHealth), 435));
 		P2Particles->Activate(true);
 	}
 }
@@ -475,6 +495,8 @@ void ARoundManager::DrawScreen()
 	//Draw HUD updates
 	UpperHUD->UpdateUpperHUD(CurrentState.FrameCount, CurrentState.RoundTimer, CurrentState.P1ComboCountAnimationState.FramePlayTime, CurrentState.P2ComboCountAnimationState.FramePlayTime, Player1Base, Player2Base);
 	LowerHUD->UpdateLowerHUD(Player1Base, Player2Base);
+
+	ShatterText->DrawEffect();
 
 	//Play fade in/out if round is currently transitioning
 	if (CurrentState.bResetRound)
@@ -565,9 +587,9 @@ void ARoundManager::ResetPositions()
 	CurrentState.RoundCount++;
 	CurrentState.RoundTimer = 99;
 	Player1Base->CurrentState.Position = FVector2D(-80.0f, 0.0f);
-	Player1Base->CurrentState.Health = Player1Base->MaxHealth;
 	Player2Base->CurrentState.Position = FVector2D(80.0f, 0.0f);
-	Player2Base->CurrentState.Health = Player2Base->MaxHealth;
+	Player1Base->ResetCharacter();
+	Player2Base->ResetCharacter();
 	CurrentState.P1Health = Player1Base->CurrentState.Health;
 	CurrentState.P2Health = Player2Base->CurrentState.Health;
 }

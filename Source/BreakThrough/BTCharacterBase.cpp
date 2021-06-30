@@ -42,7 +42,7 @@ void ABTCharacterBase::BeginPlay()
 	Super::BeginPlay();
 	CurrentState.Health = MaxHealth;
 	CurrentState.Resolve = 2;
-	CurrentState.Durability = 750;
+	CurrentState.Durability = 800;
 	CreateMaterials();
 	CreateVariables();
 	SpawnPBS();
@@ -521,8 +521,9 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 				}
 				else if (!CurrentState.bIsAirborne && Opponent->CurrentState.bIsAirborne && Opponent->CurrentState.Velocity.Y <= 0)
 				{
-					if ((CurrentState.bIsCrouching && CrouchingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset) ||
-						(!CurrentState.bIsCrouching && StandingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset)) //check if pushboxes intersect
+					if (((IsCurrentAnimation(KnockDownFaceDown) || IsCurrentAnimation(KnockDownFaceUp) || IsCurrentAnimation(Crumple)) && .25 * CrouchingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset) ||
+						(CurrentState.bIsCrouching && CrouchingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset) ||
+						(!CurrentState.bIsCrouching && !(IsCurrentAnimation(KnockDownFaceDown) || IsCurrentAnimation(KnockDownFaceUp) || IsCurrentAnimation(Crumple)) && StandingPushBoxHeight > Opponent->CurrentState.Position.Y + Opponent->AirPushboxVerticalOffset)) //check if pushboxes intersect
 					{
 						if ((Opponent->CurrentState.Position.X <= -StageBounds + .5f * Opponent->PushboxWidth && Opponent->CurrentState.bFacingRight) || (Opponent->CurrentState.Position.X >= StageBounds - .5f * Opponent->PushboxWidth && !Opponent->CurrentState.bFacingRight))
 						{
@@ -629,8 +630,9 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 				}
 				else if (CurrentState.bIsAirborne && !Opponent->CurrentState.bIsAirborne && CurrentState.Velocity.Y <= 0)
 				{
-					if ((Opponent->CurrentState.bIsCrouching && Opponent->CrouchingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset) ||
-						(!Opponent->CurrentState.bIsCrouching && Opponent->StandingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset)) //check if pushboxes intersect
+					if (((Opponent->IsCurrentAnimation(Opponent->KnockDownFaceDown) || Opponent->IsCurrentAnimation(Opponent->KnockDownFaceUp) || Opponent->IsCurrentAnimation(Opponent->Crumple)) && .25 * Opponent->CrouchingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset) ||
+						(Opponent->CurrentState.bIsCrouching && Opponent->CrouchingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset) ||
+						(!Opponent->CurrentState.bIsCrouching || !(Opponent->IsCurrentAnimation(Opponent->KnockDownFaceDown) || Opponent->IsCurrentAnimation(Opponent->KnockDownFaceUp) || Opponent->IsCurrentAnimation(Opponent->Crumple)) && Opponent->StandingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset)) //check if pushboxes intersect
 					{
 						if ((CurrentState.Position.X <= -StageBounds + .5f * PushboxWidth && CurrentState.bFacingRight) || (CurrentState.Position.X >= StageBounds - .5f * PushboxWidth && !CurrentState.bFacingRight))
 						{
@@ -896,7 +898,7 @@ void ABTCharacterBase::DrawCharacter()
 	}
 
 	//if Hitbox View is on also loop through hitbox and hurtbox arrays and draw to screen
-	//HitboxViewer();
+	HitboxViewer();
 }
 
 void ABTCharacterBase::ProcessAnimationFrame()
@@ -2412,7 +2414,7 @@ bool ABTCharacterBase::ExitTimeTransitions()
 		IsCurrentAnimation(HitCOut) || IsCurrentAnimation(HitCHeavyOut) || IsCurrentAnimation(TurnAroundCrouch))
 		return EnterNewAnimation(IdleCrouch);
 
-	if ((IsCurrentAnimation(KnockDownFaceDown) || IsCurrentAnimation(Crumple)) && (CurrentState.Health != 0))
+	if ((IsCurrentAnimation(KnockDownFaceDown) || IsCurrentAnimation(Crumple)) && CurrentState.HitStun == 0 && CurrentState.Health != 0)
 	{
 		if (CurrentState.Resolve == 0)
 		{
@@ -2422,7 +2424,7 @@ bool ABTCharacterBase::ExitTimeTransitions()
 		return EnterNewAnimation(WakeUpFaceDown);
 	}
 
-	if (IsCurrentAnimation(KnockDownFaceUp) && CurrentState.Health != 0)
+	if (IsCurrentAnimation(KnockDownFaceUp) && CurrentState.HitStun == 0 && CurrentState.Health != 0)
 	{
 		if (CurrentState.Resolve == 0)
 		{
@@ -4043,6 +4045,8 @@ void ABTCharacterBase::HitboxViewer()
 			PushBoxHeight = CrouchingPushBoxHeight;
 		if (CurrentState.bIsAirborne)
 			PushboxBottom += AirPushboxVerticalOffset;
+		if (IsCurrentAnimation(KnockDownFaceDown) || IsCurrentAnimation(KnockDownFaceUp) || IsCurrentAnimation(Crumple))
+			PushBoxHeight = .25 * CrouchingPushBoxHeight;
 		//Left side
 		DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
 			FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
@@ -4125,3 +4129,15 @@ void ABTCharacterBase::ResetSmear()
 void ABTCharacterBase::DrawSmear() { SmearMesh->SetVisibility(bShowSmear); }
 
 void ABTCharacterBase::CreateVariables() {}
+
+void ABTCharacterBase::ResetCharacter(bool bNewGame)
+{
+	CurrentState.Health = MaxHealth;
+	CurrentState.Velocity = FVector2D(0);
+
+	if (bNewGame || CurrentState.Resolve < 2)
+	{
+		CurrentState.Resolve = 2;
+		CurrentState.Durability = 800;
+	}
+}

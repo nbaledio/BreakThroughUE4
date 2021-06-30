@@ -475,6 +475,8 @@ public:
 
 	void HitboxViewer();
 
+	virtual void ResetCharacter(bool bNewGame = false);
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
 		TSubclassOf<class ASigil> SigilBlueprint;
 
@@ -712,7 +714,7 @@ protected:
 
 	//number of frames that an input is active for
 		uint8 InputTime = 5;
-		uint8 DirInputTime = 12;
+		uint8 DirInputTime = 15;
 
 public:
 	//Idle Stance Animations
