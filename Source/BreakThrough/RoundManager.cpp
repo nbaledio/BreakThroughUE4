@@ -371,6 +371,9 @@ void ARoundManager::UpdateCameraPosition()
 				CurrentState.CameraRotation.Yaw = -90;
 		}
 	}
+
+	if (CurrentState.KOFramePlayTime > 0)
+		CurrentState.KOFramePlayTime--;
 }
 
 //Update function to be used by GameState

@@ -72,6 +72,7 @@ struct FRoundManagerState
 	int32 P2Health;
 	uint8 MaxRounds;
 	uint8 UniversalHitStop;
+	uint8 KOFramePlayTime;
 
 	float KOAlpha = 0;
 

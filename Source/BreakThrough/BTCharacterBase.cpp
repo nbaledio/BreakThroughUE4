@@ -3149,21 +3149,19 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 		Opponent->CurrentState.Health -= FMath::Min(DamageToApply, Opponent->CurrentState.Health);
 
-		if (Opponent->CurrentState.Health >= 0)
+		if (Opponent->CurrentState.Health == 0)
 		{
 			if (Hitbox.AttackProperties & NonFatal)
 				Opponent->CurrentState.Health = 1;
+			else if (CurrentState.Health == Opponent->CurrentState.Health)
+			{
+				//double ko
+			}
 			else if (!CurrentState.bPlayedKOSpark)
 			{
-				/*FVector2D EffectPosition = Opponent->CurrentState.Position;
-				if (Opponent->CurrentState.bIsAirborne)
-					EffectPosition.Y += Opponent->AirPushboxVerticalOffset + Opponent->CrouchingPushBoxHeight / 2;
-				else if (Opponent->CurrentState.bIsCrouching)
-					EffectPosition.Y += Opponent->CrouchingPushBoxHeight / 2;
-				else
-					EffectPosition.Y += Opponent->AirPushboxVerticalOffset + Opponent->StandingPushBoxHeight / 2;*/
 				SpecialVFX[2]->Activate(IntersectCenter, CurrentState.bFacingRight, Hitbox.AttackProperties, KO);
 				HitStopToApply = 60;
+				RoundManager->CurrentState.KOFramePlayTime = 60;
 				CurrentState.bPlayedKOSpark = true;
 				//notify RoundManager of KO for KO camera animation
 			}
@@ -4139,6 +4137,7 @@ void ABTCharacterBase::ResetCharacter(bool bNewGame)
 {
 	CurrentState.Health = MaxHealth;
 	CurrentState.Velocity = FVector2D(0);
+	CurrentState.ShatteredTime = 0;
 	CurrentState.bPlayedKOSpark = false;
 
 	if (bNewGame || CurrentState.Resolve < 2)
