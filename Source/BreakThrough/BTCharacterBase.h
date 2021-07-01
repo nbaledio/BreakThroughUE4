@@ -289,6 +289,9 @@ struct FCharacterState
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	float SpecialProration = 1;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bPlayedKOSpark = false;
+
 	// ints to denote active time on directional inputs
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Dir1 = 0;

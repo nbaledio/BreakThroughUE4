@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "BTVFXBase.h"
+#include "Particles/ParticleSystemComponent.h"
 #include "BTHitFX.generated.h"
 
 /**
@@ -17,6 +18,8 @@ class BREAKTHROUGH_API ABTHitFX : public ABTVFXBase
 public:
 	// Sets default values for this actor's properties
 	ABTHitFX();
+
+	virtual void BeginPlay() override;
 
 	virtual void Activate(FVector2D Location, bool bFacingRight, int32 HitInfo = 0, uint8 InteractType = 0) override;
 
@@ -38,6 +41,8 @@ protected:
 		UStaticMeshComponent* Spark;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UStaticMeshComponent* Cross;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UParticleSystemComponent* CounterParticles;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
 		UMaterialInterface* EffectMaterial;

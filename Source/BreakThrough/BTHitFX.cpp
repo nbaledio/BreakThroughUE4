@@ -19,6 +19,17 @@ ABTHitFX::ABTHitFX()
 
 	Ring = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Ring"));
 	Ring->SetupAttachment(Cross);
+
+	CounterParticles = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("CounterParticles"));
+	CounterParticles->SetupAttachment(RootComponent);
+}
+
+void ABTHitFX::BeginPlay()
+{
+	ABTVFXBase::BeginPlay();
+
+	CounterParticles->Deactivate();
+	CounterParticles->SetVisibility(false);
 }
 
 void ABTHitFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInfo, uint8 InteractType)
@@ -31,11 +42,6 @@ void ABTHitFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInfo, ui
 
 	FRotator CrossRotation = FRotator(FMath::RandRange(-180, 180), FMath::RandRange(-60, 60), 90);
 	Cross->SetRelativeRotation(CrossRotation);
-
-	/*if (InteractType == Deflect)
-		Ring->SetRelativeRotation(CrossRotation + FRotator(5));
-	else
-		Ring->SetRelativeRotation(CrossRotation);*/
 
 	if (HitInfo & IsSlash)
 	{
@@ -143,7 +149,7 @@ void ABTHitFX::Update()
 			CurrentState.FramePlayTime = 0;
 		}
 
-		if (CurrentState.Interaction == Hit)
+		if (CurrentState.Interaction == Hit || CurrentState.Interaction == CounterHit)
 		{
 			if ((CurrentState.HitProperties & IsSlash || CurrentState.Interaction == Clash || CurrentState.Interaction == Deflect) && CurrentState.AnimFrameIndex >= 8)
 			{
@@ -163,6 +169,11 @@ void ABTHitFX::Update()
 			CurrentState.bIsActive = false;
 		}
 	}
+
+	if (Owner->CurrentState.ShatteredTime > 120 || Owner->Opponent->CurrentState.ShatteredTime > 120)
+		CounterParticles->CustomTimeDilation = .25;
+	else
+		CounterParticles->CustomTimeDilation = 1;
 }
 
 void ABTHitFX::DrawEffect()
@@ -173,6 +184,12 @@ void ABTHitFX::DrawEffect()
 	{
 		Billboard->SetVisibility(true);
 		Spark->SetVisibility(true);
+
+		if (CurrentState.Interaction == CounterHit && CurrentState.AnimFrameIndex == 0 && CurrentState.FramePlayTime == 1)
+		{
+			CounterParticles->SetVisibility(true);
+			CounterParticles->Activate(true);
+		}
 
 		if (Owner)
 		{
@@ -189,12 +206,12 @@ void ABTHitFX::DrawEffect()
 		if (CurrentState.HitProperties & IsSlash)
 		{
 			DynamicBillboardMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, 2 + CurrentState.AnimFrameIndex / 4, 0));
-			DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .075, 0));
+			DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .2, 0));
 		}
 		else
 		{
 			DynamicBillboardMaterial->SetVectorParameterValue(FName("AnimIndex"), FVector(CurrentState.AnimFrameIndex % 4, CurrentState.AnimFrameIndex / 4, 0));
-			if (CurrentState.Interaction == Hit)
+			if (CurrentState.Interaction == Hit || CurrentState.Interaction == CounterHit)
 				DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .1, 0));
 			else
 				DynamicBillboardMaterial->SetVectorParameterValue(FName("Color"), FVector(.25, 1, .35));
@@ -211,7 +228,7 @@ void ABTHitFX::DrawEffect()
 		{
 			Cross->SetVisibility(true);
 
-			if (CurrentState.FramePlayTime == 0 && CurrentState.Interaction == Hit)
+			if (CurrentState.FramePlayTime == 0 && (CurrentState.Interaction == Hit || CurrentState.Interaction == CounterHit))
 			{
 				FRotator CrossRotation = FRotator(Cross->GetRelativeRotation());
 				CrossRotation += FRotator(3, 0, 0);
@@ -221,7 +238,7 @@ void ABTHitFX::DrawEffect()
 			if (CurrentState.Interaction != Clash)
 				Ring->SetVisibility(true);
 
-			if (CurrentState.Interaction != Hit)
+			if (CurrentState.Interaction != Hit && CurrentState.Interaction != CounterHit)
 			{
 				DynamicCrossMaterial->SetScalarParameterValue(FName("Emissivity"), 10);
 				DynamicRingMaterial->SetScalarParameterValue(FName("Emissivity"), 0);

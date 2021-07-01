@@ -53,9 +53,9 @@ void ABTShatterTextFX::DrawEffect()
 		if (CurrentState.FramePlayTime < 4)
 		{
 			if (CurrentState.bFacingRight)
-				Transform->SetWorldLocation(FVector(CurrentState.Position.X - 20 * (10 - CurrentState.FramePlayTime), 0, CurrentState.Position.Y));
+				Transform->SetWorldLocation(FVector(CurrentState.Position.X - 10 * (10 - CurrentState.FramePlayTime), 0, CurrentState.Position.Y));
 			else
-				Transform->SetWorldLocation(FVector(CurrentState.Position.X + 20 * (10 - CurrentState.FramePlayTime), 0, CurrentState.Position.Y));
+				Transform->SetWorldLocation(FVector(CurrentState.Position.X + 10 * (10 - CurrentState.FramePlayTime), 0, CurrentState.Position.Y));
 		}
 		else 
 		{

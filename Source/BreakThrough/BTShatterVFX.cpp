@@ -26,6 +26,7 @@ void ABTShatterVFX::BeginPlay()
 
 	GlassParticlesLeft->Deactivate();
 	GlassParticlesRight->Deactivate();
+	GlassParticlesKO->Deactivate();
 }
 
 void ABTShatterVFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInfo, uint8 InteractType)
@@ -103,6 +104,18 @@ void ABTShatterVFX::Update()
 				}
 			}
 		}
+		else
+		{
+			if (CurrentState.FramePlayTime > 1)
+				CurrentState.HitStop = Owner->CurrentState.HitStop;
+
+			if (CurrentState.FramePlayTime == 80)
+				CurrentState.bIsActive = false;
+			if (Owner->CurrentState.HitStop > 0)
+				GlassParticlesKO->CustomTimeDilation = .05;
+			else
+				GlassParticlesKO->CustomTimeDilation = 1;
+		}
 	}
 }
 
@@ -132,10 +145,17 @@ void ABTShatterVFX::DrawEffect()
 		else
 			DynamicGlassMaterial->SetScalarParameterValue(FName("Alpha"), 1);
 	}
+	else if (CurrentState.bIsActive && CurrentState.Interaction == KO)
+	{
+		GlassParticlesKO->SetVisibility(true);
+		if (CurrentState.AnimFrameIndex == 0 && CurrentState.FramePlayTime == 1)
+			GlassParticlesKO->Activate(true);
+	}
 	else
 	{
 		Glass->SetVisibility(false);
 		GlassParticlesLeft->SetVisibility(false);
 		GlassParticlesRight->SetVisibility(false);
+		GlassParticlesKO->SetVisibility(false);
 	}
 }

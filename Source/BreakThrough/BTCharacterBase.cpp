@@ -396,7 +396,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 	}
 	else if (CurrentState.HitStop > 0)
 	{
-		if (CurrentState.HitStun > 0 && (CurrentState.HitStop > 6 && CurrentState.ShatteredTime == 0) || (CurrentState.HitStop > 20 && CurrentState.ShatteredTime > 120))
+		if (CurrentState.HitStun > 0 && (CurrentState.HitStop > 6 && CurrentState.Health > 0 && CurrentState.ShatteredTime == 0) || (CurrentState.HitStop > 20 && CurrentState.ShatteredTime > 120))
 			BaseMesh->SetRelativeLocation(FVector(FMath::FRandRange(-5.f, 5.f), 0, 0));
 
 		if (CurrentState.ShatteredTime > 120)
@@ -632,7 +632,7 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 				{
 					if (((Opponent->IsCurrentAnimation(Opponent->KnockDownFaceDown) || Opponent->IsCurrentAnimation(Opponent->KnockDownFaceUp) || Opponent->IsCurrentAnimation(Opponent->Crumple)) && .25 * Opponent->CrouchingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset) ||
 						(Opponent->CurrentState.bIsCrouching && Opponent->CrouchingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset) ||
-						(!Opponent->CurrentState.bIsCrouching || !(Opponent->IsCurrentAnimation(Opponent->KnockDownFaceDown) || Opponent->IsCurrentAnimation(Opponent->KnockDownFaceUp) || Opponent->IsCurrentAnimation(Opponent->Crumple)) && Opponent->StandingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset)) //check if pushboxes intersect
+						(!Opponent->CurrentState.bIsCrouching && !(Opponent->IsCurrentAnimation(Opponent->KnockDownFaceDown) || Opponent->IsCurrentAnimation(Opponent->KnockDownFaceUp) || Opponent->IsCurrentAnimation(Opponent->Crumple)) && Opponent->StandingPushBoxHeight > CurrentState.Position.Y + AirPushboxVerticalOffset)) //check if pushboxes intersect
 					{
 						if ((CurrentState.Position.X <= -StageBounds + .5f * PushboxWidth && CurrentState.bFacingRight) || (CurrentState.Position.X >= StageBounds - .5f * PushboxWidth && !CurrentState.bFacingRight))
 						{
@@ -898,7 +898,7 @@ void ABTCharacterBase::DrawCharacter()
 	}
 
 	//if Hitbox View is on also loop through hitbox and hurtbox arrays and draw to screen
-	HitboxViewer();
+	//HitboxViewer();
 }
 
 void ABTCharacterBase::ProcessAnimationFrame()
@@ -2985,6 +2985,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	uint8 HitStunToApply = Hitbox.BaseHitStun;
 	FVector2D KnockBackToApply;
 	uint8 HitStopToApply = Hitbox.BaseHitStop;
+	uint8 Interaction = Hit;
 
 	if (Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG || CurrentState.SpecialProration == .35f)
 	{
@@ -3024,6 +3025,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		if ((Opponent->CurrentState.bArmorActive || Opponent->CurrentState.bCounterHitState ||
 			IsCurrentAnimation(AirResoluteCounter) || IsCurrentAnimation(ResoluteCounter)) && Hitbox.AttackProperties & Shatter)//(Hitbox.AttackHeight < Throw)
 		{
+			Interaction = CounterHit;
 			HitStunToApply *= 1.2f;
 			HitStopToApply = 36;
 
@@ -3050,6 +3052,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		else if ((Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve == 0) || Opponent->CurrentState.bCounterHitState ||
 			(Hitbox.AttackProperties & Piercing && Opponent->CurrentState.bArmorActive && Opponent->CurrentState.Resolve > 0) || (Opponent->CurrentState.SlowMoTime > 0 && CurrentState.ComboCount == 1))
 		{
+			Interaction = CounterHit;
 			//increase hitstun and vertical knockback on counterhit
 			HitStunToApply += HitStunToApply/2;
 			if (Hitbox.PotentialCounterKnockBack != FVector2D(0))
@@ -3146,20 +3149,22 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 		Opponent->CurrentState.Health -= FMath::Min(DamageToApply, Opponent->CurrentState.Health);
 
-		if (Opponent->CurrentState.Health == 0)
+		if (Opponent->CurrentState.Health >= 0)
 		{
 			if (Hitbox.AttackProperties & NonFatal)
 				Opponent->CurrentState.Health = 1;
-			else
+			else if (!CurrentState.bPlayedKOSpark)
 			{
-				FVector2D EffectPosition = Opponent->CurrentState.Position;
+				/*FVector2D EffectPosition = Opponent->CurrentState.Position;
 				if (Opponent->CurrentState.bIsAirborne)
 					EffectPosition.Y += Opponent->AirPushboxVerticalOffset + Opponent->CrouchingPushBoxHeight / 2;
 				else if (Opponent->CurrentState.bIsCrouching)
 					EffectPosition.Y += Opponent->CrouchingPushBoxHeight / 2;
 				else
-					EffectPosition.Y += Opponent->AirPushboxVerticalOffset + Opponent->StandingPushBoxHeight / 2;
-				SpecialVFX[2]->Activate(EffectPosition, CurrentState.bFacingRight, Hitbox.AttackProperties, KO);
+					EffectPosition.Y += Opponent->AirPushboxVerticalOffset + Opponent->StandingPushBoxHeight / 2;*/
+				SpecialVFX[2]->Activate(IntersectCenter, CurrentState.bFacingRight, Hitbox.AttackProperties, KO);
+				HitStopToApply = 60;
+				CurrentState.bPlayedKOSpark = true;
 				//notify RoundManager of KO for KO camera animation
 			}
 		}	
@@ -3278,10 +3283,10 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		{
 			if (SpecialVFX[0]->CurrentState.bIsActive)
 			{
-				Opponent->SpecialVFX[0]->Activate(IntersectCenter, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties);
+				Opponent->SpecialVFX[0]->Activate(IntersectCenter, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties, Interaction);
 			}
 			else
-				SpecialVFX[0]->Activate(IntersectCenter, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties);
+				SpecialVFX[0]->Activate(IntersectCenter, Opponent->CurrentState.bFacingRight, Hitbox.AttackProperties, Interaction);
 		}
 	}
 }
@@ -4134,6 +4139,7 @@ void ABTCharacterBase::ResetCharacter(bool bNewGame)
 {
 	CurrentState.Health = MaxHealth;
 	CurrentState.Velocity = FVector2D(0);
+	CurrentState.bPlayedKOSpark = false;
 
 	if (bNewGame || CurrentState.Resolve < 2)
 	{
