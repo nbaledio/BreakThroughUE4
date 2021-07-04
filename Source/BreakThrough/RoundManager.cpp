@@ -177,21 +177,41 @@ void ARoundManager::UpdateCameraPosition()
 	if (CurrentState.KOFramePlayTime > 0)
 	{
 		//ko camera location settings
-		if (Player1Base->CurrentState.Health == 0)
-			TargetPosition.X = FMath::Lerp(Player1Base->CurrentState.Position.X, Player2Base->CurrentState.Position.X, .25);
-		else
-			TargetPosition.X = FMath::Lerp(Player2Base->CurrentState.Position.X, Player1Base->CurrentState.Position.X, .25);
+		if (FMath::Abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X) > PlayerMaxDistance - 200)
+		{
+			TargetPosition.X = FMath::Lerp(Player1Base->CurrentState.Position.X, Player2Base->CurrentState.Position.X, .5);
 
-		if (Player1Base->CurrentState.bIsAirborne && Player2Base->CurrentState.bIsAirborne)
-			TargetPosition.Z = FMath::Lerp(Player2Base->CurrentState.Position.Y + Player2Base->CrouchingPushBoxHeight + Player2Base->AirPushboxVerticalOffset, Player1Base->CurrentState.Position.Y + Player1Base->CrouchingPushBoxHeight + Player1Base->AirPushboxVerticalOffset, .5);
-		else if (Player2Base->CurrentState.bIsAirborne)
-			TargetPosition.Z = FMath::Lerp(Player1Base->CurrentState.Position.Y + .5f * Player1Base->CrouchingPushBoxHeight, Player2Base->CurrentState.Position.Y + Player2Base->AirPushboxVerticalOffset, .9);
-		else if (Player1Base->CurrentState.bIsAirborne)
-			TargetPosition.Z = FMath::Lerp(Player2Base->CurrentState.Position.Y + .5f * Player2Base->CrouchingPushBoxHeight, Player1Base->CurrentState.Position.Y + Player1Base->AirPushboxVerticalOffset, .9);
+			if (Player1Base->CurrentState.bIsAirborne || Player2Base->CurrentState.bIsAirborne)
+			{
+				if (Player1Base->CurrentState.Health == 0)
+					TargetPosition.Z = FMath::Lerp(Player1Base->CurrentState.Position.Y + Player1Base->StandingPushBoxHeight, Player2Base->CurrentState.Position.Y + Player2Base->StandingPushBoxHeight, .5);
+				else
+					TargetPosition.Z = FMath::Lerp(Player2Base->CurrentState.Position.Y + Player2Base->StandingPushBoxHeight, Player1Base->CurrentState.Position.Y + Player1Base->StandingPushBoxHeight, .5);
+			}
+			else
+			{
+				TargetPosition.Z = FMath::Lerp(Player1Base->CurrentState.Position.Y + .5f * Player1Base->StandingPushBoxHeight, Player2Base->CurrentState.Position.Y + .5f * Player2Base->StandingPushBoxHeight, .5);
+			}
+		}
+		else
+		{
+			if (Player1Base->CurrentState.Health == 0)
+				TargetPosition.X = FMath::Lerp(Player1Base->CurrentState.Position.X, Player2Base->CurrentState.Position.X, .25);
+			else
+				TargetPosition.X = FMath::Lerp(Player2Base->CurrentState.Position.X, Player1Base->CurrentState.Position.X, .25);
+
+			if (Player1Base->CurrentState.bIsAirborne && Player2Base->CurrentState.bIsAirborne)
+				TargetPosition.Z = FMath::Lerp(Player2Base->CurrentState.Position.Y + Player2Base->CrouchingPushBoxHeight + Player2Base->AirPushboxVerticalOffset, Player1Base->CurrentState.Position.Y + Player1Base->CrouchingPushBoxHeight + Player1Base->AirPushboxVerticalOffset, .5);
+			else if (Player2Base->CurrentState.bIsAirborne)
+				TargetPosition.Z = FMath::Lerp(Player1Base->CurrentState.Position.Y + Player1Base->CrouchingPushBoxHeight, Player2Base->CurrentState.Position.Y + Player2Base->AirPushboxVerticalOffset, .9);
+			else if (Player1Base->CurrentState.bIsAirborne)
+				TargetPosition.Z = FMath::Lerp(Player2Base->CurrentState.Position.Y + Player2Base->CrouchingPushBoxHeight, Player1Base->CurrentState.Position.Y + Player1Base->AirPushboxVerticalOffset, .9);
+		}
+
 		if (TargetPosition.Z < ZPosMin - 20) //limit camera vertical position
 			TargetPosition.Z = ZPosMin - 20;
 
-		if (CurrentState.KOFramePlayTime == 50)
+		if (CurrentState.KOFramePlayTime == 80)
 		{
 			//Play Break/Perfect UI Animation/effect/voice clip
 		}
@@ -296,7 +316,14 @@ void ARoundManager::UpdateCameraPosition()
 
 		if (CurrentState.KOFramePlayTime > 0 || (Player1Base->CurrentState.ShatteredTime > 120 && Player2Base->CurrentState.ShatteredTime == 0) || (Player2Base->CurrentState.ShatteredTime > 120 && Player1Base->CurrentState.ShatteredTime == 0))
 		{
-			CameraTargetPosition.Y -= 650;
+			if (FMath::Abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X) > PlayerMaxDistance - 200)
+			{
+				CameraTargetPosition.Y = FMath::Min(YPosMin - 650, YPosMin - FMath::Abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X));
+			}
+			else
+			{
+				CameraTargetPosition.Y -= 650;
+			}
 			CurrentState.CameraPosition = FMath::Lerp(CurrentState.CameraPosition, CameraTargetPosition, .2f);
 		}
 		else
@@ -348,22 +375,24 @@ void ARoundManager::UpdateCameraPosition()
 			Player1Base->DepthOffset = 0;
 			Player2Base->DepthOffset = 0;
 
-			if (CurrentState.KOFramePlayTime < 50 && FMath::Abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X) > PlayerMaxDistance - 200)
+			if (FMath::Abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X) > PlayerMaxDistance - 200)
 			{
 				if (Player1Base->CurrentState.Health == 0 && Player2Base->CurrentState.Health > 0)
 				{
 					if (Player1Base->CurrentState.Position.X < Player2Base->CurrentState.Position.X)
-						TargetRotation.Yaw = -30;
+						TargetRotation.Yaw = -35;
 					else
-						TargetRotation.Yaw = 30;
+						TargetRotation.Yaw = 35;
 				}
 				else if (Player2Base->CurrentState.Health == 0 && Player1Base->CurrentState.Health > 0)
 				{
 					if (Player2Base->CurrentState.Position.X < Player1Base->CurrentState.Position.X)
-						TargetRotation.Yaw = -30;
+						TargetRotation.Yaw = -35;
 					else
-						TargetRotation.Yaw = 30;
+						TargetRotation.Yaw = 35;
 				}
+
+				TargetRotation.Roll = -10;
 			}
 			else
 			{

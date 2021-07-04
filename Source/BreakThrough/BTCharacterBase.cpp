@@ -416,8 +416,8 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 			}
 			else
 			{
-				CurrentPosition.X += CurrentState.KnockBack.X * .25;
-				CurrentPosition.Z += CurrentState.KnockBack.Y * .25;
+				CurrentPosition.X += CurrentState.KnockBack.X * .2;
+				CurrentPosition.Z += CurrentState.KnockBack.Y * .2;
 			}
 			BaseMesh->SetRelativeLocation(CurrentPosition);
 		}
@@ -3133,15 +3133,15 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		ComboProration = 10;
 	else if (CurrentState.ComboCount < 5)
 		ComboProration = 8;
-	else if (CurrentState.ComboCount < 6)
-		ComboProration = 7;
-	else if (CurrentState.ComboCount < 7)
-		ComboProration = 6;
 	else if (CurrentState.ComboCount < 8)
-		ComboProration = 5;
-	else if (CurrentState.ComboCount < 9)
-		ComboProration = 4;
+		ComboProration = 7;
 	else if (CurrentState.ComboCount < 10)
+		ComboProration = 6;
+	else if (CurrentState.ComboCount < 12)
+		ComboProration = 5;
+	else if (CurrentState.ComboCount < 14)
+		ComboProration = 4;
+	else if (CurrentState.ComboCount < 20)
 		ComboProration = 3;
 	else
 		ComboProration = 2;
@@ -3174,9 +3174,9 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			else if (!CurrentState.bPlayedKOSpark)
 			{
 				IntersectCenter.X = Opponent->CurrentState.Position.X;
-				IntersectCenter.Y = FMath::Max(IntersectCenter.Y, Opponent->CrouchingPushBoxHeight);
+				//IntersectCenter.Y = FMath::Max(IntersectCenter.Y, Opponent->CrouchingPushBoxHeight);
 				SpecialVFX[2]->Activate(IntersectCenter, CurrentState.bFacingRight, Hitbox.AttackProperties, KO);
-				HitStopToApply = 65;
+				HitStopToApply = 85;
 				RoundManager->CurrentState.KOFramePlayTime = HitStopToApply + 15;
 				CurrentState.bPlayedKOSpark = true;
 				//notify RoundManager of KO for KO camera animation
