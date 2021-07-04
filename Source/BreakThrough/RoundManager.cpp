@@ -196,9 +196,9 @@ void ARoundManager::UpdateCameraPosition()
 		else
 		{
 			if (Player1Base->CurrentState.Health == 0)
-				TargetPosition.X = FMath::Lerp(Player1Base->CurrentState.Position.X, Player2Base->CurrentState.Position.X, .25);
+				TargetPosition.X = FMath::Lerp(Player1Base->CurrentState.Position.X, Player2Base->CurrentState.Position.X, .35);
 			else
-				TargetPosition.X = FMath::Lerp(Player2Base->CurrentState.Position.X, Player1Base->CurrentState.Position.X, .25);
+				TargetPosition.X = FMath::Lerp(Player2Base->CurrentState.Position.X, Player1Base->CurrentState.Position.X, .35);
 
 			if (Player1Base->CurrentState.bIsAirborne && Player2Base->CurrentState.bIsAirborne)
 				TargetPosition.Z = FMath::Lerp(Player2Base->CurrentState.Position.Y + Player2Base->CrouchingPushBoxHeight + Player2Base->AirPushboxVerticalOffset, Player1Base->CurrentState.Position.Y + Player1Base->CrouchingPushBoxHeight + Player1Base->AirPushboxVerticalOffset, .5);
@@ -253,7 +253,7 @@ void ARoundManager::UpdateCameraPosition()
 	}
 	else
 	{
-		if (FMath::Abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X) < PlayerMaxDistance)
+		if (FMath::Abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X) <= PlayerMaxDistance)
 		{
 			TargetPosition.X = (Player1Base->CurrentState.Position.X + Player2Base->CurrentState.Position.X) / 2;
 		}

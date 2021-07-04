@@ -360,19 +360,13 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 				CurrentState.Position += CurrentState.Velocity * DistanceScaler / 60.f;
 		}
 
-		if (CurrentState.Position.Y <= 0)
-			CurrentState.Position.Y = 0;
-		
-		if (CurrentState.Position.Y > 0 || CurrentState.Velocity.Y > 0)
-			CurrentState.bIsAirborne = true;
-
 		if (RoundManager)
 		{
-			if (FMath::Abs(Opponent->CurrentState.Position.X - CurrentState.Position.X) > RoundManager->PlayerMaxDistance)
+			if (FMath::Abs(RoundManager->CurrentState.Position.X - CurrentState.Position.X) >= .5f * RoundManager->PlayerMaxDistance)
 			{
 				if (CurrentState.Position.X < RoundManager->CurrentState.Position.X)
 					CurrentState.Position.X = RoundManager->CurrentState.Position.X - .5 * RoundManager->PlayerMaxDistance;
-				else
+				else if (CurrentState.Position.X > RoundManager->CurrentState.Position.X)
 					CurrentState.Position.X = RoundManager->CurrentState.Position.X + .5 *RoundManager->PlayerMaxDistance;
 			}
 			else if (CurrentState.Position.X <= -StageBounds + .5f * PushboxWidth)
@@ -384,6 +378,12 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 				CurrentState.Position.X = StageBounds - .5f * PushboxWidth;
 			}
 		}
+
+		if (CurrentState.Position.Y <= 0)
+			CurrentState.Position.Y = 0;
+
+		if (CurrentState.Position.Y > 0 || CurrentState.Velocity.Y > 0)
+			CurrentState.bIsAirborne = true;
 
 		if (CurrentState.GravDefyTime > 0)
 		{
@@ -3174,7 +3174,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			else if (!CurrentState.bPlayedKOSpark)
 			{
 				IntersectCenter.X = Opponent->CurrentState.Position.X;
-				//IntersectCenter.Y = FMath::Max(IntersectCenter.Y, Opponent->CrouchingPushBoxHeight);
+				IntersectCenter.Y = FMath::Max(IntersectCenter.Y, .5f * Opponent->CrouchingPushBoxHeight);
 				SpecialVFX[2]->Activate(IntersectCenter, CurrentState.bFacingRight, Hitbox.AttackProperties, KO);
 				HitStopToApply = 85;
 				RoundManager->CurrentState.KOFramePlayTime = HitStopToApply + 15;

@@ -40,6 +40,8 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UStaticMeshComponent* Glass;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UStaticMeshComponent* KOEffect;
 	
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")

@@ -10,6 +10,9 @@ ABTShatterVFX::ABTShatterVFX()
 	Glass = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Glass"));
 	Glass->SetupAttachment(RootComponent);
 
+	KOEffect = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("KOEffect"));
+	KOEffect->SetupAttachment(RootComponent);
+
 	GlassParticlesLeft = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("GlassParticlesLeft"));
 	GlassParticlesLeft->SetupAttachment(RootComponent);
 
