@@ -406,11 +406,19 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 			CurrentPosition.Z += CurrentState.KnockBack.Y * .5;
 			BaseMesh->SetRelativeLocation(CurrentPosition);
 		}
-		else if (Opponent->CurrentState.ShatteredTime > 120)
+		else if (Opponent->CurrentState.ShatteredTime > 120 || RoundManager->CurrentState.KOFramePlayTime > 0)
 		{
 			FVector CurrentPosition = BaseMesh->GetRelativeLocation();
-			CurrentPosition.X += CurrentState.Velocity.X * .35;
-			CurrentPosition.Z += CurrentState.Velocity.Y * .35;
+			if (CurrentState.HitStun == 0)
+			{
+				CurrentPosition.X += CurrentState.Velocity.X * .35;
+				CurrentPosition.Z += CurrentState.Velocity.Y * .35;
+			}
+			else
+			{
+				CurrentPosition.X += CurrentState.KnockBack.X * .25;
+				CurrentPosition.Z += CurrentState.KnockBack.Y * .25;
+			}
 			BaseMesh->SetRelativeLocation(CurrentPosition);
 		}
 		CurrentState.HitStop--;
@@ -3026,7 +3034,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			IsCurrentAnimation(AirResoluteCounter) || IsCurrentAnimation(ResoluteCounter)) && Hitbox.AttackProperties & Shatter)//(Hitbox.AttackHeight < Throw)
 		{
 			Interaction = CounterHit;
-			HitStunToApply *= 1.2f;
+			HitStunToApply *= 1.5f;
 			HitStopToApply = 36;
 
 			//Opponent's penalty for getting shattered
@@ -3148,7 +3156,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		DamageToApply = FMath::Max(1, DamageToApply); //non-super attacks will always deal a minimum of one damage
 
 		Opponent->CurrentState.Health -= FMath::Min(DamageToApply, Opponent->CurrentState.Health);
-
+		Opponent->CurrentState.Health = 0;
 		if (Opponent->CurrentState.Health == 0)
 		{
 			if (Hitbox.AttackProperties & NonFatal)
@@ -3156,12 +3164,20 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 			else if (CurrentState.Health == Opponent->CurrentState.Health)
 			{
 				//double ko
+				RoundManager->CurrentState.KOFramePlayTime = 0;
+
+				if (SpecialVFX[2]->CurrentState.bIsActive)
+					SpecialVFX[2]->CurrentState.bIsActive = false;
+				if (Opponent->SpecialVFX[2]->CurrentState.bIsActive)
+					Opponent->SpecialVFX[2]->CurrentState.bIsActive = false;
 			}
 			else if (!CurrentState.bPlayedKOSpark)
 			{
+				IntersectCenter.X = Opponent->CurrentState.Position.X;
+				IntersectCenter.Y = FMath::Max(IntersectCenter.Y, Opponent->CrouchingPushBoxHeight);
 				SpecialVFX[2]->Activate(IntersectCenter, CurrentState.bFacingRight, Hitbox.AttackProperties, KO);
-				HitStopToApply = 60;
-				RoundManager->CurrentState.KOFramePlayTime = 60;
+				HitStopToApply = 65;
+				RoundManager->CurrentState.KOFramePlayTime = HitStopToApply + 15;
 				CurrentState.bPlayedKOSpark = true;
 				//notify RoundManager of KO for KO camera animation
 			}

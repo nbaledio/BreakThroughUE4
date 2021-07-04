@@ -39,6 +39,8 @@ void ABTShatterVFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInf
 		Scale.X *= -1;
 	Transform->SetRelativeScale3D(Scale);
 
+	Transform->SetWorldRotation(FRotator(0));
+
 	if (InteractType == KO)
 	{
 
@@ -88,6 +90,7 @@ void ABTShatterVFX::Update()
 			{
 				if (ShatterBrokenOffsets)
 					DynamicGlassMaterial->SetTextureParameterValue(FName("ReflectionOffset"), ShatterBrokenOffsets);
+
 				if (CurrentState.bFacingRight)
 				{
 					if (Owner->Opponent->CurrentState.bTouchingWall)
@@ -103,6 +106,13 @@ void ABTShatterVFX::Update()
 						GlassParticlesLeft->Activate(true);
 				}
 			}
+
+			if (Owner->CurrentState.HitStop > 30)
+				GlassParticlesKO->CustomTimeDilation = .075;
+			else if (Owner->CurrentState.HitStop > 0)
+				GlassParticlesKO->CustomTimeDilation = .005;
+			else
+				GlassParticlesKO->CustomTimeDilation = 1;
 		}
 		else
 		{
@@ -111,8 +121,11 @@ void ABTShatterVFX::Update()
 
 			if (CurrentState.FramePlayTime == 80)
 				CurrentState.bIsActive = false;
-			if (Owner->CurrentState.HitStop > 0)
-				GlassParticlesKO->CustomTimeDilation = .085;
+
+			if (Owner->CurrentState.HitStop > 60)
+				GlassParticlesKO->CustomTimeDilation = .075;
+			else if (Owner->CurrentState.HitStop > 0 && Owner->RoundManager->CurrentState.KOFramePlayTime > 0)
+				GlassParticlesKO->CustomTimeDilation = .01;
 			else
 				GlassParticlesKO->CustomTimeDilation = 1;
 		}
@@ -150,6 +163,10 @@ void ABTShatterVFX::DrawEffect()
 		GlassParticlesKO->SetVisibility(true);
 		if (CurrentState.AnimFrameIndex == 0 && CurrentState.FramePlayTime == 1)
 			GlassParticlesKO->Activate(true);
+
+		Glass->SetVisibility(false);
+		GlassParticlesLeft->SetVisibility(false);
+		GlassParticlesRight->SetVisibility(false);
 	}
 	else
 	{
