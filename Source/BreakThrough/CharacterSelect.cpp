@@ -7,8 +7,19 @@ void UCharacterSelect::NativeConstruct()
 {
 	Super::NativeConstruct();
 	const UObject* world = (UObject*)GetWorld();
-	P1Controller = UGameplayStatics::GetPlayerController(world, 0);
-	P2Controller = UGameplayStatics::GetPlayerController(world, 1);
+	if (P1Side == "Left" && P2Side == "Right") 
+	{
+		P1Controller = UGameplayStatics::GetPlayerController(world, 0);
+		P2Controller = UGameplayStatics::GetPlayerController(world, 1);
+	}
+	else if (P2Side == "Right" && P1Side == "Left") 
+	{
+		P1Controller = UGameplayStatics::GetPlayerController(world, 1);
+		P2Controller = UGameplayStatics::GetPlayerController(world, 0);
+	}
+
+	Headshots.Add(ACH_Headshot);
+	Headshots.Add(DHA_Headshot);
 }
 
 void UCharacterSelect::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -25,6 +36,15 @@ void UCharacterSelect::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
 	if (P2Controller)
 	{
 		GetP2Inputs();
+	}
+
+	if (Gamemode == "CPU") 
+	{
+		VsCPUMenuInteractions();
+	}
+	else if (Gamemode == "VS") 
+	{
+		Vs2PMenuInteractions();
 	}
 }
 
@@ -76,10 +96,10 @@ void UCharacterSelect::GetP2Inputs()
 	//Set bool variables
 	SetP2ButtonInputs();
 
-	//Read P1 analog inputs
+	//Read P2 analog inputs
 	P2Controller->GetInputAnalogStickState(EControllerAnalogStick::CAS_LeftStick, P2_HORIZONTAL_AXIS, P2_VERTICAL_AXIS);
 
-	//Calculate P1 DPad inputs
+	//Calculate P2 DPad inputs
 	if (P2_INPUT_LEFT)
 	{
 		P2_HORIZONTAL_AXIS -= 1.0f;
@@ -243,5 +263,60 @@ void UCharacterSelect::SetP2ButtonInputs()
 	else
 	{
 		P2_INPUT_START = false;
+	}
+}
+
+void UCharacterSelect::VsCPUMenuInteractions() 
+{
+	if (!P1CharacterSelected) 
+	{
+		//P1 Cursor Input
+		FVector2D P1CursorCurrentPosition = Cast<UCanvasPanelSlot>(P1Cursor->Slot)->GetPosition();
+		Cast<UCanvasPanelSlot>(P1Cursor->Slot)->SetPosition(FVector2D(FMath::Clamp(P1CursorCurrentPosition.X + (P1_HORIZONTAL_AXIS * CursorSpeed), -1050.0f, 750.0f), FMath::Clamp(P1CursorCurrentPosition.Y - (P1_VERTICAL_AXIS * CursorSpeed), -650.0f, 325.0f)));
+		//Set P1 Character Portrait based on hovered character
+		SetP1CharacterPortrait(P1CursorCollisionDetection());
+	}
+}
+
+void UCharacterSelect::Vs2PMenuInteractions()
+{
+
+}
+
+int UCharacterSelect::P1CursorCollisionDetection()
+{
+	FVector2D P1CursorCurrentPosition = Cast<UCanvasPanelSlot>(P1Cursor->Slot)->GetPosition();
+	for (int i = 0; i < Headshots.Num(); i++) 
+	{
+		FVector2D HeadshotPos = Cast<UCanvasPanelSlot>(Headshots[i]->Slot)->GetPosition();
+		float dx = P1CursorCurrentPosition.X - HeadshotPos.X - 250;
+		float dy = P1CursorCurrentPosition.Y - HeadshotPos.Y - 250;
+		float distance = FMath::Sqrt(dx * dx + dy * dy);
+		if (distance < 24.0f + 50.0f)
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+void UCharacterSelect::SetP1CharacterPortrait(int CharacterCode) 
+{
+	switch (CharacterCode)
+	{
+	case 0:
+		P1CharacterPortrait->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
+		P1CharacterPortrait->SetBrushFromTexture(Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Achealis"))));
+		P1CharacterName->SetText(FText::FromString("Achealis Thorne"));
+		break;
+	case 1:
+		P1CharacterPortrait->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
+		P1CharacterPortrait->SetBrushFromTexture(Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Dhalia"))));
+		P1CharacterName->SetText(FText::FromString("Dhalia Thorne"));
+		break;
+	default:
+		P1CharacterPortrait->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 0.0f));
+		P1CharacterPortrait->SetBrushFromTexture(NULL);
+		P1CharacterName->SetText(FText::FromString(""));
 	}
 }

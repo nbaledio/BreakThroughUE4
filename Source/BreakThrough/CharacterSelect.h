@@ -6,8 +6,12 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/TextBlock.h"
 #include "Components/Image.h"
+#include "Components/PanelSlot.h"
+#include "Components/CanvasPanelSlot.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "Slate.h"
+#include "Math/UnrealMathUtility.h"
 #include "CharacterSelect.generated.h"
 
 UCLASS(Abstract)
@@ -25,6 +29,14 @@ public:
 		class UTextBlock* P1CharacterName;
 	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* P2CharacterName;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* P1Cursor;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* P2Cursor;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* ACH_Headshot;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* DHA_Headshot;
 
 protected:
 	virtual void NativeConstruct() override;
@@ -54,11 +66,31 @@ private:
 	bool P2_INPUT_BACK;
 	bool P2_INPUT_START;
 
+	//Local Variables
+	FString Gamemode = "CPU";
+	FString P1Side = "Left";
+	FString P2Side = "Right";
+
+	TArray<UImage*> Headshots;
+	
+	float CursorSpeed = 15.0f;
+
+	bool P1CharacterSelected;
+	bool P1Ready;
+	bool P2CharacterSelected;
+	bool P2Ready;
+
+	//Controllers
 	APlayerController* P1Controller;
 	APlayerController* P2Controller;
 
+	//Functions
 	void GetP1Inputs();
 	void GetP2Inputs();
 	void SetP1ButtonInputs();
 	void SetP2ButtonInputs();
+	void VsCPUMenuInteractions();
+	void Vs2PMenuInteractions();
+	int P1CursorCollisionDetection();
+	void SetP1CharacterPortrait(int CharacterCode);
 };
