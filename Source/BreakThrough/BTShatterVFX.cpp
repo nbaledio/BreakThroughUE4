@@ -46,7 +46,7 @@ void ABTShatterVFX::Activate(FVector2D Location, bool bFacingRight, int32 HitInf
 
 	if (InteractType == KO)
 	{
-
+		KOEffect->SetRelativeRotation(FRotator(0, FMath::RandRange(-180.f, 180.f), 0));
 	}
 	else
 	{
@@ -66,8 +66,14 @@ void ABTShatterVFX::CreateMaterials()
 	if (GlassMaterial)
 		DynamicGlassMaterial = UMaterialInstanceDynamic::Create(GlassMaterial, this);
 
+	if (EffectMaterial)
+		DynamicEffectMaterial = UMaterialInstanceDynamic::Create(EffectMaterial, this);
+
 	if (DynamicGlassMaterial && Glass)
 		Glass->SetMaterial(0, DynamicGlassMaterial); 
+
+	if (DynamicEffectMaterial && KOEffect)
+		KOEffect->SetMaterial(0, DynamicEffectMaterial);
 }
 
 void ABTShatterVFX::Update()
@@ -109,20 +115,13 @@ void ABTShatterVFX::Update()
 						GlassParticlesLeft->Activate(true);
 				}
 			}
-
-			if (Owner->CurrentState.HitStop > 30)
-				GlassParticlesKO->CustomTimeDilation = .075;
-			else if (Owner->CurrentState.HitStop > 0)
-				GlassParticlesKO->CustomTimeDilation = .005;
-			else
-				GlassParticlesKO->CustomTimeDilation = 1;
 		}
 		else
 		{
-			if (CurrentState.FramePlayTime > 1)
-				CurrentState.HitStop = Owner->CurrentState.HitStop;
+			/*if (CurrentState.FramePlayTime > 1)
+				CurrentState.HitStop = Owner->CurrentState.HitStop;*/
 
-			if (CurrentState.FramePlayTime == 80)
+			if (CurrentState.FramePlayTime == 160)
 				CurrentState.bIsActive = false;
 
 			if (Owner->CurrentState.HitStop > 80)
@@ -130,7 +129,7 @@ void ABTShatterVFX::Update()
 			else if (Owner->CurrentState.HitStop > 0 && Owner->RoundManager->CurrentState.KOFramePlayTime > 0)
 				GlassParticlesKO->CustomTimeDilation = .02;
 			else
-				GlassParticlesKO->CustomTimeDilation = 1;
+				GlassParticlesKO->CustomTimeDilation = 1.2;
 		}
 	}
 }
@@ -164,6 +163,23 @@ void ABTShatterVFX::DrawEffect()
 	else if (CurrentState.bIsActive && CurrentState.Interaction == KO)
 	{
 		GlassParticlesKO->SetVisibility(true);
+		KOEffect->SetVisibility(true);
+
+		if (CurrentState.FramePlayTime <= 85)
+		{
+			if (CurrentState.FramePlayTime < 6)
+				KOEffect->SetRelativeScale3D(FVector(FMath::Lerp(.5f, 1.f, (float)(CurrentState.FramePlayTime) / 6.f)));
+			else
+				KOEffect->SetRelativeScale3D(FVector(FMath::Lerp(1.f, 1.5f, (float)(CurrentState.FramePlayTime - 6) / 80.f)));
+			//KOEffect->SetRelativeScale3D(FVector(1));// FMath::Lerp(.8f, 1.f, FMath::Lerp(1.f, 0.f, FMath::Min(1.f, (float)(Owner->CurrentState.HitStop) / 75.f)))));
+			DynamicEffectMaterial->SetScalarParameterValue(FName("Alpha"), 1);
+		}
+		else
+		{
+			KOEffect->SetRelativeScale3D(FVector(FMath::Lerp(1.5f, 2.f, FMath::Min(1.f, (float)(CurrentState.FramePlayTime - 85) / 10.f))));
+			DynamicEffectMaterial->SetScalarParameterValue(FName("Alpha"), FMath::Lerp(1.f, 0.f, FMath::Min(1.f, (float)(CurrentState.FramePlayTime - 85) / 15.f)));
+		}
+
 		if (CurrentState.AnimFrameIndex == 0 && CurrentState.FramePlayTime == 1)
 			GlassParticlesKO->Activate(true);
 
@@ -176,6 +192,7 @@ void ABTShatterVFX::DrawEffect()
 		Glass->SetVisibility(false);
 		GlassParticlesLeft->SetVisibility(false);
 		GlassParticlesRight->SetVisibility(false);
+		KOEffect->SetVisibility(false);
 		GlassParticlesKO->SetVisibility(false);
 	}
 }

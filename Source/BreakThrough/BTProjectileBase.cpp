@@ -2,6 +2,7 @@
 
 #include "BTProjectileBase.h"
 #include "BTCharacterBase.h"
+#include "RoundManager.h"
 
 // Sets default values
 ABTProjectileBase::ABTProjectileBase()
@@ -525,7 +526,7 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 				Owner->CurrentState.ResolveRecoverTimer = 180;
 			Owner->CurrentState.ResolvePulse += 5;
 
-			HitStunToApply *= 1.2f;
+			HitStunToApply *= 1.5f;
 			if (Hitbox.PotentialCounterKnockBack != FVector2D(0))
 				KnockBackToApply = Hitbox.PotentialCounterKnockBack;
 			Owner->Opponent->CurrentState.CharacterHitState |= Hitbox.CounterAttackProperties;
@@ -533,16 +534,38 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 		}
 		else if ((Owner->Opponent->CurrentState.bArmorActive || Owner->Opponent->CurrentState.bCounterHitState) && !(Hitbox.AttackProperties & Piercing && Owner->Opponent->CurrentState.bArmorActive && Owner->Opponent->CurrentState.Resolve > 0))
 		{
-			HitStunToApply *= 1.2f;
+			HitStunToApply += HitStunToApply / 2;
 			if (KnockBackToApply.Y > 0)
 				KnockBackToApply.Y *= 1.2f;
 			HitStopToApply += HitStopToApply / 2;
 			Owner->Opponent->CurrentState.CharacterHitState |= Hitbox.CounterAttackProperties;
 			//set counter hit ui effect to play
+
+			if (Hitbox.AttackProperties & Piercing && Owner->Opponent->CurrentState.bArmorActive && Owner->Opponent->CurrentState.Resolve > 0)
+			{
+				//set piercing ui effect to play
+				//piercing attacks still take away opponent's Resolve on hit
+				Owner->Opponent->CurrentState.Durability -= Hitbox.DurabilityDamage;
+				Owner->Opponent->CurrentState.Resolve -= Hitbox.ResolveDamage;
+
+				//make opponent flash magenta on pierce
+				Owner->Opponent->StatusMix = .7f;
+				Owner->Opponent->CurrentState.StatusTimer = 10;
+				Owner->Opponent->StatusColor = FVector(1, .1, 1);
+			}
+			else
+			{
+				//set counter hit ui effect to play
+
+				//make opponent flash red on counter
+				Owner->Opponent->StatusMix = .7f;
+				Owner->Opponent->CurrentState.StatusTimer = 10;
+				Owner->Opponent->StatusColor = FVector(1, 0, 0);
+			}
 		}
-		else if (Hitbox.AttackProperties & Piercing && Owner->Opponent->CurrentState.bArmorActive && Owner->Opponent->CurrentState.Resolve > 0)
+		else if (!(Owner->Opponent->CurrentState.AvailableActions & AcceptGuard) && Owner->CurrentState.ComboCount == 1)
 		{
-			//set piercing ui effect to play
+			//set punish ui effect to play
 		}
 	}
 
@@ -579,20 +602,64 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 		ComboProration = 10;
 	else if (Owner->CurrentState.ComboCount < 5)
 		ComboProration = 8;
-	else if (Owner->CurrentState.ComboCount < 6)
-		ComboProration = 7;
-	else if (Owner->CurrentState.ComboCount < 7)
-		ComboProration = 6;
 	else if (Owner->CurrentState.ComboCount < 8)
-		ComboProration = 5;
-	else if (Owner->CurrentState.ComboCount < 9)
-		ComboProration = 4;
+		ComboProration = 7;
 	else if (Owner->CurrentState.ComboCount < 10)
+		ComboProration = 6;
+	else if (Owner->CurrentState.ComboCount < 12)
+		ComboProration = 5;
+	else if (Owner->CurrentState.ComboCount < 14)
+		ComboProration = 4;
+	else if (Owner->CurrentState.ComboCount < 20)
 		ComboProration = 3;
 	else
 		ComboProration = 2;
 
 	DamageToApply = FMath::FloorToInt(DamageToApply * ComboProration / 10);
+
+	if (Hitbox.BaseDamage > 0)
+	{
+		if (Hitbox.AttackProperties & IsSuper)
+			DamageToApply = FMath::Max(FMath::FloorToInt(OpponentValor * Hitbox.BaseDamage / 4), DamageToApply); //Supers will always deal a minimum of 25% their base damage affected by valor
+
+		DamageToApply = FMath::Max(1, DamageToApply); //non-super attacks will always deal a minimum of one damage
+
+		Owner->Opponent->CurrentState.Health -= FMath::Min(DamageToApply, Owner->Opponent->CurrentState.Health);
+		//Owner->Opponent->CurrentState.Health = 0;
+		if (Owner->Opponent->CurrentState.Health == 0)
+		{
+			if (Hitbox.AttackProperties & NonFatal)
+				Owner->Opponent->CurrentState.Health = 1;
+			else if (!Owner->CurrentState.bPlayedKOSpark)
+			{
+				//IntersectCenter.X = Opponent->CurrentState.Position.X;
+				Owner->IntersectCenter.Y = FMath::Max(Owner->IntersectCenter.Y, .5f * Owner->Opponent->CrouchingPushBoxHeight);
+				Owner->SpecialVFX[2]->Activate(Owner->IntersectCenter, CurrentState.bFacingRight, Hitbox.AttackProperties, KO);
+				HitStopToApply = 85;
+				Owner->RoundManager->CurrentState.KOFramePlayTime = HitStopToApply + 15;
+				Owner->CurrentState.bPlayedKOSpark = true;
+
+				if (Owner->Projectiles.Num() > 0)
+				{
+					for (ABTProjectileBase* Projectile : Owner->Projectiles)
+					{
+						if (Projectile->CurrentState.bIsActive)
+							Projectile->CurrentState.HitStop = HitStopToApply;
+					}
+				}
+
+				if (Owner->Opponent->Projectiles.Num() > 0)
+				{
+					for (ABTProjectileBase* Projectile : Owner->Opponent->Projectiles)
+					{
+						if (Projectile->CurrentState.bIsActive)
+							Projectile->CurrentState.HitStop = HitStopToApply;
+					}
+				}
+				//notify RoundManager of KO for KO camera animation
+			}
+		}
+	}
 
 	if (Hitbox.AttackProperties & IsSuper)
 		DamageToApply = FMath::Max((int32)(OpponentValor * Hitbox.BaseDamage * .25f), DamageToApply); //Supers will always deal a minimum of 25% their base damage affected by valor

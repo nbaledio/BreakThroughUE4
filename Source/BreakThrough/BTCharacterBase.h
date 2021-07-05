@@ -478,6 +478,10 @@ public:
 
 	void HitboxViewer();
 
+	void LoadFXStates();
+
+	void SaveFXStates();
+
 	virtual void ResetCharacter(bool bNewGame = false);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
@@ -950,8 +954,6 @@ private:
 	void AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter);
 
 	void SetSounds();
-
-	void SaveFXStates();
 
 	void ProcessBlitz();
 

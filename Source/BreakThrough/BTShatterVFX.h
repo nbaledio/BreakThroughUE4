@@ -46,6 +46,8 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
 		UMaterialInterface* GlassMaterial;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
+		UMaterialInterface* EffectMaterial;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
 		UTexture* ShatterWholeOffsets;
@@ -53,5 +55,6 @@ protected:
 		UTexture* ShatterBrokenOffsets;
 
 	UMaterialInstanceDynamic* DynamicGlassMaterial;
+	UMaterialInstanceDynamic* DynamicEffectMaterial;
 	
 };
