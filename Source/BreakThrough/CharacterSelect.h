@@ -9,6 +9,7 @@
 #include "Components/PanelSlot.h"
 #include "Components/CanvasPanelSlot.h"
 #include "GameFramework/PlayerController.h"
+#include "Components/CanvasPanel.h"
 #include "Kismet/GameplayStatics.h"
 #include "Slate.h"
 #include "Math/UnrealMathUtility.h"
@@ -29,6 +30,14 @@ public:
 		class UTextBlock* P1CharacterName;
 	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* P2CharacterName;
+	UPROPERTY(meta = (BindWidget))
+		class UCanvasPanel* P1ColorSelectMenu;
+	UPROPERTY(meta = (BindWidget))
+		class UCanvasPanel* P2ColorSelectMenu;
+	UPROPERTY(meta = (BindWidget))
+		class UTextBlock* P1ColorText;
+	UPROPERTY(meta = (BindWidget))
+		class UTextBlock* P2ColorText;
 	UPROPERTY(meta = (BindWidget))
 		class UImage* P1Cursor;
 	UPROPERTY(meta = (BindWidget))
@@ -79,6 +88,19 @@ private:
 	bool P1Ready;
 	bool P2CharacterSelected;
 	bool P2Ready;
+	bool P1AcceptConfirmInput;
+	bool P1AcceptBackInput;
+	bool P1AcceptScrollInput;
+	bool P2AcceptConfirmInput;
+	bool P2AcceptBackInput;
+	bool P2AcceptScrollInput;
+
+	int P1HoveredCharacter;
+	int P2HoveredCharacter;
+	int P1Character = -1;
+	int P1Color = 1;
+	int P2Character = -1;
+	int P2Color = 1;
 
 	//Controllers
 	APlayerController* P1Controller;
@@ -87,10 +109,10 @@ private:
 	//Functions
 	void GetP1Inputs();
 	void GetP2Inputs();
-	void SetP1ButtonInputs();
-	void SetP2ButtonInputs();
 	void VsCPUMenuInteractions();
 	void Vs2PMenuInteractions();
 	int P1CursorCollisionDetection();
 	void SetP1CharacterPortrait(int CharacterCode);
+	int P2CursorCollisionDetection();
+	void SetP2CharacterPortrait(int CharacterCode);
 };
