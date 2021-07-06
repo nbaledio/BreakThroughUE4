@@ -12,6 +12,9 @@ ABTShatterVFX::ABTShatterVFX()
 
 	KOEffect = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("KOEffect"));
 	KOEffect->SetupAttachment(RootComponent);
+	
+	KORing = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("KO Ring"));
+	KORing->SetupAttachment(KOEffect);
 
 	GlassParticlesLeft = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("GlassParticlesLeft"));
 	GlassParticlesLeft->SetupAttachment(RootComponent);
@@ -69,11 +72,21 @@ void ABTShatterVFX::CreateMaterials()
 	if (EffectMaterial)
 		DynamicEffectMaterial = UMaterialInstanceDynamic::Create(EffectMaterial, this);
 
+	if (RingMaterial)
+		DynamicRingMaterial = UMaterialInstanceDynamic::Create(RingMaterial, this);
+
 	if (DynamicGlassMaterial && Glass)
 		Glass->SetMaterial(0, DynamicGlassMaterial); 
 
 	if (DynamicEffectMaterial && KOEffect)
 		KOEffect->SetMaterial(0, DynamicEffectMaterial);
+
+	if (DynamicRingMaterial && KORing)
+	{
+		KORing->SetMaterial(0, DynamicRingMaterial);
+		
+		DynamicRingMaterial->SetVectorParameterValue(FName("Color"), FVector(.25, .7, 1));
+	}
 }
 
 void ABTShatterVFX::Update()
@@ -164,6 +177,18 @@ void ABTShatterVFX::DrawEffect()
 	{
 		GlassParticlesKO->SetVisibility(true);
 		KOEffect->SetVisibility(true);
+		KORing->SetVisibility(true);
+
+		if (Owner)
+		{
+			if (Owner->RoundManager)
+			{
+				FRotator EffectRotation = Owner->RoundManager->MainCamera->GetComponentRotation();
+				EffectRotation.Yaw += 90;
+				EffectRotation.Roll += 90;
+				KORing->SetWorldRotation(EffectRotation);
+			}
+		}
 
 		if (CurrentState.FramePlayTime <= 85)
 		{
@@ -171,12 +196,17 @@ void ABTShatterVFX::DrawEffect()
 				KOEffect->SetRelativeScale3D(FVector(FMath::Lerp(.5f, 1.f, (float)(CurrentState.FramePlayTime) / 6.f)));
 			else
 				KOEffect->SetRelativeScale3D(FVector(FMath::Lerp(1.f, 1.5f, (float)(CurrentState.FramePlayTime - 6) / 80.f)));
-			//KOEffect->SetRelativeScale3D(FVector(1));// FMath::Lerp(.8f, 1.f, FMath::Lerp(1.f, 0.f, FMath::Min(1.f, (float)(Owner->CurrentState.HitStop) / 75.f)))));
+
+			KORing->SetRelativeScale3D(FVector(FMath::Lerp(.0f, 2.5f, FMath::Min(1.f, (float)(CurrentState.FramePlayTime) / 15.f))));
+			
 			DynamicEffectMaterial->SetScalarParameterValue(FName("Alpha"), 1);
+			DynamicRingMaterial->SetScalarParameterValue(FName("Alpha"), FMath::Min(1.f, (float)(CurrentState.FramePlayTime) / 30.f));
 		}
 		else
 		{
+			KORing->SetVisibility(false);
 			KOEffect->SetRelativeScale3D(FVector(FMath::Lerp(1.5f, 2.f, FMath::Min(1.f, (float)(CurrentState.FramePlayTime - 85) / 10.f))));
+
 			DynamicEffectMaterial->SetScalarParameterValue(FName("Alpha"), FMath::Lerp(1.f, 0.f, FMath::Min(1.f, (float)(CurrentState.FramePlayTime - 85) / 15.f)));
 		}
 
@@ -193,6 +223,7 @@ void ABTShatterVFX::DrawEffect()
 		GlassParticlesLeft->SetVisibility(false);
 		GlassParticlesRight->SetVisibility(false);
 		KOEffect->SetVisibility(false);
+		KORing->SetVisibility(false);
 		GlassParticlesKO->SetVisibility(false);
 	}
 }

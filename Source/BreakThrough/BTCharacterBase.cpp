@@ -3141,7 +3141,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		DamageToApply = FMath::Max(1, DamageToApply); //non-super attacks will always deal a minimum of one damage
 
 		Opponent->CurrentState.Health -= FMath::Min(DamageToApply, Opponent->CurrentState.Health);
-		//Opponent->CurrentState.Health = 0;
+		Opponent->CurrentState.Health = 0;
 		if (Opponent->CurrentState.Health == 0)
 		{
 			if (Hitbox.AttackProperties & NonFatal)
@@ -3480,6 +3480,14 @@ void ABTCharacterBase::LoadFXStates()
 			Projectiles[i]->CurrentState = CurrentState.CurrentProjectileStates[i];
 		}
 	}
+
+	if (CurrentState.CurrentEffectStates.Num() == SpecialVFX.Num() && CurrentState.CurrentEffectStates.Num() > 0)
+	{
+		for (uint8 i = 0; i < SpecialVFX.Num(); i++)
+		{
+			SpecialVFX[i]->CurrentState = CurrentState.CurrentEffectStates[i];
+		}
+	}
 }
 
 void ABTCharacterBase::SaveFXStates()
@@ -3497,6 +3505,14 @@ void ABTCharacterBase::SaveFXStates()
 		for (uint8 i = 0; i < Projectiles.Num(); i++)
 		{
 			CurrentState.CurrentProjectileStates[i] = Projectiles[i]->CurrentState;
+		}
+	}
+
+	if (CurrentState.CurrentEffectStates.Num() == SpecialVFX.Num() && CurrentState.CurrentEffectStates.Num() > 0)
+	{
+		for (uint8 i = 0; i < SpecialVFX.Num(); i++)
+		{
+			CurrentState.CurrentEffectStates[i] = SpecialVFX[i]->CurrentState;
 		}
 	}
 }

@@ -42,12 +42,16 @@ protected:
 		UStaticMeshComponent* Glass;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UStaticMeshComponent* KOEffect;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UStaticMeshComponent* KORing;
 	
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
 		UMaterialInterface* GlassMaterial;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
 		UMaterialInterface* EffectMaterial;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parameters")
+		UMaterialInterface* RingMaterial;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Parameters")
 		UTexture* ShatterWholeOffsets;
@@ -56,5 +60,6 @@ protected:
 
 	UMaterialInstanceDynamic* DynamicGlassMaterial;
 	UMaterialInstanceDynamic* DynamicEffectMaterial;
+	UMaterialInstanceDynamic* DynamicRingMaterial;
 	
 };

@@ -175,6 +175,7 @@ void ARoundManager::UpdateCameraPosition()
 	FVector TargetPosition = FVector(0);
 	bCinematicCamera = false;
 
+
 	if (CurrentState.KOFramePlayTime > 0 && !(Player1Base->CurrentState.Health == 0 && Player2Base->CurrentState.Health == 0))
 	{
 		//ko camera location settings
@@ -290,11 +291,9 @@ void ARoundManager::UpdateCameraPosition()
 		}
 		else
 		{
-			//CurrentState.CameraPosition.X = FMath::Lerp(CurrentState.CameraPosition.X, TargetPosition.X, .15f);
 			CurrentState.CameraPosition = FMath::Lerp(CurrentState.CameraPosition, CameraTargetPosition, .2f);
 			
 			TargetPosition = FVector(CurrentState.CameraPosition.X, 0, CurrentState.CameraPosition.Z);
-			//CurrentState.CameraPosition.Z = FMath::Lerp(CurrentState.CameraPosition.Z, TargetPosition.Z, .1f);
 		}
 	}
 	else if (Player2Base->CurrentState.CurrentAnimFrame.CameraLocation != FVector(0)) // check if Player 2's animation has a stored camera location
@@ -324,11 +323,14 @@ void ARoundManager::UpdateCameraPosition()
 		{
 			if (FMath::Abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X) > PlayerMaxDistance - 200)
 			{
-				CameraTargetPosition.Y = FMath::Min(YPosMin - 650, YPosMin - FMath::Abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X));
+				CameraTargetPosition.Y = FMath::Max(YPosMin - 650, YPosMin - FMath::Abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X) - 150);
 			}
 			else
 			{
-				CameraTargetPosition.Y -= 650;
+				if (!Player1Base->CurrentState.bIsAirborne && !Player2Base->CurrentState.bIsAirborne)
+					CameraTargetPosition.Y -= 650;
+				else
+					CameraTargetPosition.Y -= 500;
 			}
 			CurrentState.CameraPosition = FMath::Lerp(CurrentState.CameraPosition, CameraTargetPosition, .2f);
 		}
@@ -396,7 +398,7 @@ void ARoundManager::UpdateCameraPosition()
 						TargetRotation.Yaw = 35;
 				}
 
-				TargetRotation.Roll = -10;
+				//TargetRotation.Roll = -10;
 			}
 			else
 			{
@@ -410,9 +412,7 @@ void ARoundManager::UpdateCameraPosition()
 							TargetRotation.Yaw = -20;
 
 						if (Player1Base->CurrentState.KnockBack.Y > 0 || (Player2Base->CurrentState.Position.Y > Player1Base->CurrentState.Position.Y) || (!Player1Base->CurrentState.bIsAirborne && !Player2Base->CurrentState.bIsAirborne) || (Player1Base->CurrentState.bIsAirborne && Player2Base->CurrentState.bIsAirborne))
-							TargetRotation.Roll = 10;
-						else
-							TargetRotation.Roll = -10;
+							TargetRotation.Roll = 5;
 					}
 					else if (Player2Base->CurrentState.Health == 0 && Player1Base->CurrentState.Health > 0)
 					{
@@ -422,9 +422,7 @@ void ARoundManager::UpdateCameraPosition()
 							TargetRotation.Yaw = -20;
 
 						if (Player2Base->CurrentState.KnockBack.Y > 0 || (Player1Base->CurrentState.Position.Y > Player2Base->CurrentState.Position.Y) || (!Player1Base->CurrentState.bIsAirborne && !Player2Base->CurrentState.bIsAirborne) || (Player1Base->CurrentState.bIsAirborne && Player2Base->CurrentState.bIsAirborne))
-							TargetRotation.Roll = 10;
-						else
-							TargetRotation.Roll = -10;
+							TargetRotation.Roll = 5;
 					}
 				}
 				else
@@ -496,6 +494,7 @@ void ARoundManager::UpdateCameraPosition()
 		{
 
 			CurrentState.Rotation = FMath::Lerp(CurrentState.Rotation, FRotator(0), .2);
+
 			if (FMath::Abs(CurrentState.Rotation.Roll) < .1 && FMath::Abs(CurrentState.Rotation.Pitch) < .1 && FMath::Abs(CurrentState.Rotation.Yaw) < .1)
 			{
 				CurrentState.Rotation = FRotator(0);
@@ -708,13 +707,18 @@ void ARoundManager::DrawScreen()
 		LowerHUD->P2ResolveBar1->SetVisibility(ESlateVisibility::Hidden);
 
 	//draw updated camera/transform position from here
-	SetActorLocation(CurrentState.Position);
-	SetActorRotation(CurrentState.Rotation);
-
 	if (bCinematicCamera)
-		MainCamera->SetWorldLocation(CurrentState.CameraPosition);
+	{
+		SetActorLocation(FVector(CurrentState.CameraPosition.X, 0, CurrentState.CameraPosition.Z));
+		SetActorRotation(FRotator(0));
+	}
 	else
-		MainCamera->SetRelativeLocation(FVector(0, CurrentState.CameraPosition.Y, 0));
+	{
+		SetActorLocation(CurrentState.Position);
+		SetActorRotation(CurrentState.Rotation);
+	}
+
+	MainCamera->SetRelativeLocation(FVector(0, CurrentState.CameraPosition.Y, 0));
 		
 	MainCamera->SetRelativeRotation(CurrentState.CameraRotation);
 }
