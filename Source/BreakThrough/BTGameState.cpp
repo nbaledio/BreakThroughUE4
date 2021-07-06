@@ -85,6 +85,7 @@ void BTGameState::LoadGameState()
         if (Player[i] != nullptr)// && CharacterStates.Num() > i)
         {
             Player[i]->CurrentState = CharacterStates[i];
+            Player[i]->LoadFXStates();
         }
     }
 
@@ -98,6 +99,7 @@ void BTGameState::SaveGameState()
     {
         if (Player[i] != nullptr)
         {
+            Player[i]->SaveFXStates();
             CharacterStates[i] = Player[i]->CurrentState;
         }
     }

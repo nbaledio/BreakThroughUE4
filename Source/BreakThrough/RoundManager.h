@@ -15,7 +15,11 @@
 #include "Components/SceneCaptureComponent2D.h"
 #include "Components/WidgetComponent.h"
 #include "Particles/ParticleSystemComponent.h"
+#include "BTVFXBase.h"
 #include "RoundManager.generated.h"
+
+class ABTVFXBase;
+struct FEffectState;
 
 USTRUCT(BlueprintType)
 struct FResolveBarState
@@ -68,6 +72,7 @@ struct FRoundManagerState
 	int32 P2Health;
 	uint8 MaxRounds;
 	uint8 UniversalHitStop;
+	uint8 KOFramePlayTime;
 
 	float KOAlpha = 0;
 
@@ -81,6 +86,7 @@ struct FRoundManagerState
 	FComboCountAnimationState P2ComboCountAnimationState;
 
 	TArray<FResolveBarState> ResolveStates;
+	FEffectState ShatterTextState;
 };
 
 UCLASS()
@@ -107,9 +113,13 @@ public:
 
 	FRoundManagerState CurrentState;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
+		TSubclassOf<class ABTVFXBase> ShatterTextBlueprint;
+
 	//References for character variables
 	ABTCharacterBase* Player1Base;
 	ABTCharacterBase* Player2Base;
+	ABTVFXBase* ShatterText;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
 	float PlayerMaxDistance = 400;

@@ -9,6 +9,7 @@
 enum Interactions
 {
 	Hit = 0,
+	CounterHit,
 	Guard,
 	JustGuard,
 	Resolve,

@@ -261,7 +261,7 @@ struct FCharacterState
 		int32 Health = 1000;
 	//the resolve that must be broken through
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
-		uint8 Resolve = 4;
+		uint8 Resolve = 2;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Battle Stats")
 		int32 Durability = 1000;
 
@@ -288,6 +288,9 @@ struct FCharacterState
 	bool bTrueCombo = true; //keeps track of whether or not a character could have escaped a combo at some point
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	float SpecialProration = 1;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		bool bPlayedKOSpark = false;
 
 	// ints to denote active time on directional inputs
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
@@ -338,6 +341,19 @@ struct FCharacterState
 	uint8 Charge6Life = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 Charge8Life = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
+		uint8 QCF = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
+		uint8 QCB = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
+		uint8 HCF = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
+		uint8 HCB = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
+		uint8 DP = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
+		uint8 RDP = 0;
 
 	// ints to denote active time on button inputs
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
@@ -461,6 +477,12 @@ public:
 	bool RectangleOverlap(FVector2D Pos1, FVector2D Pos2, FVector2D Size1, FVector2D Size2);
 
 	void HitboxViewer();
+
+	void LoadFXStates();
+
+	void SaveFXStates();
+
+	virtual void ResetCharacter(bool bNewGame = false);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
 		TSubclassOf<class ASigil> SigilBlueprint;
@@ -638,19 +660,17 @@ protected:
 
 	virtual bool SuperAttacks() { return false; };
 
-	bool QCF();
+	void QCF();
 
-	bool QCB();
+	void QCB();
 
-	bool HCF();
+	void HCF();
 
-	bool HCB();
+	void HCB();
 
-	bool DP();
+	void DP();
 
-	bool RDP();
-
-	bool FC();
+	void RDP();
 
 	void RefreshMovelist();
 
@@ -701,7 +721,7 @@ protected:
 
 	//number of frames that an input is active for
 		uint8 InputTime = 5;
-		uint8 DirInputTime = 12;
+		uint8 DirInputTime = 15;
 
 public:
 	//Idle Stance Animations
@@ -934,8 +954,6 @@ private:
 	void AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter);
 
 	void SetSounds();
-
-	void SaveFXStates();
 
 	void ProcessBlitz();
 
