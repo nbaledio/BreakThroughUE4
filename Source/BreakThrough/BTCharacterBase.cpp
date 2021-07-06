@@ -3141,7 +3141,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		DamageToApply = FMath::Max(1, DamageToApply); //non-super attacks will always deal a minimum of one damage
 
 		Opponent->CurrentState.Health -= FMath::Min(DamageToApply, Opponent->CurrentState.Health);
-		Opponent->CurrentState.Health = 0;
+		//Opponent->CurrentState.Health = 0;
 		if (Opponent->CurrentState.Health == 0)
 		{
 			if (Hitbox.AttackProperties & NonFatal)
