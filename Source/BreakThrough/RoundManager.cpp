@@ -883,12 +883,6 @@ void ARoundManager::UpdateResolveBar(uint8 index)
 
 void ARoundManager::UpdateBlackScreen() 
 {
-	//Increment black screen animation
-	if (CurrentState.BlackScreenState.FramePlayTime < 180)
-	{
-		CurrentState.BlackScreenState.FramePlayTime++;
-	}
-
 	//Reset positions on fade in finish
 	if (CurrentState.BlackScreenState.FramePlayTime == 180 && !CurrentState.BlackScreenState.bReverse)
 	{
@@ -903,6 +897,12 @@ void ARoundManager::UpdateBlackScreen()
 		CurrentState.BlackScreenState.bReverse = false;
 		CurrentState.BlackScreenState.FramePlayTime = 0;
 		RoundStart();
+	}
+
+	//Increment black screen animation
+	if (CurrentState.BlackScreenState.FramePlayTime < 180)
+	{
+		CurrentState.BlackScreenState.FramePlayTime++;
 	}
 }
 
