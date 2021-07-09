@@ -9,7 +9,7 @@ void UCharacterSelect::NativeConstruct()
 	const UObject* world = (UObject*)GetWorld();
 
 	//Set Controllers
-	if (Gamemode == "CPU") 
+	if (Gamemode == "CPU" || Gamemode == "Training") 
 	{
 		P1Controller = UGameplayStatics::GetPlayerController(world, 0);
 		P2Controller = UGameplayStatics::GetPlayerController(world, 0);
@@ -29,7 +29,7 @@ void UCharacterSelect::NativeConstruct()
 			P1Controller = UGameplayStatics::GetPlayerController(world, 0);
 			P2Controller = UGameplayStatics::GetPlayerController(world, 1);
 		}
-		else if (P2Side == "Right" && P1Side == "Left")
+		else if (P1Side == "Right" && P2Side == "Left")
 		{
 			P1Controller = UGameplayStatics::GetPlayerController(world, 1);
 			P2Controller = UGameplayStatics::GetPlayerController(world, 0);
@@ -59,7 +59,7 @@ void UCharacterSelect::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
 		GetP2Inputs();
 	}
 
-	if (Gamemode == "CPU") 
+	if (Gamemode == "CPU" || Gamemode == "Training") 
 	{
 		VsCPUMenuInteractions();
 	}
@@ -535,10 +535,6 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			if (P1Character == P2Character && P1Color == P2Color) 
 			{
 				P2Color--;
-				if (P2Color < 1) 
-				{
-					P2Color = 5;
-				}
 			}
 		}
 		else if ((P1_INPUT_RIGHT || P1_HORIZONTAL_AXIS > 0.9f) && P2AcceptScrollInput)
@@ -569,6 +565,10 @@ void UCharacterSelect::VsCPUMenuInteractions()
 		if (P2Color > 5)
 		{
 			P2Color = 1;
+			if (P1Color == P2Color && P1Character == P2Character && P1Ready)
+			{
+				P2Color++;
+			}
 		}
 
 		//Set P2 Color Text
@@ -667,6 +667,10 @@ void UCharacterSelect::Vs2PMenuInteractions()
 		{
 			P1Color--;
 			P1AcceptScrollInput = false;
+			if (P1Character == P2Character && P1Color == P2Color && P2Ready)
+			{
+				P1Color--;
+			}
 		}
 		else if ((P1_INPUT_RIGHT || P1_HORIZONTAL_AXIS > 0.9f) && P1AcceptScrollInput)
 		{
@@ -688,10 +692,18 @@ void UCharacterSelect::Vs2PMenuInteractions()
 		if (P1Color < 1)
 		{
 			P1Color = 5;
+			if (P1Color == P2Color && P1Character == P2Character && P2Ready)
+			{
+				P1Color--;
+			}
 		}
 		if (P1Color > 5)
 		{
 			P1Color = 1;
+			if (P1Character == P2Character && P1Color == P2Color && P2Ready)
+			{
+				P2Color++;
+			}
 		}
 
 		//Set P1 Color Text
@@ -752,7 +764,7 @@ void UCharacterSelect::Vs2PMenuInteractions()
 			P2AcceptConfirmInput = true;
 		}
 		//Check for back input
-		if (P2_INPUT_BACK && P1AcceptBackInput)
+		if (P2_INPUT_BACK && P2AcceptBackInput)
 		{
 			P2AcceptBackInput = false;
 			P2Character = -1;
@@ -772,6 +784,10 @@ void UCharacterSelect::Vs2PMenuInteractions()
 		{
 			P2Color--;
 			P2AcceptScrollInput = false;
+			if (P1Character == P2Character && P1Color == P2Color && P1Ready)
+			{
+				P2Color--;
+			}
 		}
 		else if ((P2_INPUT_RIGHT || P2_HORIZONTAL_AXIS > 0.9f) && P2AcceptScrollInput)
 		{
@@ -793,10 +809,18 @@ void UCharacterSelect::Vs2PMenuInteractions()
 		if (P2Color < 1)
 		{
 			P2Color = 5;
+			if (P1Color == P2Color && P1Character == P2Character && P1Ready)
+			{
+				P2Color--;
+			}
 		}
 		if (P2Color > 5)
 		{
 			P2Color = 1;
+			if (P1Character == P2Character && P1Color == P2Color && P1Ready)
+			{
+				P2Color++;
+			}
 		}
 
 		//Set P1 Color Text

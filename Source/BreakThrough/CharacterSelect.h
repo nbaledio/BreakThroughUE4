@@ -76,9 +76,9 @@ private:
 	bool P2_INPUT_START;
 
 	//Local Variables
-	FString Gamemode = "CPU";
-	FString P1Side = "Left";
-	FString P2Side = "Right";
+	FString Gamemode = "VS";
+	FString P1Side = "Right";
+	FString P2Side = "Left";
 
 	TArray<UImage*> Headshots;
 	
