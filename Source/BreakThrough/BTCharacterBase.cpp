@@ -188,7 +188,7 @@ void ABTCharacterBase::HitDetection()
 											(Opponent->CurrentState.CurrentAnimFrame.Invincibility == HiCounter && CurrentState.CurrentAnimFrame.Hitboxes[i].AttackHeight < Low) || (Opponent->CurrentState.CurrentAnimFrame.Invincibility == LowCounter && CurrentState.CurrentAnimFrame.Hitboxes[i].AttackHeight == Low)) &&
 											!(CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & IsSuper))) //check if the opponent is in a counter stance that can counter the current attack
 										{
-											CurrentState.HitStop = 24;
+											CurrentState.HitStop = 15;
 											Opponent->CurrentState.bHitSuccess = true;
 											Opponent->CurrentState.bClash = true;
 										}
@@ -824,7 +824,7 @@ void ABTCharacterBase::DrawCharacter()
 	LightSettings();
 	DrawSmear();
 
-	DynamicOutline->SetScalarParameterValue(FName("LineThickness"), FMath::Lerp(0, 4, RoundManager->CurrentState.CameraPosition.Y/RoundManager->YPosMax));
+	DynamicOutline->SetScalarParameterValue(FName("LineThickness"), FMath::Lerp(0.f, 3.5f, RoundManager->CurrentState.CameraPosition.Y/RoundManager->YPosMax));
 	DynamicOutline->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
 
 	DynamicEyeShine->SetScalarParameterValue(FName("DepthOffset"), DepthOffset);
@@ -1318,8 +1318,11 @@ void ABTCharacterBase::RunBraking()
 					CurrentState.Velocity.X -= AccelScale * RunAcceleration;
 			}
 
+			
+			if (RunAcceleration > 0 && (CurrentState.Dir6 == DirInputTime || CurrentState.Dir9 == DirInputTime || CurrentState.bIsDashDown))
+			{ }
 			//stop running if forward direction is no longer being held for run type characters and if animation has finished on dash type characters
-			if ((RunAcceleration > 0 && CurrentState.Dir6 < DirInputTime && CurrentState.Dir9 < DirInputTime) || (!IsCurrentAnimation(RunStart) && !IsCurrentAnimation(RunCycle) && !IsCurrentAnimation(PreJump)))
+			else if ((RunAcceleration > 0 && CurrentState.Dir6 < DirInputTime && CurrentState.Dir9 < DirInputTime) || (!IsCurrentAnimation(RunStart) && !IsCurrentAnimation(RunCycle) && !IsCurrentAnimation(PreJump)))
 			{
 				TurnAroundCheck();
 				CurrentState.bIsRunning = false;
@@ -1757,9 +1760,22 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 
 void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button inputs based on the inputs read
 {
+	if (Inputs & INPUT_DASH && !CurrentState.bIsDashDown && !(Inputs & INPUT_DOWN)) //Light Attack Button
+	{
+		CurrentState.DashPressed = InputTime;
+
+		if (CurrentState.HitStop > 0)
+			CurrentState.DashPressed += CurrentState.HitStop;
+		CurrentState.bIsDashDown = true;
+	}
+	else if (!(Inputs & INPUT_DASH) && CurrentState.bIsDashDown)
+	{
+		CurrentState.bIsDashDown = false;
+	}
+
 	if (Inputs & INPUT_LIGHT && !CurrentState.bIsLDown) //Light Attack Button
 	{
-		CurrentState.LPressed = 2 * InputTime;
+		CurrentState.LPressed = InputTime;
 
 		if (CurrentState.HitStop > 0)
 			CurrentState.LPressed += CurrentState.HitStop;
@@ -1891,6 +1907,9 @@ void ABTCharacterBase::InputCountdown() //decrement input values
 		CurrentState.DoubleDir4--;
 	if (CurrentState.DoubleDir6 > 0)
 		CurrentState.DoubleDir6--;
+
+	if (CurrentState.DashPressed > 0)
+		CurrentState.DashPressed--;
 
 	if (CurrentState.LPressed > 0)
 		CurrentState.LPressed--;
@@ -2079,11 +2098,14 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			if (CurrentState.bLose)
 				return EnterNewAnimation(TimeOverLose);
 
-			if (CurrentState.DoubleDir6 > 0)
+			if (CurrentState.DoubleDir6 > 0 || (CurrentState.DashPressed > 0 && CurrentState.Dir4 < DirInputTime))
 			{
 				if (RunAcceleration > 0)
 					CurrentState.bIsRunning = true;
+
 				CurrentState.DoubleDir6 = 0;
+				CurrentState.DashPressed = 0;
+
 				if (RunStart.Num() > 0)
 					return EnterNewAnimation(RunStart);
 				else
@@ -2106,9 +2128,10 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		{
 			if (AirDashForce > 0 && CurrentState.JumpsUsed < MaxJumps)
 			{
-				if (CurrentState.DoubleDir6 > 0)
+				if (CurrentState.DoubleDir6 > 0 || (CurrentState.DashPressed > 0 && CurrentState.Dir4 < DirInputTime))
 				{
 					CurrentState.DoubleDir6 = 0;
+					CurrentState.DashPressed = 0;
 					CurrentState.GravDefyTime = AirDashDuration;
 					CurrentState.Velocity = FVector2D(AirDashForce, 0);
 
@@ -2151,9 +2174,10 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 					return EnterNewAnimation(AirDashForwardIn);
 				}
 
-				if (CurrentState.DoubleDir4 > 0)
+				if (CurrentState.DoubleDir4 > 0 || (CurrentState.DashPressed > 0 && CurrentState.Dir4 == DirInputTime))
 				{
 					CurrentState.DoubleDir4 = 0;
+					CurrentState.DashPressed = 0;
 					CurrentState.GravDefyTime = AirDashDuration;
 					CurrentState.Velocity = FVector2D(-.85 * AirDashForce, 0);
 
@@ -2216,9 +2240,10 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		if (!CurrentState.bIsCrouching && (IsCurrentAnimation(IdleCrouch) || IsCurrentAnimation(CrouchDown) || IsCurrentAnimation(IdleCrouchBlink) || IsCurrentAnimation(CrouchIdleAction)))
 			return EnterNewAnimation(StandUp);
 
-		if (CurrentState.DoubleDir4 > 0 && CurrentState.BlockStun == 0 && CurrentState.LandingLag == 0)
+		if ((CurrentState.DoubleDir4 > 0 || (CurrentState.DashPressed > 0 && CurrentState.Dir4 == DirInputTime)) && CurrentState.BlockStun == 0 && CurrentState.LandingLag == 0)
 		{
 			CurrentState.DoubleDir4 = 0;
+			CurrentState.DashPressed = 0;
 			
 			if (CurrentState.ResolveRecoverTimer >= 200)
 				CurrentState.ResolveRecoverTimer = 180;
@@ -3154,6 +3179,10 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 				HitStopToApply = 95;
 				RoundManager->CurrentState.KOFramePlayTime = HitStopToApply + 15;
 				CurrentState.bPlayedKOSpark = true;
+
+				if (Hitbox.PotentialCounterKnockBack != FVector2D(0))
+					KnockBackToApply = Hitbox.PotentialCounterKnockBack;
+
 				if (Projectiles.Num() > 0)
 				{
 					for (ABTProjectileBase* Projectile : Projectiles)
@@ -3892,18 +3921,56 @@ void ABTCharacterBase::ProcessBlitz()
 
 				//place and play guard effect
 				//place at midpoint between hitbox center and hurtbox center
+				if (Opponent)
+				{
+					FVector2D ImpactPoint = FVector2D(Opponent->CurrentState.Position.X - .5 * Opponent->PushboxWidth, Opponent->CurrentState.Position.Y + Opponent->StandingPushBoxHeight);
+					uint8 GuardStatus = Guard;
+
+					if (Opponent->CurrentState.JustDefense >= 0)
+						GuardStatus = JustGuard;
+
+					if (Opponent->CurrentState.bFacingRight)
+						ImpactPoint.X = Opponent->CurrentState.Position.X + .5 * Opponent->PushboxWidth;
+
+					if (SpecialVFX[1]->CurrentState.bIsActive)
+					{
+						Opponent->SpecialVFX[1]->Activate(ImpactPoint, Opponent->CurrentState.bFacingRight, IsSpecial, GuardStatus);
+					}
+					else
+						SpecialVFX[1]->Activate(ImpactPoint, Opponent->CurrentState.bFacingRight, IsSpecial, GuardStatus);
+				}
 			}
 			else
 			{
-				Opponent->CurrentState.KnockBack = FVector2D(6, 0);
-				Opponent->CurrentState.SlowMoTime = 18; //Slows opponent for .5 seconds
-				if (Opponent->CurrentState.bIsAirborne)
+				if (Opponent->CurrentState.CurrentAnimFrame.Invincibility >= HiCounter && Opponent->CurrentState.CurrentAnimFrame.Invincibility <= SuperCounter)
 				{
-					Opponent->CurrentState.KnockBack = FVector2D(3.f, 2.25f);
-					Opponent->EnterNewAnimation(Opponent->DeflectedAir);
+					CurrentState.HitStop = 15;
+					Opponent->CurrentState.bHitSuccess = true;
+					Opponent->CurrentState.bClash = true;
 				}
-				else
-					Opponent->EnterNewAnimation(Opponent->Deflected);
+				else if (Opponent->CurrentState.CurrentAnimFrame.Invincibility != StrikeInvincible && Opponent->CurrentState.CurrentAnimFrame.Invincibility != FullInvincible)
+				{
+					Opponent->CurrentState.KnockBack = FVector2D(6, 0);
+					Opponent->CurrentState.SlowMoTime = 18; //Slows opponent for .5 seconds
+					if (Opponent->CurrentState.bIsAirborne)
+					{
+						Opponent->CurrentState.KnockBack = FVector2D(3.f, 2.25f);
+						Opponent->EnterNewAnimation(Opponent->DeflectedAir);
+					}
+					else
+						Opponent->EnterNewAnimation(Opponent->Deflected);
+
+					if (Opponent)
+					{
+						FVector2D EffectCenter = FVector2D(FMath::Lerp(Opponent->CurrentState.Position.X, CurrentState.Position.X, .25f), FMath::Lerp(Opponent->CurrentState.Position.Y + Opponent->StandingPushBoxHeight, CurrentState.Position.Y + StandingPushBoxHeight, .25f));
+						if (SpecialVFX[0]->CurrentState.bIsActive)
+						{
+							Opponent->SpecialVFX[0]->Activate(EffectCenter, CurrentState.bFacingRight, 0, Deflect);
+						}
+						else
+							SpecialVFX[0]->Activate(EffectCenter, CurrentState.bFacingRight, 0, Deflect);
+					}
+				}
 			}
 		}
 		else

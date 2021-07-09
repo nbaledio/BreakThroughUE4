@@ -140,9 +140,9 @@ void ABTShatterVFX::Update()
 			if (Owner->CurrentState.HitStop > 80)
 				GlassParticlesKO->CustomTimeDilation = .1;
 			else if (Owner->CurrentState.HitStop > 0 && Owner->RoundManager->CurrentState.KOFramePlayTime > 0)
-				GlassParticlesKO->CustomTimeDilation = .02;
+				GlassParticlesKO->CustomTimeDilation = .03;
 			else
-				GlassParticlesKO->CustomTimeDilation = 1.2;
+				GlassParticlesKO->CustomTimeDilation = 1;
 		}
 	}
 }

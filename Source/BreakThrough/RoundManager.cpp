@@ -328,9 +328,19 @@ void ARoundManager::UpdateCameraPosition()
 			else
 			{
 				if (!Player1Base->CurrentState.bIsAirborne && !Player2Base->CurrentState.bIsAirborne)
-					CameraTargetPosition.Y -= 650;
+				{
+					if (CurrentState.KOFramePlayTime > 0)
+						CameraTargetPosition.Y -= FMath::Lerp(500.f, 650.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+					else
+						CameraTargetPosition.Y -= 650;
+				}
 				else
-					CameraTargetPosition.Y -= 500;
+				{
+					if (CurrentState.KOFramePlayTime > 0)
+						CameraTargetPosition.Y -= FMath::Lerp(550.f, 400.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+					else
+						CameraTargetPosition.Y -= 500;
+				}
 			}
 			CurrentState.CameraPosition = FMath::Lerp(CurrentState.CameraPosition, CameraTargetPosition, .2f);
 		}
@@ -386,16 +396,36 @@ void ARoundManager::UpdateCameraPosition()
 				if (Player1Base->CurrentState.Health == 0 && Player2Base->CurrentState.Health > 0)
 				{
 					if (Player1Base->CurrentState.Position.X < Player2Base->CurrentState.Position.X)
-						TargetRotation.Yaw = -35;
+					{
+						if (Player2Base->CurrentState.bIsAirborne)
+							TargetRotation.Yaw = FMath::Lerp(45.f, 35.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+						else
+							TargetRotation.Yaw = FMath::Lerp(-45.f, -35.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+					}
 					else
-						TargetRotation.Yaw = 35;
+					{
+						if (Player2Base->CurrentState.bIsAirborne)
+							TargetRotation.Yaw = FMath::Lerp(-45.f, -35.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+						else
+							TargetRotation.Yaw = FMath::Lerp(45.f, 35.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+					}
 				}
 				else if (Player2Base->CurrentState.Health == 0 && Player1Base->CurrentState.Health > 0)
 				{
 					if (Player2Base->CurrentState.Position.X < Player1Base->CurrentState.Position.X)
-						TargetRotation.Yaw = -35;
+					{
+						if (Player1Base->CurrentState.bIsAirborne)
+							TargetRotation.Yaw = FMath::Lerp(45.f, 35.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+						else
+							TargetRotation.Yaw = FMath::Lerp(-45.f, -35.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+					}
 					else
-						TargetRotation.Yaw = 35;
+					{
+						if (Player1Base->CurrentState.bIsAirborne)
+							TargetRotation.Yaw = FMath::Lerp(-45.f, -35.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+						else
+							TargetRotation.Yaw = FMath::Lerp(45.f, 35.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+					}
 				}
 
 				//TargetRotation.Roll = -10;
@@ -407,22 +437,42 @@ void ARoundManager::UpdateCameraPosition()
 					if (Player1Base->CurrentState.Health == 0 && Player2Base->CurrentState.Health > 0)
 					{
 						if (Player1Base->CurrentState.Position.X < Player2Base->CurrentState.Position.X)
-							TargetRotation.Yaw = 20;
+						{
+							if (Player2Base->CurrentState.bIsAirborne)
+								TargetRotation.Yaw = FMath::Lerp(-25.f, -20.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+							else
+								TargetRotation.Yaw = FMath::Lerp(25.f, 20.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+						}
 						else
-							TargetRotation.Yaw = -20;
+						{
+							if (Player2Base->CurrentState.bIsAirborne)
+								TargetRotation.Yaw = FMath::Lerp(25.f, 20.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+							else
+								TargetRotation.Yaw = FMath::Lerp(-25.f, -20.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+						}
 
-						if (Player1Base->CurrentState.KnockBack.Y > 0 || (Player2Base->CurrentState.Position.Y > Player1Base->CurrentState.Position.Y) || (!Player1Base->CurrentState.bIsAirborne && !Player2Base->CurrentState.bIsAirborne) || (Player1Base->CurrentState.bIsAirborne && Player2Base->CurrentState.bIsAirborne))
-							TargetRotation.Roll = 5;
+						if (Player1Base->CurrentState.KnockBack.Y > 0 || (!Player1Base->CurrentState.bIsAirborne && !Player2Base->CurrentState.bIsAirborne) || (Player1Base->CurrentState.bIsAirborne && Player2Base->CurrentState.bIsAirborne))
+							TargetRotation.Roll = 10;
 					}
 					else if (Player2Base->CurrentState.Health == 0 && Player1Base->CurrentState.Health > 0)
 					{
 						if (Player2Base->CurrentState.Position.X < Player1Base->CurrentState.Position.X)
-							TargetRotation.Yaw = 20;
+						{
+							if (Player1Base->CurrentState.bIsAirborne)
+								TargetRotation.Yaw = FMath::Lerp(-25.f, -20.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+							else
+								TargetRotation.Yaw = FMath::Lerp(25.f, 20.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+						}
 						else
-							TargetRotation.Yaw = -20;
+						{
+							if (Player1Base->CurrentState.bIsAirborne)
+								TargetRotation.Yaw = FMath::Lerp(25.f, 20.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+							else
+								TargetRotation.Yaw = FMath::Lerp(-25.f, -20.f, FMath::Min(1.f, (float)(CurrentState.KOFramePlayTime) / 100.f));
+						}
 
-						if (Player2Base->CurrentState.KnockBack.Y > 0 || (Player1Base->CurrentState.Position.Y > Player2Base->CurrentState.Position.Y) || (!Player1Base->CurrentState.bIsAirborne && !Player2Base->CurrentState.bIsAirborne) || (Player1Base->CurrentState.bIsAirborne && Player2Base->CurrentState.bIsAirborne))
-							TargetRotation.Roll = 5;
+						if (Player2Base->CurrentState.KnockBack.Y > 0 || (!Player1Base->CurrentState.bIsAirborne && !Player2Base->CurrentState.bIsAirborne) || (Player1Base->CurrentState.bIsAirborne && Player2Base->CurrentState.bIsAirborne))
+							TargetRotation.Roll = 10;
 					}
 				}
 				else
