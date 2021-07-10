@@ -8,6 +8,8 @@ void UCharacterSelect::NativeConstruct()
 	Super::NativeConstruct();
 	const UObject* world = (UObject*)GetWorld();
 
+	//Set gamemode and sides here
+
 	//Set Controllers
 	if (Gamemode == "CPU" || Gamemode == "Training") 
 	{
@@ -27,7 +29,7 @@ void UCharacterSelect::NativeConstruct()
 		if (P1Side == "Left" && P2Side == "Right")
 		{
 			P1Controller = UGameplayStatics::GetPlayerController(world, 0);
-			P2Controller = UGameplayStatics::GetPlayerController(world, 1);
+			P2Controller = UGameplayStatics::GetPlayerController(world, 0);
 		}
 		else if (P1Side == "Right" && P2Side == "Left")
 		{
@@ -38,9 +40,14 @@ void UCharacterSelect::NativeConstruct()
 
 	SetP1CharacterPortrait(-1);
 	SetP2CharacterPortrait(-1);
+	SetStagePreview(-1);
 
 	Headshots.Add(ACH_Headshot);
 	Headshots.Add(DHA_Headshot);
+
+	StageIcons.Add(TrainingStageIcon);
+	StageIcons.Add(DhaliaStageIcon);
+	StageIcons.Add(IzanagiCastleIcon);
 }
 
 void UCharacterSelect::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -63,9 +70,19 @@ void UCharacterSelect::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
 	{
 		VsCPUMenuInteractions();
 	}
-	else if (Gamemode == "VS") 
+	else if (Gamemode == "VS")
 	{
 		Vs2PMenuInteractions();
+	}
+
+	if(P1Ready && P2Ready)
+	{
+		StageSelectInputs();
+		StageSelectMenu->SetVisibility(ESlateVisibility::Visible);
+	}
+	else 
+	{
+		StageSelectMenu->SetVisibility(ESlateVisibility::Hidden);
 	}
 }
 
@@ -838,6 +855,16 @@ void UCharacterSelect::Vs2PMenuInteractions()
 	}
 }
 
+void UCharacterSelect::StageSelectInputs()
+{
+	//Cursor Movement
+	FVector2D CursorCurrentPosition = Cast<UCanvasPanelSlot>(StageSelectCursor->Slot)->GetPosition();
+	Cast<UCanvasPanelSlot>(StageSelectCursor->Slot)->SetPosition(FVector2D(FMath::Clamp(CursorCurrentPosition.X + (P1_HORIZONTAL_AXIS * CursorSpeed), -1050.0f, 750.0f), FMath::Clamp(CursorCurrentPosition.Y - (P1_VERTICAL_AXIS * CursorSpeed), -650.0f, 325.0f)));
+
+	//Set stage preview
+	int stage = StageSelectCursorCollisionDetection();
+}
+
 int UCharacterSelect::P1CursorCollisionDetection()
 {
 	FVector2D P1CursorCurrentPosition = Cast<UCanvasPanelSlot>(P1Cursor->Slot)->GetPosition();
@@ -873,6 +900,28 @@ int UCharacterSelect::P2CursorCollisionDetection()
 		}
 	}
 	SetP2CharacterPortrait(-1);
+	return -1;
+}
+
+int UCharacterSelect::StageSelectCursorCollisionDetection() 
+{
+	FVector2D CursorCurrentPosition = Cast<UCanvasPanelSlot>(StageSelectCursor->Slot)->GetPosition();
+	FVector2D CursorCurrentSize = Cast<UCanvasPanelSlot>(StageSelectCursor->Slot)->GetSize();
+	for (int i = 0; i < StageIcons.Num(); i++)
+	{
+		FVector2D StageIconPos = Cast<UCanvasPanelSlot>(StageIcons[i]->Slot)->GetPosition();
+		FVector2D StageIconSize = Cast<UCanvasPanelSlot>(StageIcons[i]->Slot)->GetSize();
+		bool r1 = CursorCurrentPosition.X + 40 < StageIconPos.X + 300 + StageIconSize.X/4;
+		bool r2 = CursorCurrentPosition.X + 40 + CursorCurrentSize.X/12 > StageIconPos.X + 300;
+		bool r3 = CursorCurrentPosition.Y + 40 < StageIconPos.Y + 100 + StageIconSize.Y/4;
+		bool r4 = CursorCurrentPosition.Y + 40 + CursorCurrentSize.Y/12 > StageIconPos.Y + 100;
+		if (r1 && r2 && r3 && r4)
+		{
+			SetStagePreview(i);
+			return i;
+		}
+	}
+	SetStagePreview(-1);
 	return -1;
 }
 
@@ -915,5 +964,31 @@ void UCharacterSelect::SetP2CharacterPortrait(int CharacterCode)
 		P2CharacterPortrait->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 0.0f));
 		P2CharacterPortrait->SetBrushFromTexture(NULL);
 		P2CharacterName->SetText(FText::FromString(""));
+	}
+}
+
+void UCharacterSelect::SetStagePreview(int StageCode) 
+{
+	switch (StageCode)
+	{
+	case 0:
+		StagePreview->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
+		StagePreview->SetBrushFromTexture(Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/TrainingStageIcon"))));
+		StageNameText->SetText(FText::FromString("Training Stage"));
+		break;
+	case 1:
+		StagePreview->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
+		StagePreview->SetBrushFromTexture(Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/DhaliaStageIcon"))));
+		StageNameText->SetText(FText::FromString("Dhalia's Stage"));
+		break;
+	case 2:
+		StagePreview->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
+		StagePreview->SetBrushFromTexture(Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/IzanagiCastleIcon"))));
+		StageNameText->SetText(FText::FromString("Izanagi Castle"));
+		break;
+	default:
+		StagePreview->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 0.0f));
+		StagePreview->SetBrushFromTexture(NULL);
+		StageNameText->SetText(FText::FromString(""));
 	}
 }

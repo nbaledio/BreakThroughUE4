@@ -22,6 +22,7 @@ class BREAKTHROUGH_API UCharacterSelect : public UUserWidget
 
 public:
 	//Widget Components
+	//Character Select Components
 	UPROPERTY(meta = (BindWidget))
 		class UImage* P1CharacterPortrait;
 	UPROPERTY(meta = (BindWidget))
@@ -46,6 +47,22 @@ public:
 		class UImage* ACH_Headshot;
 	UPROPERTY(meta = (BindWidget))
 		class UImage* DHA_Headshot;
+
+	//Stage Select Components
+	UPROPERTY(meta = (BindWidget))
+		class UCanvasPanel* StageSelectMenu;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* StageSelectCursor;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* StagePreview;
+	UPROPERTY(meta = (BindWidget))
+		class UTextBlock* StageNameText;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* TrainingStageIcon;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* DhaliaStageIcon;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* IzanagiCastleIcon;
 
 protected:
 	virtual void NativeConstruct() override;
@@ -76,11 +93,12 @@ private:
 	bool P2_INPUT_START;
 
 	//Local Variables
-	FString Gamemode = "VS";
-	FString P1Side = "Right";
-	FString P2Side = "Left";
+	FString Gamemode = "CPU";
+	FString P1Side = "Left";
+	FString P2Side = "Right";
 
 	TArray<UImage*> Headshots;
+	TArray<UImage*> StageIcons;
 	
 	float CursorSpeed = 15.0f;
 
@@ -111,8 +129,11 @@ private:
 	void GetP2Inputs();
 	void VsCPUMenuInteractions();
 	void Vs2PMenuInteractions();
+	void StageSelectInputs();
 	int P1CursorCollisionDetection();
 	void SetP1CharacterPortrait(int CharacterCode);
 	int P2CursorCollisionDetection();
 	void SetP2CharacterPortrait(int CharacterCode);
+	int StageSelectCursorCollisionDetection();
+	void SetStagePreview(int StageCode);
 };
