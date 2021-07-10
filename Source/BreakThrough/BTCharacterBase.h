@@ -538,6 +538,10 @@ public:
 		float PushboxWidth = 1;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float AirPushboxVerticalOffset = 0;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		FVector2D ThrowPosition;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		FVector2D AirThrowPosition;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 		bool bBackThrow = false;

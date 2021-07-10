@@ -159,7 +159,10 @@ void ABTCharacterBase::HitDetection()
 					if (Opponent->CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0 && !CurrentState.bAttackMadeContact && !Opponent->CurrentState.bAttackMadeContact) //only look for clashes if the opponent has an active attack out
 					{
 						if (Opponent->CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0)
-							ClashDetection();
+						{
+							if (Opponent->CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight < Throw)
+								ClashDetection();
+						}
 					}
 					if (Opponent->CurrentState.CurrentAnimFrame.Hurtboxes.Num() > 0)
 					{
@@ -2251,15 +2254,15 @@ bool ABTCharacterBase::ConditionalTransitions()
 	{
 		if (IsCurrentAnimation(ThrowAttempt))
 		{
-			CurrentState.HitStop = 20;
-			Opponent->CurrentState.HitStop = 20;
+			CurrentState.HitStop = 16;
+			Opponent->CurrentState.HitStop = 16;
 			return EnterNewAnimation(NormalThrow);
 		}
 
 		if (IsCurrentAnimation(AirThrowAttempt))
 		{
-			CurrentState.HitStop = 20;
-			Opponent->CurrentState.HitStop = 20;
+			CurrentState.HitStop = 16;
+			Opponent->CurrentState.HitStop = 16;
 			return EnterNewAnimation(NormalAirThrow);
 		}
 	}
@@ -2363,7 +2366,7 @@ bool ABTCharacterBase::ExitTimeTransitions()
 	}
 
 	if (IsCurrentAnimation(NeutralJump) || IsCurrentAnimation(ForwardJump) || IsCurrentAnimation(BackwardJump) || IsCurrentAnimation(GuardAirOut) ||
-		IsCurrentAnimation(DeflectedAir) || IsCurrentAnimation(ThrowEscapeAir) || IsCurrentAnimation(BlitzOutAir) || IsCurrentAnimation(AirThrowAttempt))
+		IsCurrentAnimation(DeflectedAir) || IsCurrentAnimation(ThrowEscapeAir) || IsCurrentAnimation(BlitzOutAir) || IsCurrentAnimation(AirThrowAttempt) || IsCurrentAnimation(NormalAirThrow))
 	{
 		return EnterNewAnimation(MidJump);
 	}
@@ -2400,7 +2403,7 @@ bool ABTCharacterBase::ExitTimeTransitions()
 	if (IsCurrentAnimation(StandUp) || IsCurrentAnimation(Brake) || IsCurrentAnimation(WakeUpFaceDown) || IsCurrentAnimation(WakeUpFaceUp) || IsCurrentAnimation(GuardHiOut) ||
 		IsCurrentAnimation(HitSLOut) || IsCurrentAnimation(HitSHOut) || IsCurrentAnimation(HitSLHeavyOut) || IsCurrentAnimation(HitSHHeavyOut) || IsCurrentAnimation(IdleStandBlink) ||
 		IsCurrentAnimation(StandIdleAction) || IsCurrentAnimation(Deflected) || IsCurrentAnimation(ThrowEscape) || IsCurrentAnimation(BlitzOutStanding) || IsCurrentAnimation(TurnAroundStand) ||
-		IsCurrentAnimation(ThrowAttempt))
+		IsCurrentAnimation(ThrowAttempt) || IsCurrentAnimation(NormalThrow))
 		return EnterNewAnimation(IdleStand);
 
 	if (IsCurrentAnimation(CrouchDown) || IsCurrentAnimation(GuardLoOut) || IsCurrentAnimation(IdleCrouchBlink) || IsCurrentAnimation(CrouchIdleAction) ||
@@ -3307,8 +3310,17 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 		{
 			CurrentState.bClash = true;
 			Opponent->CurrentState.bClash = true;
-			CurrentState.KnockBack = FVector2D(-2, 0);
-			Opponent->CurrentState.KnockBack = FVector2D(-2, 0);
+
+			if (Opponent->CurrentState.bTouchingWall)
+				CurrentState.KnockBack = FVector2D(4.5, 0);
+			else
+				CurrentState.KnockBack = FVector2D(3, 0);
+
+			if (CurrentState.bTouchingWall)
+				Opponent->CurrentState.KnockBack = FVector2D(4.5, 0);
+			else
+				Opponent->CurrentState.KnockBack = FVector2D(3, 0);
+			
 
 			if (ThrowType == AirThrow)
 			{
@@ -3336,7 +3348,7 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 					SpecialVFX[0]->Activate(ThrowCenter, CurrentState.bFacingRight, 0, Deflect);
 			}
 		}
-		else if (Opponent->CurrentState.Resolute)
+		/*else if (Opponent->CurrentState.Resolute)
 		{
 			//play Resolute Counter UI graphic
 			if (Opponent->CurrentState.ResolveRecoverTimer < 180)
@@ -3355,7 +3367,22 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 				EnterNewAnimation(Deflected);
 				Opponent->EnterNewAnimation(Opponent->ResoluteCounter);
 			}
-		}
+
+			//play throw escape effect
+			if (Opponent)
+			{
+				FVector2D ThrowCenter = FVector2D(.5 * (CurrentState.Position.X + Opponent->CurrentState.Position.X),
+					.35 * (CurrentState.Position.Y + StandingPushBoxHeight + AirPushboxVerticalOffset +
+						Opponent->CurrentState.Position.Y + Opponent->StandingPushBoxHeight + Opponent->AirPushboxVerticalOffset));
+
+				if (SpecialVFX[0]->CurrentState.bIsActive)
+				{
+					Opponent->SpecialVFX[0]->Activate(ThrowCenter, CurrentState.bFacingRight, 0, Deflect);
+				}
+				else
+					SpecialVFX[0]->Activate(ThrowCenter, CurrentState.bFacingRight, 0, Deflect);
+			}
+		}*/
 	}
 	else if ((ThrowType == CommandThrow || ThrowType == AirCommandThrow) && Opponent->CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0)  //check if both players have landed a command throw, to induce a throwbreak
 	{
@@ -3943,6 +3970,11 @@ void ABTCharacterBase::ClashDetection()
 				Opponent->CurrentState.bClash = true;
 				CurrentState.bAttackMadeContact = true;
 				Opponent->CurrentState.bAttackMadeContact = true;
+
+				Opponent->CurrentState.Durability += 100;
+				CurrentState.Durability += 100;
+				Opponent->CurrentState.ResolvePulse *= 1.2f;
+				CurrentState.ResolvePulse *= 1.2f;
 				//attacks with the deflect can deflect opponents' non-super, non-deflect attacks
 				if (CurrentState.CurrentAnimFrame.Hitboxes[0].AttackProperties & CanDeflect && !(Opponent->CurrentState.CurrentAnimFrame.Hitboxes[0].AttackProperties & CanDeflect) &&
 					!(Opponent->CurrentState.CurrentAnimFrame.Hitboxes[0].AttackProperties & IsSuper))

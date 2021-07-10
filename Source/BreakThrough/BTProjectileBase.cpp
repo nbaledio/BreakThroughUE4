@@ -103,7 +103,7 @@ void ABTProjectileBase::HitDetection()
 		CurrentState.bHitSuccess = false;
 		if (Owner && CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0)
 		{
-			if (Owner->Opponent)
+			if (Owner->Opponent && CurrentState.CurrentAnimFrame.Hitboxes[0].AttackHeight < Throw)
 			{
 				if (Owner->Opponent->Projectiles.Num() > 0)
 				{
