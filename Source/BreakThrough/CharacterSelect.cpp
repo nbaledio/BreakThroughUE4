@@ -877,10 +877,16 @@ int UCharacterSelect::P1CursorCollisionDetection()
 		if (distance < 28.0f + 50.0f)
 		{
 			SetP1CharacterPortrait(i);
+			if (!P1OnEnter) 
+			{
+				PlayAnimation(P1PortraitSlide, 0.0f, 1, EUMGSequencePlayMode::Forward, 7.0f, false);
+				P1OnEnter = true;
+			}
 			return i;
 		}
 	}
 	SetP1CharacterPortrait(-1);
+	P1OnEnter = false;
 	return -1;
 }
 
@@ -896,10 +902,16 @@ int UCharacterSelect::P2CursorCollisionDetection()
 		if (distance < 28.0f + 50.0f)
 		{
 			SetP2CharacterPortrait(i);
+			if (!P2OnEnter)
+			{
+				PlayAnimation(P2PortraitSlide, 0.0f, 1, EUMGSequencePlayMode::Forward, 7.0f, false);
+				P2OnEnter = true;
+			}
 			return i;
 		}
 	}
 	SetP2CharacterPortrait(-1);
+	P2OnEnter = false;
 	return -1;
 }
 

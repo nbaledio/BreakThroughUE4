@@ -64,6 +64,12 @@ public:
 	UPROPERTY(meta = (BindWidget))
 		class UImage* IzanagiCastleIcon;
 
+	//Animations
+	UPROPERTY(meta = (BindWidgetAnim))
+		UWidgetAnimation* P1PortraitSlide;
+	UPROPERTY(meta = (BindWidgetAnim))
+		UWidgetAnimation* P2PortraitSlide;
+
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
@@ -102,6 +108,8 @@ private:
 	
 	float CursorSpeed = 15.0f;
 
+	bool P1OnEnter;
+	bool P2OnEnter;
 	bool P1CharacterSelected;
 	bool P1Ready;
 	bool P2CharacterSelected;
