@@ -325,13 +325,11 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			P1CharacterSelected = true;
 			if (P1Side == "Left")
 			{
-				P1ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
 				StopAllAnimations();
 				PlayAnimation(P1CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
 			}
 			else if (P1Side == "Right")
 			{
-				P2ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
 				StopAllAnimations();
 				PlayAnimation(P2CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
 			}
@@ -362,16 +360,19 @@ void UCharacterSelect::VsCPUMenuInteractions()
 		{
 			P1Ready = true;
 			P1AcceptConfirmInput = false;
+			P2AcceptConfirmInput = false;
 			if (P1Side == "Left") 
 			{
-				P1ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
 				P2Cursor->SetVisibility(ESlateVisibility::Visible);
+				StopAllAnimations();
+				PlayAnimation(P1ColorSelectConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 				PlayAnimation(P2PortraitSlide, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			}
 			else if (P1Side == "Right") 
 			{
-				P2ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
 				P1Cursor->SetVisibility(ESlateVisibility::Visible);
+				StopAllAnimations();
+				PlayAnimation(P2ColorSelectConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 				PlayAnimation(P1PortraitSlide, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			}
 		}
@@ -387,13 +388,11 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			P1CharacterSelected = false;
 			if (P1Side == "Left")
 			{
-				P1ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
 				StopAllAnimations();
 				PlayAnimation(P1CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			}
 			else if (P1Side == "Right") 
 			{
-				P2ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
 				StopAllAnimations();
 				PlayAnimation(P2CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			}
@@ -473,13 +472,11 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			P2CharacterSelected = true;
 			if (P2Side == "Right") 
 			{
-				P2ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
 				StopAllAnimations();
 				PlayAnimation(P2CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
 			}
 			else if (P2Side == "Left") 
 			{
-				P1ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
 				StopAllAnimations();
 				PlayAnimation(P1CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
 			}
@@ -498,13 +495,15 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			{
 				P2Cursor->SetVisibility(ESlateVisibility::Hidden);
 				SetP2CharacterPortrait(-1);
-				P1ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
+				StopAllAnimations();
+				PlayAnimation(P1ColorSelectConfirm, 0.0f, 1, EUMGSequencePlayMode::Reverse, 9.0f, false);
 			}
 			else if (P2Side == "Left") 
 			{
 				P1Cursor->SetVisibility(ESlateVisibility::Hidden);
 				SetP1CharacterPortrait(-1);
-				P2ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
+				StopAllAnimations();
+				PlayAnimation(P2ColorSelectConfirm, 0.0f, 1, EUMGSequencePlayMode::Reverse, 9.0f, false);
 			}
 			P1AcceptBackInput = false;
 			P1Ready = false;
@@ -524,11 +523,13 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			P2Ready = true;
 			if (P2Side == "Right") 
 			{
-				P2ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
+				StopAllAnimations();
+				PlayAnimation(P2ColorSelectConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			}
 			else if (P2Side == "Left") 
 			{
-				P1ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
+				StopAllAnimations();
+				PlayAnimation(P1ColorSelectConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			}
 		}
 		else if (!P1_INPUT_ACCEPT)
@@ -544,13 +545,11 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			P2CharacterSelected = false;
 			if (P2Side == "Right") 
 			{
-				P2ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
 				StopAllAnimations();
 				PlayAnimation(P2CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			}
 			else if (P2Side == "Left") 
 			{
-				P1ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
 				StopAllAnimations();
 				PlayAnimation(P1CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			}
@@ -625,11 +624,11 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			P2Ready = false;
 			if (P2Side == "Right") 
 			{
-				P2ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
+				PlayAnimation(P2ColorSelectConfirm, 0.0f, 1, EUMGSequencePlayMode::Reverse, 9.0f, false);
 			}
 			else if (P2Side == "Left") 
 			{
-				P1ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
+				PlayAnimation(P1ColorSelectConfirm, 0.0f, 1, EUMGSequencePlayMode::Reverse, 9.0f, false);
 			}
 		}
 	}
@@ -652,10 +651,10 @@ void UCharacterSelect::Vs2PMenuInteractions()
 		{
 			P1Character = character;
 			P1CharacterSelected = true;
-			P1ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
 			P1AcceptConfirmInput = false;
 			StopAnimation(P1CharacterDeselect);
 			StopAnimation(P1PortraitSlide);
+			StopAnimation(P1ColorSelectConfirm);
 			PlayAnimation(P1CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
 			//Display P1 Character Model
 		}
@@ -680,7 +679,10 @@ void UCharacterSelect::Vs2PMenuInteractions()
 		if (P1_INPUT_ACCEPT && P1AcceptConfirmInput)
 		{
 			P1Ready = true;
-			P1ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
+			StopAnimation(P1CharacterConfirm);
+			StopAnimation(P1PortraitSlide);
+			StopAnimation(P1CharacterDeselect);
+			PlayAnimation(P1ColorSelectConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 		}
 		else if (!P1_INPUT_ACCEPT)
 		{
@@ -693,9 +695,9 @@ void UCharacterSelect::Vs2PMenuInteractions()
 			P1Character = -1;
 			P1Color = 1;
 			P1CharacterSelected = false;
-			P1ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
 			StopAnimation(P1CharacterConfirm);
 			StopAnimation(P1PortraitSlide);
+			StopAnimation(P1ColorSelectConfirm);
 			PlayAnimation(P1CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			//Hide P1 Character Model
 		}
@@ -758,7 +760,10 @@ void UCharacterSelect::Vs2PMenuInteractions()
 		{
 			P1AcceptBackInput = false;
 			P1Ready = false;
-			P1ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
+			StopAnimation(P1CharacterConfirm);
+			StopAnimation(P1PortraitSlide);
+			StopAnimation(P1CharacterDeselect);
+			PlayAnimation(P1ColorSelectConfirm, 0.0f, 1, EUMGSequencePlayMode::Reverse, 9.0f, false);
 		}
 	}
 
@@ -781,6 +786,7 @@ void UCharacterSelect::Vs2PMenuInteractions()
 			P2AcceptConfirmInput = false;
 			StopAnimation(P2CharacterDeselect);
 			StopAnimation(P2PortraitSlide);
+			StopAnimation(P2ColorSelectConfirm);
 			PlayAnimation(P2CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
 			//Display P2 Character Model
 		}
@@ -805,7 +811,10 @@ void UCharacterSelect::Vs2PMenuInteractions()
 		if (P2_INPUT_ACCEPT && P2AcceptConfirmInput)
 		{
 			P2Ready = true;
-			P2ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
+			StopAnimation(P2CharacterConfirm);
+			StopAnimation(P2PortraitSlide);
+			StopAnimation(P2CharacterDeselect);
+			PlayAnimation(P2ColorSelectConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 		}
 		else if (!P2_INPUT_ACCEPT)
 		{
@@ -821,6 +830,7 @@ void UCharacterSelect::Vs2PMenuInteractions()
 			P2ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
 			StopAnimation(P2PortraitSlide);
 			StopAnimation(P2CharacterConfirm);
+			StopAnimation(P2ColorSelectConfirm);
 			PlayAnimation(P2CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			//Hide P2 Character Model
 		}
@@ -883,7 +893,10 @@ void UCharacterSelect::Vs2PMenuInteractions()
 		{
 			P2AcceptBackInput = false;
 			P2Ready = false;
-			P2ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
+			StopAnimation(P2CharacterConfirm);
+			StopAnimation(P2PortraitSlide);
+			StopAnimation(P2CharacterDeselect);
+			PlayAnimation(P2ColorSelectConfirm, 0.0f, 1, EUMGSequencePlayMode::Reverse, 9.0f, false);
 		}
 	}
 }
@@ -958,8 +971,8 @@ int UCharacterSelect::StageSelectCursorCollisionDetection()
 		FVector2D StageIconSize = Cast<UCanvasPanelSlot>(StageIcons[i]->Slot)->GetSize();
 		bool r1 = CursorCurrentPosition.X + 40 < StageIconPos.X + 300 + StageIconSize.X/4;
 		bool r2 = CursorCurrentPosition.X + 40 + CursorCurrentSize.X/12 > StageIconPos.X + 300;
-		bool r3 = CursorCurrentPosition.Y + 40 < StageIconPos.Y + 100 + StageIconSize.Y/4;
-		bool r4 = CursorCurrentPosition.Y + 40 + CursorCurrentSize.Y/12 > StageIconPos.Y + 100;
+		bool r3 = CursorCurrentPosition.Y + 40 < StageIconPos.Y + 110 + StageIconSize.Y/4;
+		bool r4 = CursorCurrentPosition.Y + 40 + CursorCurrentSize.Y/12 > StageIconPos.Y + 110;
 		if (r1 && r2 && r3 && r4)
 		{
 			SetStagePreview(i);

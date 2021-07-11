@@ -81,6 +81,10 @@ public:
 		UWidgetAnimation* P1CharacterDeselect;
 	UPROPERTY(meta = (BindWidgetAnim))
 		UWidgetAnimation* P2CharacterDeselect;
+	UPROPERTY(meta = (BindWidgetAnim))
+		UWidgetAnimation* P1ColorSelectConfirm;
+	UPROPERTY(meta = (BindWidgetAnim))
+		UWidgetAnimation* P2ColorSelectConfirm;
 
 protected:
 	virtual void NativeConstruct() override;
