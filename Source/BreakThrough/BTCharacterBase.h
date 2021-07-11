@@ -487,6 +487,8 @@ public:
 
 	void SaveFXStates();
 
+	void ThrowSetup(FVector2D OpponentPosition, bool bIsNormalThrow = true);
+
 	virtual void ResetCharacter(bool bNewGame = false);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
@@ -543,6 +545,10 @@ public:
 		float PushboxWidth = 1;
 	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
 		float AirPushboxVerticalOffset = 0;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		float ThrowPosition;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement Properties")
+		FVector2D AirThrowPosition;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 		bool bBackThrow = false;

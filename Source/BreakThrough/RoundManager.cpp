@@ -359,8 +359,12 @@ void ARoundManager::UpdateCameraPosition()
 		CurrentState.Position = FMath::Lerp(CurrentState.Position, TargetPosition, .2);
 
 
-	if (Player1Base->CurrentState.CurrentAnimFrame.CameraRotation != FRotator(0) && Player1Base->CurrentState.CurrentAnimFrame.CameraLocation != FVector(0)) //check if Player 1's animation has a stored camera rotation
+	if (Player1Base->CurrentState.CurrentAnimFrame.CameraRotation != FRotator(0)) //check if Player 1's animation has a stored camera rotation
 	{
+		FRotator TargetRotation = Player1Base->CurrentState.CurrentAnimFrame.CameraRotation;
+		if (!Player1Base->CurrentState.bFacingRight)
+			TargetRotation.Yaw *= -1;
+
 		if (Player1Base->CurrentState.CurrentAnimFrame.bCinematic)
 		{
 			CurrentState.CameraRotation = Player1Base->CurrentState.CurrentAnimFrame.CameraRotation;
@@ -373,6 +377,10 @@ void ARoundManager::UpdateCameraPosition()
 	}
 	else if (Player2Base->CurrentState.CurrentAnimFrame.CameraRotation != FRotator(0)) //check if Player 2's animation has a stored camera rotation
 	{
+		FRotator TargetRotation = Player2Base->CurrentState.CurrentAnimFrame.CameraRotation;
+		if (!Player2Base->CurrentState.bFacingRight)
+			TargetRotation.Yaw *= -1;
+
 		if (Player2Base->CurrentState.CurrentAnimFrame.bCinematic)
 		{
 			CurrentState.CameraRotation = Player2Base->CurrentState.CurrentAnimFrame.CameraRotation;
@@ -388,10 +396,13 @@ void ARoundManager::UpdateCameraPosition()
 		if (CurrentState.KOFramePlayTime > 0 && !(Player1Base->CurrentState.Health == 0 && Player2Base->CurrentState.Health == 0))
 		{
 			FRotator TargetRotation = FRotator(0, 0, -10);
-			Player1Base->DepthOffset = 0;
-			Player2Base->DepthOffset = 0;
+			if (!Player1Base->IsCurrentAnimation(Player1Base->NormalThrow) && !Player2Base->IsCurrentAnimation(Player2Base->NormalThrow))
+			{
+				Player1Base->DepthOffset = 0;
+				Player2Base->DepthOffset = 0;
+			}
 
-			if (FMath::Abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X) > PlayerMaxDistance - 200)
+			if (FMath::Abs(Player1Base->CurrentState.Position.X - Player2Base->CurrentState.Position.X) > PlayerMaxDistance - 200 || Player1Base->IsCurrentAnimation(Player1Base->NormalThrow) || Player2Base->IsCurrentAnimation(Player2Base->NormalThrow))
 			{
 				if (Player1Base->CurrentState.Health == 0 && Player2Base->CurrentState.Health > 0)
 				{
@@ -933,12 +944,6 @@ void ARoundManager::UpdateResolveBar(uint8 index)
 
 void ARoundManager::UpdateBlackScreen() 
 {
-	//Increment black screen animation
-	if (CurrentState.BlackScreenState.FramePlayTime < 180)
-	{
-		CurrentState.BlackScreenState.FramePlayTime++;
-	}
-
 	//Reset positions on fade in finish
 	if (CurrentState.BlackScreenState.FramePlayTime == 180 && !CurrentState.BlackScreenState.bReverse)
 	{
@@ -953,6 +958,12 @@ void ARoundManager::UpdateBlackScreen()
 		CurrentState.BlackScreenState.bReverse = false;
 		CurrentState.BlackScreenState.FramePlayTime = 0;
 		RoundStart();
+	}
+
+	//Increment black screen animation
+	if (CurrentState.BlackScreenState.FramePlayTime < 180)
+	{
+		CurrentState.BlackScreenState.FramePlayTime++;
 	}
 }
 
