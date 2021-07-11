@@ -427,7 +427,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 		CurrentState.HitStop--;
 	}
 
-	if ((CurrentState.HitStun > 0 || IsCurrentAnimation(Stagger) || CurrentState.CurrentAnimFrame.Invincibility == FaceDown || CurrentState.CurrentAnimFrame.Invincibility == FaceUp) && CurrentState.ShatteredTime == 0)
+	if (Opponent->CurrentState.ComboCount > 0 && (CurrentState.HitStun > 0 || IsCurrentAnimation(Stagger) || CurrentState.CurrentAnimFrame.Invincibility == FaceDown || CurrentState.CurrentAnimFrame.Invincibility == FaceUp) && CurrentState.ShatteredTime == 0)
 	{
 		if (CurrentState.SlowMoTime % 2 == 0 && !Opponent->CurrentState.CurrentAnimFrame.bSuperFlash)
 			CurrentState.ComboTimer++;
@@ -553,6 +553,17 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 							else
 								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+							if (Opponent->CurrentState.Position.X < -StageBounds + .5f * Opponent->PushboxWidth)
+							{
+								Opponent->CurrentState.Position.X = -StageBounds + .5f * Opponent->PushboxWidth;
+								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							}
+							else if (Opponent->CurrentState.Position.X > StageBounds - .5f * Opponent->PushboxWidth)
+							{
+								Opponent->CurrentState.Position.X = StageBounds - .5f * Opponent->PushboxWidth;
+								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							}
 						}
 						else if (FMath::Abs(Opponent->CurrentState.Velocity.X) >= 2)
 						{
@@ -651,6 +662,17 @@ void ABTCharacterBase::PushboxSolver() //only called once per gamestate tick aft
 								CurrentState.Position.X = Opponent->CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
 							else
 								CurrentState.Position.X = Opponent->CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+
+							if (CurrentState.Position.X < -StageBounds + .5f * PushboxWidth)
+							{
+								CurrentState.Position.X = -StageBounds + .5f * PushboxWidth;
+								Opponent->CurrentState.Position.X = CurrentState.Position.X + (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							}
+							else if (CurrentState.Position.X > StageBounds - .5f * PushboxWidth)
+							{
+								CurrentState.Position.X = StageBounds - .5f * PushboxWidth;
+								Opponent->CurrentState.Position.X = CurrentState.Position.X - (.5f * Opponent->PushboxWidth + .5f * PushboxWidth);
+							}
 						}
 						else if (FMath::Abs(CurrentState.Velocity.X) >= 2)
 						{
@@ -1063,6 +1085,8 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 			CurrentState.Velocity.Y *= -1;
 			if (CurrentState.Velocity.Y < 4)
 				CurrentState.Velocity.Y = 4;
+			else if (CurrentState.Velocity.Y > 7)
+				CurrentState.Velocity.Y = 7;
 
 			if (Opponent != nullptr)
 			{
@@ -1084,14 +1108,12 @@ bool ABTCharacterBase::SurfaceContact() //Animation transitions that occur when 
 			{
 				CurrentState.SlowMoTime = 0;
 				CurrentState.ShatteredTime = 0;
-				CurrentState.HitStun = 0;
 				return EnterNewAnimation(KnockDownFaceDown);
 			}
 			else if (CurrentState.CurrentAnimFrame.Invincibility == FaceUp)
 			{
 				CurrentState.SlowMoTime = 0;
 				CurrentState.ShatteredTime = 0;
-				CurrentState.HitStun = 0;
 				return EnterNewAnimation(KnockDownFaceUp);
 			}
 			else //if a character is not in a hit state, they will land on their feet
@@ -2158,7 +2180,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 				{
 					CurrentState.DoubleDir4 = 0;
 					CurrentState.GravDefyTime = AirDashDuration;
-					CurrentState.Velocity = FVector2D(-.85 * AirDashForce, 0);
+					CurrentState.Velocity = FVector2D(-.75 * AirDashForce, 0);
 
 					if (!CurrentState.bFacingRight)
 						CurrentState.Velocity.X *= -1;
@@ -2256,6 +2278,9 @@ bool ABTCharacterBase::ConditionalTransitions()
 		{
 			CurrentState.HitStop = 16;
 			Opponent->CurrentState.HitStop = 16;
+
+			ThrowSetup(FVector2D(ThrowPosition, 0));
+
 			return EnterNewAnimation(NormalThrow);
 		}
 
@@ -2263,6 +2288,9 @@ bool ABTCharacterBase::ConditionalTransitions()
 		{
 			CurrentState.HitStop = 16;
 			Opponent->CurrentState.HitStop = 16;
+
+			ThrowSetup(AirThrowPosition);
+
 			return EnterNewAnimation(NormalAirThrow);
 		}
 	}
@@ -3136,7 +3164,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 	DamageToApply = FMath::FloorToInt(DamageToApply * ComboProration / 10);
 
-	if (Hitbox.BaseDamage > 0)
+	if (Hitbox.BaseDamage > 0 && RoundManager->CurrentState.RoundTimer > 0)
 	{
 		if (Hitbox.AttackProperties & IsSuper)
 			DamageToApply = FMath::Max(FMath::FloorToInt(OpponentValor * Hitbox.BaseDamage / 4), DamageToApply); //Supers will always deal a minimum of 25% their base damage affected by valor
@@ -3144,7 +3172,7 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 		DamageToApply = FMath::Max(1, DamageToApply); //non-super attacks will always deal a minimum of one damage
 
 		Opponent->CurrentState.Health -= FMath::Min(DamageToApply, Opponent->CurrentState.Health);
-		//Opponent->CurrentState.Health = 0;
+		Opponent->CurrentState.Health = 0;
 		if (Opponent->CurrentState.Health == 0)
 		{
 			if (Hitbox.AttackProperties & NonFatal)
@@ -3546,7 +3574,7 @@ void ABTCharacterBase::SaveFXStates()
 
 bool ABTCharacterBase::BlitzCancel()
 {
-	if ((CurrentState.AvailableActions & AcceptMove || IsCurrentAnimation(Brake) || CurrentState.bIsRunning)&& !CurrentState.bIsCrouching && CurrentState.LPressed > 0 && CurrentState.BPressed > 0 && FMath::Abs(CurrentState.LPressed - CurrentState.BPressed) <= InputTime)
+	if (((CurrentState.AvailableActions & AcceptGuard && CurrentState.BlockStun == 0) || IsCurrentAnimation(Brake) || CurrentState.bIsRunning)&& !CurrentState.bIsCrouching && CurrentState.LPressed > 0 && CurrentState.BPressed > 0 && FMath::Abs(CurrentState.LPressed - CurrentState.BPressed) <= InputTime)
 	{
 		if (CurrentState.Dir4 == DirInputTime)
 			bBackThrow = true;
@@ -3571,7 +3599,7 @@ bool ABTCharacterBase::BlitzCancel()
 		CurrentState.ResolveRecoverTimer = 0;
 		CurrentState.ResolvePulse *= .65;
 		if (!(CurrentState.AvailableActions & AcceptMove))
-			CurrentState.SpecialProration *= .9; //scales all damage post mid-combo BlitzCancel by 90% except Focus Blitz Cancel
+			CurrentState.SpecialProration *= .95; //scales all damage post mid-combo BlitzCancel by 95%
 
 		if (CurrentState.bIsAirborne && CurrentState.BlockStun == 0)
 		{
@@ -4063,7 +4091,10 @@ void ABTCharacterBase::HitAnimation()
 		}
 		else if (CurrentState.CharacterHitState & CanSweep)
 		{
-			EnterNewAnimation(Sweep);
+			if (CurrentState.KnockBack.Y < 0)
+				EnterNewAnimation(FallingForward);
+			else
+				EnterNewAnimation(Sweep);
 		}
 		else if (CurrentState.bIsAirborne || CurrentState.KnockBack.Y != 0)
 		{
@@ -4115,29 +4146,26 @@ void ABTCharacterBase::HitAnimation()
 void ABTCharacterBase::HitboxViewer()
 {
 	//Pushbox
-	if (CurrentState.CurrentAnimFrame.Invincibility != Intangible)
-	{
-		float PushboxBottom = GetActorLocation().Z;
-		float PushBoxHeight = StandingPushBoxHeight;
-		if (CurrentState.bIsCrouching || CurrentState.bIsAirborne)
-			PushBoxHeight = CrouchingPushBoxHeight;
-		if (CurrentState.bIsAirborne)
-			PushboxBottom += AirPushboxVerticalOffset;
-		if (IsCurrentAnimation(KnockDownFaceDown) || IsCurrentAnimation(KnockDownFaceUp) || IsCurrentAnimation(Crumple))
-			PushBoxHeight = .25 * CrouchingPushBoxHeight;
-		//Left side
-		DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
-			FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
-		//bottom side
-		DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
-			FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom), FColor(255, 255, 0), false, 0, 0, .5f);
-		//right side
-		DrawDebugLine(GetWorld(), FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
-			FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
-		//top side
-		DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight),
-			FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
-	}
+	float PushboxBottom = GetActorLocation().Z;
+	float PushBoxHeight = StandingPushBoxHeight;
+	if (CurrentState.bIsCrouching || CurrentState.bIsAirborne)
+		PushBoxHeight = CrouchingPushBoxHeight;
+	if (CurrentState.bIsAirborne)
+		PushboxBottom += AirPushboxVerticalOffset;
+	if (IsCurrentAnimation(KnockDownFaceDown) || IsCurrentAnimation(KnockDownFaceUp) || IsCurrentAnimation(Crumple))
+		PushBoxHeight = .25 * CrouchingPushBoxHeight;
+	//Left side
+	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
+		FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
+	//bottom side
+	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
+		FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom), FColor(255, 255, 0), false, 0, 0, .5f);
+	//right side
+	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom),
+		FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
+	//top side
+	DrawDebugLine(GetWorld(), FVector(GetActorLocation().X - .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight),
+		FVector(GetActorLocation().X + .5f * PushboxWidth, GetActorLocation().Y + 35, PushboxBottom + PushBoxHeight), FColor(255, 255, 0), false, 0, 0, .5f);
 
 	if (CurrentState.CurrentAnimFrame.Hitboxes.Num() > 0)
 	{
@@ -4207,6 +4235,34 @@ void ABTCharacterBase::ResetSmear()
 void ABTCharacterBase::DrawSmear() { SmearMesh->SetVisibility(bShowSmear); }
 
 void ABTCharacterBase::CreateVariables() {}
+
+void ABTCharacterBase::ThrowSetup(FVector2D OpponentPosition, bool bIsNormalThrow)
+{
+	if (bBackThrow && bIsNormalThrow)
+	{
+		CurrentState.bFacingRight = !CurrentState.bFacingRight;
+	}
+
+	Opponent->CurrentState.bFacingRight = !CurrentState.bFacingRight;
+
+	if (CurrentState.bFacingRight)
+		Opponent->CurrentState.Position = CurrentState.Position + OpponentPosition;
+	else
+		Opponent->CurrentState.Position = FVector2D(CurrentState.Position.X - OpponentPosition.X, CurrentState.Position.Y + OpponentPosition.Y);
+
+	if (Opponent->CurrentState.Position.X <= -StageBounds + .5f * Opponent->PushboxWidth)
+	{
+		Opponent->CurrentState.Position.X = -StageBounds + Opponent->PushboxWidth;
+		CurrentState.Position.X = Opponent->CurrentState.Position.X + OpponentPosition.X;
+		Opponent->HitWall();
+	}
+	else if (Opponent->CurrentState.Position.X >= StageBounds - .5f * Opponent->PushboxWidth)
+	{
+		Opponent->CurrentState.Position.X = StageBounds - Opponent->PushboxWidth;
+		CurrentState.Position.X = Opponent->CurrentState.Position.X - OpponentPosition.X;
+		Opponent->HitWall();
+	}
+}
 
 void ABTCharacterBase::ResetCharacter(bool bNewGame)
 {
