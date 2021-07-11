@@ -86,6 +86,20 @@ public:
 	UPROPERTY(meta = (BindWidgetAnim))
 		UWidgetAnimation* P2ColorSelectConfirm;
 
+	//Announcer Sounds
+	UPROPERTY(EditAnywhere)
+		class USoundWave* Announcer_CharSelectIntro;
+	UPROPERTY(EditAnywhere)
+		class USoundWave* Announcer_AchealisThorne;
+	UPROPERTY(EditAnywhere)
+		class USoundWave* Announcer_DhaliaThorne;
+
+	//Textures
+	UPROPERTY(EditAnywhere)
+		class UTexture2D* AchealisPortrait;
+	UPROPERTY(EditAnywhere)
+		class UTexture2D* DhaliaPortrait;
+
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
@@ -160,6 +174,7 @@ private:
 	void VsCPUMenuInteractions();
 	void Vs2PMenuInteractions();
 	void StageSelectInputs();
+	void PlayAnnouncer(int CharacterCode);
 	int P1CursorCollisionDetection();
 	void SetP1CharacterPortrait(int CharacterCode);
 	int P2CursorCollisionDetection();

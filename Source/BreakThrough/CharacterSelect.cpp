@@ -51,6 +51,8 @@ void UCharacterSelect::NativeConstruct()
 	StageIcons.Add(TrainingStageIcon);
 	StageIcons.Add(DhaliaStageIcon);
 	StageIcons.Add(IzanagiCastleIcon);
+
+	UGameplayStatics::PlaySound2D(this, Announcer_CharSelectIntro);
 }
 
 void UCharacterSelect::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -323,6 +325,7 @@ void UCharacterSelect::VsCPUMenuInteractions()
 		{
 			P1Character = P1HoveredCharacter;
 			P1CharacterSelected = true;
+			PlayAnnouncer(P1Character);
 			if (P1Side == "Left")
 			{
 				StopAllAnimations();
@@ -470,6 +473,7 @@ void UCharacterSelect::VsCPUMenuInteractions()
 		{
 			P2Character = P2HoveredCharacter;
 			P2CharacterSelected = true;
+			PlayAnnouncer(P2Character);
 			if (P2Side == "Right") 
 			{
 				StopAllAnimations();
@@ -652,6 +656,7 @@ void UCharacterSelect::Vs2PMenuInteractions()
 			P1Character = character;
 			P1CharacterSelected = true;
 			P1AcceptConfirmInput = false;
+			PlayAnnouncer(P1Character);
 			StopAnimation(P1CharacterDeselect);
 			StopAnimation(P1PortraitSlide);
 			StopAnimation(P1ColorSelectConfirm);
@@ -784,6 +789,7 @@ void UCharacterSelect::Vs2PMenuInteractions()
 			P2CharacterSelected = true;
 			P2ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
 			P2AcceptConfirmInput = false;
+			PlayAnnouncer(P2Character);
 			StopAnimation(P2CharacterDeselect);
 			StopAnimation(P2PortraitSlide);
 			StopAnimation(P2ColorSelectConfirm);
@@ -920,7 +926,7 @@ int UCharacterSelect::P1CursorCollisionDetection()
 		float dx = P1CursorCurrentPosition.X - HeadshotPos.X - 250;
 		float dy = P1CursorCurrentPosition.Y - HeadshotPos.Y - 250;
 		float distance = FMath::Sqrt(dx * dx + dy * dy);
-		if (distance < 28.0f + 50.0f)
+		if (distance < 35.0f + 50.0f)
 		{
 			SetP1CharacterPortrait(i);
 			if (!P1OnEnter) 
@@ -945,7 +951,7 @@ int UCharacterSelect::P2CursorCollisionDetection()
 		float dx = P2CursorCurrentPosition.X - HeadshotPos.X - 250;
 		float dy = P2CursorCurrentPosition.Y - HeadshotPos.Y - 250;
 		float distance = FMath::Sqrt(dx * dx + dy * dy);
-		if (distance < 28.0f + 50.0f)
+		if (distance < 35.0f + 50.0f)
 		{
 			SetP2CharacterPortrait(i);
 			if (!P2OnEnter)
@@ -989,15 +995,15 @@ void UCharacterSelect::SetP1CharacterPortrait(int CharacterCode)
 	{
 	case 0:
 		P1CharacterPortrait->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
-		P1CharacterPortrait->SetBrushFromTexture(Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Achealis"))));
-		P1HighlightMaterial->SetTextureParameterValue(FName(TEXT("CharacterPortrait")), Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Achealis"))));
+		P1CharacterPortrait->SetBrushFromTexture(AchealisPortrait);
+		P1HighlightMaterial->SetTextureParameterValue(FName(TEXT("CharacterPortrait")), AchealisPortrait);
 		P1CharacterPortraitHighlight->SetBrushFromMaterial(P1HighlightMaterial);
 		P1CharacterName->SetText(FText::FromString("Achealis Thorne"));
 		break;
 	case 1:
 		P1CharacterPortrait->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
-		P1CharacterPortrait->SetBrushFromTexture(Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Dhalia"))));
-		P1HighlightMaterial->SetTextureParameterValue(FName(TEXT("CharacterPortrait")), Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Dhalia"))));
+		P1CharacterPortrait->SetBrushFromTexture(DhaliaPortrait);
+		P1HighlightMaterial->SetTextureParameterValue(FName(TEXT("CharacterPortrait")), DhaliaPortrait);
 		P1CharacterPortraitHighlight->SetBrushFromMaterial(P1HighlightMaterial);
 		P1CharacterName->SetText(FText::FromString("Dhalia Thorne"));
 		break;
@@ -1014,15 +1020,15 @@ void UCharacterSelect::SetP2CharacterPortrait(int CharacterCode)
 	{
 	case 0:
 		P2CharacterPortrait->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
-		P2CharacterPortrait->SetBrushFromTexture(Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Achealis"))));
-		P2HighlightMaterial->SetTextureParameterValue(FName(TEXT("CharacterPortrait")), Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Achealis"))));
+		P2CharacterPortrait->SetBrushFromTexture(AchealisPortrait);
+		P2HighlightMaterial->SetTextureParameterValue(FName(TEXT("CharacterPortrait")), AchealisPortrait);
 		P2CharacterPortraitHighlight->SetBrushFromMaterial(P2HighlightMaterial);
 		P2CharacterName->SetText(FText::FromString("Achealis Thorne"));
 		break;
 	case 1:
 		P2CharacterPortrait->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
-		P2CharacterPortrait->SetBrushFromTexture(Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Dhalia"))));
-		P2HighlightMaterial->SetTextureParameterValue(FName(TEXT("CharacterPortrait")), Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Dhalia"))));
+		P2CharacterPortrait->SetBrushFromTexture(DhaliaPortrait);
+		P2HighlightMaterial->SetTextureParameterValue(FName(TEXT("CharacterPortrait")), DhaliaPortrait);
 		P2CharacterPortraitHighlight->SetBrushFromMaterial(P2HighlightMaterial);
 		P2CharacterName->SetText(FText::FromString("Dhalia Thorne"));
 		break;
@@ -1030,6 +1036,19 @@ void UCharacterSelect::SetP2CharacterPortrait(int CharacterCode)
 		P2CharacterPortrait->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 0.0f));
 		P2CharacterPortrait->SetBrushFromTexture(NULL);
 		P2CharacterName->SetText(FText::FromString(""));
+	}
+}
+
+void UCharacterSelect::PlayAnnouncer(int CharacterCode)
+{
+	switch (CharacterCode) 
+	{
+	case 0:
+		UGameplayStatics::PlaySound2D(this, Announcer_AchealisThorne);
+		break;
+	case 1:
+		UGameplayStatics::PlaySound2D(this, Announcer_DhaliaThorne);
+		break;
 	}
 }
 
