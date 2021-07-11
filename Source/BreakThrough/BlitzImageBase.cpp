@@ -105,7 +105,7 @@ void ABlitzImageBase::Update()
 					CurrentState.WaveScaleAlpha += .125f;
 
 				if (CurrentState.WaveScaleAlpha > .5f && CurrentState.WaveAlpha < 1)
-					CurrentState.WaveAlpha += .1f;
+					CurrentState.WaveAlpha += .08f;
 				else if (CurrentState.WaveAlpha >= 1)
 					CurrentState.bWaveIsActive = false;
 			}

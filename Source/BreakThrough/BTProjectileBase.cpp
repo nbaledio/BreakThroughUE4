@@ -485,31 +485,35 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 	FVector2D KnockBackToApply;
 	uint8 HitStopToApply = Hitbox.BaseHitStop;
 
-	if (Owner->Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)
+
+	if (!Owner->IsCurrentAnimation(Owner->NormalThrow) && !Owner->IsCurrentAnimation(Owner->NormalAirThrow))
 	{
-		KnockBackToApply = FVector2D(1.1f * FMath::Abs(Hitbox.PotentialKnockBack.X), 3);
-	}
-	else if (Owner->Opponent->CurrentState.bIsAirborne)
-	{
-		if (Hitbox.PotentialAirKnockBack == FVector2D(0, 0) && Hitbox.PotentialKnockBack.Y == 0)
-			KnockBackToApply = FVector2D(Hitbox.PotentialKnockBack.X, 2.25f);
+		if (Owner->Opponent->CurrentState.CurrentAnimFrame.Invincibility == OTG)
+		{
+			KnockBackToApply = FVector2D(1.1f * FMath::Abs(Hitbox.PotentialKnockBack.X), 3);
+		}
+		else if (Owner->Opponent->CurrentState.bIsAirborne)
+		{
+			if (Hitbox.PotentialAirKnockBack == FVector2D(0, 0) && Hitbox.PotentialKnockBack.Y == 0)
+				KnockBackToApply = FVector2D(Hitbox.PotentialKnockBack.X, 2.25f);
+			else
+				KnockBackToApply = Hitbox.PotentialAirKnockBack;
+		}
 		else
-			KnockBackToApply = Hitbox.PotentialAirKnockBack;
-	}
-	else
-	{
-		KnockBackToApply = Hitbox.PotentialKnockBack;
+		{
+			KnockBackToApply = Hitbox.PotentialKnockBack;
+		}
+
+		if (bVertPositionRelative)
+		{
+			if (CurrentState.Position.Y > Owner->Opponent->CurrentState.Position.Y)
+				Owner->Opponent->CurrentState.KnockBack.Y *= -1;
+		}
+
+		Owner->CurrentState.AvailableActions = Hitbox.PotentialActions;
+		Owner->Opponent->CurrentState.CharacterHitState = Hitbox.AttackProperties;
 	}
 
-	if (bVertPositionRelative)
-	{
-		if (CurrentState.Position.Y > Owner->Opponent->CurrentState.Position.Y)
-			Owner->Opponent->CurrentState.KnockBack.Y *= -1;
-	}
-
-
-	Owner->CurrentState.AvailableActions = Hitbox.PotentialActions;
-	Owner->Opponent->CurrentState.CharacterHitState = Hitbox.AttackProperties;
 	//apply certain modifiers based on circumstances around the hit
 	if (Hitbox.AttackHeight < Throw)
 	{
@@ -570,7 +574,7 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 		}
 	}
 
-	if (Owner->Opponent->CurrentState.CharacterHitState & CanMidScreenWallBounce)
+	if (!Owner->IsCurrentAnimation(Owner->NormalThrow) && !Owner->IsCurrentAnimation(Owner->NormalAirThrow) && Owner->Opponent->CurrentState.CharacterHitState & CanMidScreenWallBounce)
 		Owner->Opponent->CurrentState.WallBounceTime = 24;
 	else
 		Owner->Opponent->CurrentState.WallBounceTime = 0;
@@ -629,7 +633,7 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 		//Owner->Opponent->CurrentState.Health = 0;
 		if (Owner->Opponent->CurrentState.Health == 0)
 		{
-			if (Hitbox.AttackProperties & NonFatal)
+			if (Hitbox.AttackProperties & NonFatal || Owner->IsCurrentAnimation(Owner->NormalThrow) || Owner->IsCurrentAnimation(Owner->NormalAirThrow))
 				Owner->Opponent->CurrentState.Health = 1;
 			else if (!Owner->CurrentState.bPlayedKOSpark)
 			{
@@ -691,8 +695,11 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 		Owner->Opponent->CurrentState.HitStun += 2;
 
 	//apply hitstop
-	Owner->Opponent->CurrentState.HitStop = HitStopToApply;
-	CurrentState.HitStop = HitStopToApply;
+	if (!Owner->IsCurrentAnimation(Owner->NormalThrow) && !Owner->IsCurrentAnimation(Owner->NormalAirThrow))
+	{
+		Owner->Opponent->CurrentState.HitStop = HitStopToApply;
+		CurrentState.HitStop = HitStopToApply;
+	}
 
 	//meter gain for opponent character
 	if (Owner->Opponent->CurrentState.ShatteredTime == 0)
@@ -708,24 +715,27 @@ void ABTProjectileBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCente
 	Owner->CurrentState.AvailableActions = Hitbox.PotentialActions;
 
 	//Apply knockback to opponent
-	if (bHoriPositionRelative)
+	if (!Owner->IsCurrentAnimation(Owner->NormalThrow) && !Owner->IsCurrentAnimation(Owner->NormalAirThrow))
 	{
-		if (CurrentState.Position.X > Owner->Opponent->CurrentState.Position.X)
-			KnockBackToApply *= FVector2D(-1, 1);
-		else if (CurrentState.Position.X < Owner->Opponent->CurrentState.Position.X)
+		if (bHoriPositionRelative)
 		{
+			if (CurrentState.Position.X > Owner->Opponent->CurrentState.Position.X)
+				KnockBackToApply *= FVector2D(-1, 1);
+			else if (CurrentState.Position.X < Owner->Opponent->CurrentState.Position.X)
+			{
+			}
+			else if (!CurrentState.bFacingRight)
+			{
+				KnockBackToApply *= FVector2D(-1, 1);
+			}
 		}
 		else if (!CurrentState.bFacingRight)
 		{
 			KnockBackToApply *= FVector2D(-1, 1);
 		}
-	}
-	else if (!CurrentState.bFacingRight)
-	{
-		KnockBackToApply *= FVector2D(-1, 1);
-	}
 
-	Owner->Opponent->CurrentState.KnockBack = KnockBackToApply;
+		Owner->Opponent->CurrentState.KnockBack = KnockBackToApply;
+	}
 
 	//place and play hit effect
 	//place at midpoint between hitbox center and hurtbox center

@@ -1344,13 +1344,22 @@ void ABTCharacterBase::RunBraking()
 			}
 
 			
-			if (RunAcceleration > 0 && (CurrentState.Dir6 == DirInputTime || CurrentState.Dir9 == DirInputTime || CurrentState.bIsDashDown))
+			if (RunAcceleration > 0 && (CurrentState.Dir6 == DirInputTime || CurrentState.Dir9 == DirInputTime || CurrentState.bIsDashDown) && (IsCurrentAnimation(RunStart) || IsCurrentAnimation(RunCycle) || IsCurrentAnimation(PreJump)))
 			{ }
 			//stop running if forward direction is no longer being held for run type characters and if animation has finished on dash type characters
 			else if ((RunAcceleration > 0 && CurrentState.Dir6 < DirInputTime && CurrentState.Dir9 < DirInputTime) || (!IsCurrentAnimation(RunStart) && !IsCurrentAnimation(RunCycle) && !IsCurrentAnimation(PreJump)))
 			{
-				TurnAroundCheck();
 				CurrentState.bIsRunning = false;
+
+				if (RunAcceleration > 0 && FMath::Abs(CurrentState.Velocity.X) < .85 * MaxRunSpeed)
+				{
+					CurrentState.Velocity.X = .85 * MaxRunSpeed;
+
+					if (!CurrentState.bFacingRight)
+						CurrentState.Velocity.X *= -1;
+				}
+
+				TurnAroundCheck();
 			}
 		}
 	}
@@ -1511,7 +1520,7 @@ void ABTCharacterBase::ApplyKnockBack()
 
 		CurrentState.KnockBack = FVector2D(0, 0);
 
-		if (!CurrentState.bIsAirborne && CurrentState.Velocity.Y > 0)
+		if (!CurrentState.bIsAirborne && CurrentState.Velocity.Y != 0)
 			CurrentState.bIsAirborne = true;
 	}
 }
@@ -2301,8 +2310,8 @@ bool ABTCharacterBase::ConditionalTransitions()
 	{
 		if (IsCurrentAnimation(ThrowAttempt))
 		{
-			CurrentState.HitStop = 16;
-			Opponent->CurrentState.HitStop = 16;
+			CurrentState.HitStop = 10;
+			Opponent->CurrentState.HitStop = 10;
 
 			ThrowSetup(FVector2D(ThrowPosition, 0));
 
@@ -2311,8 +2320,8 @@ bool ABTCharacterBase::ConditionalTransitions()
 
 		if (IsCurrentAnimation(AirThrowAttempt))
 		{
-			CurrentState.HitStop = 16;
-			Opponent->CurrentState.HitStop = 16;
+			CurrentState.HitStop = 10;
+			Opponent->CurrentState.HitStop = 10;
 
 			ThrowSetup(AirThrowPosition);
 
@@ -3057,12 +3066,12 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 	{
 		KnockBackToApply = Hitbox.PotentialKnockBack;
 
-		if (Opponent->IsCurrentAnimation(Opponent->Crumple))
+		if (Opponent->IsCurrentAnimation(Opponent->Crumple) && Hitbox.AttackHeight < Throw)
 		{
-			if (Hitbox.PotentialKnockBack.Y == 0)
+			if (Hitbox.PotentialKnockBack.Y == 0 && Hitbox.PotentialAirKnockBack.Y)
 				KnockBackToApply.Y = 2;
-			/*else
-				KnockBackToApply.Y = Hitbox.PotentialAirKnockBack.Y;*/
+			else if (Hitbox.PotentialKnockBack.Y == 0)
+				KnockBackToApply.Y = Hitbox.PotentialAirKnockBack.Y;
 		}
 	}
 
