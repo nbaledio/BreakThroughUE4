@@ -28,6 +28,10 @@ public:
 	UPROPERTY(meta = (BindWidget))
 		class UImage* P2CharacterPortrait;
 	UPROPERTY(meta = (BindWidget))
+		class UImage* P1CharacterPortraitHighlight;
+	UPROPERTY(meta = (BindWidget))
+		class UImage* P2CharacterPortraitHighlight;
+	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* P1CharacterName;
 	UPROPERTY(meta = (BindWidget))
 		class UTextBlock* P2CharacterName;
@@ -69,12 +73,26 @@ public:
 		UWidgetAnimation* P1PortraitSlide;
 	UPROPERTY(meta = (BindWidgetAnim))
 		UWidgetAnimation* P2PortraitSlide;
+	UPROPERTY(meta = (BindWidgetAnim))
+		UWidgetAnimation* P1CharacterConfirm;
+	UPROPERTY(meta = (BindWidgetAnim))
+		UWidgetAnimation* P2CharacterConfirm;
+	UPROPERTY(meta = (BindWidgetAnim))
+		UWidgetAnimation* P1CharacterDeselect;
+	UPROPERTY(meta = (BindWidgetAnim))
+		UWidgetAnimation* P2CharacterDeselect;
 
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 private:
+	//Materials
+	UPROPERTY(EditAnywhere)
+		UMaterialInterface* CharacterHighlight;
+	UMaterialInstanceDynamic* P1HighlightMaterial;
+	UMaterialInstanceDynamic* P2HighlightMaterial;
+
 	//Input variables
 	//P1 inputs
 	float P1_HORIZONTAL_AXIS;

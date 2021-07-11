@@ -29,7 +29,7 @@ void UCharacterSelect::NativeConstruct()
 		if (P1Side == "Left" && P2Side == "Right")
 		{
 			P1Controller = UGameplayStatics::GetPlayerController(world, 0);
-			P2Controller = UGameplayStatics::GetPlayerController(world, 0);
+			P2Controller = UGameplayStatics::GetPlayerController(world, 1);
 		}
 		else if (P1Side == "Right" && P2Side == "Left")
 		{
@@ -37,6 +37,9 @@ void UCharacterSelect::NativeConstruct()
 			P2Controller = UGameplayStatics::GetPlayerController(world, 0);
 		}
 	}
+
+	P1HighlightMaterial = UMaterialInstanceDynamic::Create(CharacterHighlight, this);
+	P2HighlightMaterial = UMaterialInstanceDynamic::Create(CharacterHighlight, this);
 
 	SetP1CharacterPortrait(-1);
 	SetP2CharacterPortrait(-1);
@@ -316,22 +319,28 @@ void UCharacterSelect::VsCPUMenuInteractions()
 		}
 
 		//Confirm character if currently hovering one
-		if (P1_INPUT_ACCEPT && P1HoveredCharacter != -1)
+		if (P1_INPUT_ACCEPT && P1HoveredCharacter != -1 && P1AcceptConfirmInput)
 		{
 			P1Character = P1HoveredCharacter;
 			P1CharacterSelected = true;
 			if (P1Side == "Left")
 			{
-				P1CharacterPortrait->SetVisibility(ESlateVisibility::Hidden);
 				P1ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
+				StopAllAnimations();
+				PlayAnimation(P1CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
 			}
 			else if (P1Side == "Right")
 			{
-				P2CharacterPortrait->SetVisibility(ESlateVisibility::Hidden);
 				P2ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
+				StopAllAnimations();
+				PlayAnimation(P2CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
 			}
 			P1AcceptConfirmInput = false;
 			//Display P1 Character Model
+		}
+		else if (!P1AcceptConfirmInput) 
+		{
+			P1AcceptConfirmInput = true;
 		}
 
 		//Display return to main menu
@@ -352,16 +361,18 @@ void UCharacterSelect::VsCPUMenuInteractions()
 		if (P1_INPUT_ACCEPT && P1AcceptConfirmInput)
 		{
 			P1Ready = true;
-			P2AcceptConfirmInput = false;
+			P1AcceptConfirmInput = false;
 			if (P1Side == "Left") 
 			{
 				P1ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
 				P2Cursor->SetVisibility(ESlateVisibility::Visible);
+				PlayAnimation(P2PortraitSlide, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			}
 			else if (P1Side == "Right") 
 			{
 				P2ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
 				P1Cursor->SetVisibility(ESlateVisibility::Visible);
+				PlayAnimation(P1PortraitSlide, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			}
 		}
 		else if (!P1_INPUT_ACCEPT)
@@ -376,13 +387,15 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			P1CharacterSelected = false;
 			if (P1Side == "Left")
 			{
-				P1CharacterPortrait->SetVisibility(ESlateVisibility::Visible);
 				P1ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
+				StopAllAnimations();
+				PlayAnimation(P1CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			}
 			else if (P1Side == "Right") 
 			{
-				P2CharacterPortrait->SetVisibility(ESlateVisibility::Visible);
 				P2ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
+				StopAllAnimations();
+				PlayAnimation(P2CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			}
 			//Hide P1 Character Model
 		}
@@ -460,13 +473,15 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			P2CharacterSelected = true;
 			if (P2Side == "Right") 
 			{
-				P2CharacterPortrait->SetVisibility(ESlateVisibility::Hidden);
 				P2ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
+				StopAllAnimations();
+				PlayAnimation(P2CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
 			}
 			else if (P2Side == "Left") 
 			{
-				P1CharacterPortrait->SetVisibility(ESlateVisibility::Hidden);
 				P1ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
+				StopAllAnimations();
+				PlayAnimation(P1CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
 			}
 			P2AcceptConfirmInput = false;
 			//Display P2 Character Model
@@ -529,13 +544,15 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			P2CharacterSelected = false;
 			if (P2Side == "Right") 
 			{
-				P2CharacterPortrait->SetVisibility(ESlateVisibility::Visible);
 				P2ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
+				StopAllAnimations();
+				PlayAnimation(P2CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			}
 			else if (P2Side == "Left") 
 			{
-				P1CharacterPortrait->SetVisibility(ESlateVisibility::Visible);
 				P1ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
+				StopAllAnimations();
+				PlayAnimation(P1CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			}
 			//Hide P2 Character Model
 		}
@@ -631,14 +648,20 @@ void UCharacterSelect::Vs2PMenuInteractions()
 		int character = P1CursorCollisionDetection();
 
 		//Confirm character if currently hovering one
-		if (P1_INPUT_ACCEPT && character != -1)
+		if (P1_INPUT_ACCEPT && character != -1 && P1AcceptConfirmInput)
 		{
 			P1Character = character;
 			P1CharacterSelected = true;
-			P1CharacterPortrait->SetVisibility(ESlateVisibility::Hidden);
 			P1ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
 			P1AcceptConfirmInput = false;
+			StopAnimation(P1CharacterDeselect);
+			StopAnimation(P1PortraitSlide);
+			PlayAnimation(P1CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
 			//Display P1 Character Model
+		}
+		else if (!P1_INPUT_ACCEPT)
+		{
+			P1AcceptConfirmInput = true;
 		}
 
 		if (P1_INPUT_BACK && P1AcceptBackInput)
@@ -670,8 +693,10 @@ void UCharacterSelect::Vs2PMenuInteractions()
 			P1Character = -1;
 			P1Color = 1;
 			P1CharacterSelected = false;
-			P1CharacterPortrait->SetVisibility(ESlateVisibility::Visible);
 			P1ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
+			StopAnimation(P1CharacterConfirm);
+			StopAnimation(P1PortraitSlide);
+			PlayAnimation(P1CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			//Hide P1 Character Model
 		}
 		else if (!P1_INPUT_BACK)
@@ -748,14 +773,20 @@ void UCharacterSelect::Vs2PMenuInteractions()
 		int character = P2CursorCollisionDetection();
 
 		//Confirm character if currently hovering one
-		if (P2_INPUT_ACCEPT && character != -1)
+		if (P2_INPUT_ACCEPT && character != -1 && P2AcceptConfirmInput)
 		{
 			P2Character = character;
 			P2CharacterSelected = true;
-			P2CharacterPortrait->SetVisibility(ESlateVisibility::Hidden);
 			P2ColorSelectMenu->SetVisibility(ESlateVisibility::Visible);
 			P2AcceptConfirmInput = false;
+			StopAnimation(P2CharacterDeselect);
+			StopAnimation(P2PortraitSlide);
+			PlayAnimation(P2CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
 			//Display P2 Character Model
+		}
+		else if (!P2_INPUT_ACCEPT)
+		{
+			P2AcceptConfirmInput = true;
 		}
 
 		if (P2_INPUT_BACK && P2AcceptBackInput)
@@ -787,8 +818,10 @@ void UCharacterSelect::Vs2PMenuInteractions()
 			P2Character = -1;
 			P2Color = 1;
 			P2CharacterSelected = false;
-			P2CharacterPortrait->SetVisibility(ESlateVisibility::Visible);
 			P2ColorSelectMenu->SetVisibility(ESlateVisibility::Hidden);
+			StopAnimation(P2PortraitSlide);
+			StopAnimation(P2CharacterConfirm);
+			PlayAnimation(P2CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 			//Hide P2 Character Model
 		}
 		else if (!P2_INPUT_BACK)
@@ -879,7 +912,7 @@ int UCharacterSelect::P1CursorCollisionDetection()
 			SetP1CharacterPortrait(i);
 			if (!P1OnEnter) 
 			{
-				PlayAnimation(P1PortraitSlide, 0.0f, 1, EUMGSequencePlayMode::Forward, 7.0f, false);
+				PlayAnimation(P1PortraitSlide, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 				P1OnEnter = true;
 			}
 			return i;
@@ -904,7 +937,7 @@ int UCharacterSelect::P2CursorCollisionDetection()
 			SetP2CharacterPortrait(i);
 			if (!P2OnEnter)
 			{
-				PlayAnimation(P2PortraitSlide, 0.0f, 1, EUMGSequencePlayMode::Forward, 7.0f, false);
+				PlayAnimation(P2PortraitSlide, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
 				P2OnEnter = true;
 			}
 			return i;
@@ -944,11 +977,15 @@ void UCharacterSelect::SetP1CharacterPortrait(int CharacterCode)
 	case 0:
 		P1CharacterPortrait->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
 		P1CharacterPortrait->SetBrushFromTexture(Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Achealis"))));
+		P1HighlightMaterial->SetTextureParameterValue(FName(TEXT("CharacterPortrait")), Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Achealis"))));
+		P1CharacterPortraitHighlight->SetBrushFromMaterial(P1HighlightMaterial);
 		P1CharacterName->SetText(FText::FromString("Achealis Thorne"));
 		break;
 	case 1:
 		P1CharacterPortrait->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
 		P1CharacterPortrait->SetBrushFromTexture(Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Dhalia"))));
+		P1HighlightMaterial->SetTextureParameterValue(FName(TEXT("CharacterPortrait")), Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Dhalia"))));
+		P1CharacterPortraitHighlight->SetBrushFromMaterial(P1HighlightMaterial);
 		P1CharacterName->SetText(FText::FromString("Dhalia Thorne"));
 		break;
 	default:
@@ -965,11 +1002,15 @@ void UCharacterSelect::SetP2CharacterPortrait(int CharacterCode)
 	case 0:
 		P2CharacterPortrait->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
 		P2CharacterPortrait->SetBrushFromTexture(Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Achealis"))));
+		P2HighlightMaterial->SetTextureParameterValue(FName(TEXT("CharacterPortrait")), Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Achealis"))));
+		P2CharacterPortraitHighlight->SetBrushFromMaterial(P2HighlightMaterial);
 		P2CharacterName->SetText(FText::FromString("Achealis Thorne"));
 		break;
 	case 1:
 		P2CharacterPortrait->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
 		P2CharacterPortrait->SetBrushFromTexture(Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Dhalia"))));
+		P2HighlightMaterial->SetTextureParameterValue(FName(TEXT("CharacterPortrait")), Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), NULL, *FString("/Game/CharacterSelect/Textures/Dhalia"))));
+		P2CharacterPortraitHighlight->SetBrushFromMaterial(P2HighlightMaterial);
 		P2CharacterName->SetText(FText::FromString("Dhalia Thorne"));
 		break;
 	default:
