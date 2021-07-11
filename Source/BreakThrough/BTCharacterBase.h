@@ -365,6 +365,9 @@ struct FCharacterState
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 BPressed = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
+		uint8 DashPressed = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 LReleased = 0;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	uint8 MReleased = 0;
@@ -382,6 +385,8 @@ struct FCharacterState
 	bool bIsHDown;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
 	bool bIsBDown;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")
+		bool bIsDashDown;
 
 	//int using bit flags to track to actions available to the character
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inputs")

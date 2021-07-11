@@ -282,7 +282,8 @@ void ABTProjectileBase::HitDetection()
 														(Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility == HiCounter && CurrentState.CurrentAnimFrame.Hitboxes[i].AttackHeight < Low) || (Owner->Opponent->CurrentState.CurrentAnimation[Owner->Opponent->CurrentState.AnimFrameIndex].Invincibility == LowCounter && CurrentState.CurrentAnimFrame.Hitboxes[i].AttackHeight == Low)) &&
 														!(CurrentState.CurrentAnimFrame.Hitboxes[i].AttackProperties & IsSuper))) //check if the opponent is in a counter stance that can counter the current attack
 													{
-														CurrentState.HitStop = 24;
+														CurrentState.bIsActive = false;
+														Owner->Opponent->CurrentState.bHitSuccess = true;
 														Owner->Opponent->CurrentState.bClash = true;
 													}
 													else
