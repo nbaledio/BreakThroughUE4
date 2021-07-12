@@ -379,9 +379,9 @@ void ARoundManager::UpdateCameraPosition()
 	}
 	else if (Player2Base->CurrentState.CurrentAnimFrame.CameraRotation != FRotator(0)) //check if Player 2's animation has a stored camera rotation
 	{
-		FRotator TargetRotation = FRotator(Player1Base->CurrentState.CurrentAnimFrame.CameraRotation.Pitch, -90 + Player1Base->CurrentState.CurrentAnimFrame.CameraRotation.Yaw, Player1Base->CurrentState.CurrentAnimFrame.CameraRotation.Roll);
-		if (!Player1Base->CurrentState.bFacingRight)
-			TargetRotation.Yaw -= 2 * Player1Base->CurrentState.CurrentAnimFrame.CameraRotation.Yaw;
+		FRotator TargetRotation = FRotator(Player2Base->CurrentState.CurrentAnimFrame.CameraRotation.Pitch, -90 + Player2Base->CurrentState.CurrentAnimFrame.CameraRotation.Yaw, Player2Base->CurrentState.CurrentAnimFrame.CameraRotation.Roll);
+		if (!Player2Base->CurrentState.bFacingRight)
+			TargetRotation.Yaw -= 2 * Player2Base->CurrentState.CurrentAnimFrame.CameraRotation.Yaw;
 
 		if (Player2Base->CurrentState.CurrentAnimFrame.bCinematic)
 		{
@@ -391,7 +391,7 @@ void ARoundManager::UpdateCameraPosition()
 		else
 		{
 			TargetRotation.Yaw += 90;
-			CurrentState.Rotation = FMath::Lerp(CurrentState.Rotation, TargetRotation, .15f);
+			CurrentState.Rotation = FMath::Lerp(CurrentState.Rotation, TargetRotation, .1f);
 		}
 	}
 	else if (Player1Base->CurrentState.CurrentAnimFrame.CameraLocation == FVector(0) && Player2Base->CurrentState.CurrentAnimFrame.CameraLocation == FVector(0))//otherwise normal gameplay camera

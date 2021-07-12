@@ -111,7 +111,7 @@ void ABTHitFX::CreateMaterials()
 		Ring->SetMaterial(0, DynamicRingMaterial);
 		DynamicRingMaterial->SetScalarParameterValue(FName("Emissivity"), 15);
 		DynamicRingMaterial->SetVectorParameterValue(FName("RowsAndColumns"), FVector(2));
-		DynamicRingMaterial->SetVectorParameterValue(FName("Color"), FVector(1, .02, 0));
+		DynamicRingMaterial->SetVectorParameterValue(FName("Color"), FVector(.65f, .01, 0));
 		//DynamicRingMaterial->SetVectorParameterValue(FName("Color"), FVector(.1, 1, .25));
 	}
 }

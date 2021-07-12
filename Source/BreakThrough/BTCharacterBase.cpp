@@ -1344,10 +1344,10 @@ void ABTCharacterBase::RunBraking()
 			}
 
 			
-			if (RunAcceleration > 0 && (CurrentState.Dir6 == DirInputTime || CurrentState.Dir9 == DirInputTime || CurrentState.bIsDashDown) && (IsCurrentAnimation(RunStart) || IsCurrentAnimation(RunCycle) || IsCurrentAnimation(PreJump)))
+			if (RunAcceleration > 0 && CurrentState.HitStun == 0 && (CurrentState.Dir6 == DirInputTime || CurrentState.Dir9 == DirInputTime || CurrentState.bIsDashDown) && (IsCurrentAnimation(RunStart) || IsCurrentAnimation(RunCycle) || IsCurrentAnimation(PreJump)))
 			{ }
 			//stop running if forward direction is no longer being held for run type characters and if animation has finished on dash type characters
-			else if ((RunAcceleration > 0 && CurrentState.Dir6 < DirInputTime && CurrentState.Dir9 < DirInputTime) || (!IsCurrentAnimation(RunStart) && !IsCurrentAnimation(RunCycle) && !IsCurrentAnimation(PreJump)))
+			else if ((RunAcceleration > 0 && CurrentState.Dir6 < DirInputTime && CurrentState.Dir9 < DirInputTime) || (!IsCurrentAnimation(RunStart) && !IsCurrentAnimation(RunCycle) && !IsCurrentAnimation(PreJump)) || CurrentState.HitStun > 0)
 			{
 				CurrentState.bIsRunning = false;
 
@@ -1794,7 +1794,7 @@ void ABTCharacterBase::DirectionalInputs(int32 Inputs) //set the correct directi
 
 void ABTCharacterBase::ButtonInputs(int32 Inputs) //set the correct button inputs based on the inputs read
 {
-	if (Inputs & INPUT_DASH && !CurrentState.bIsDashDown && !(Inputs & INPUT_DOWN)) //Light Attack Button
+	if (Inputs & INPUT_DASH && !CurrentState.bIsDashDown) //Light Attack Button
 	{
 		CurrentState.DashPressed = InputTime;
 
@@ -2132,7 +2132,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 			if (CurrentState.bLose)
 				return EnterNewAnimation(TimeOverLose);
 
-			if (CurrentState.DoubleDir6 > 0 || (CurrentState.DashPressed > 0 && CurrentState.Dir4 < DirInputTime))
+			if (CurrentState.DoubleDir6 > 0 || (CurrentState.DashPressed > 0 && CurrentState.Dir4 < DirInputTime && CurrentState.Dir1 < DirInputTime && CurrentState.Dir2 < DirInputTime && CurrentState.Dir3 < DirInputTime))
 			{
 				if (RunAcceleration > 0)
 					CurrentState.bIsRunning = true;
@@ -2162,7 +2162,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 		{
 			if (AirDashForce > 0 && CurrentState.JumpsUsed < MaxJumps)
 			{
-				if (CurrentState.DoubleDir6 > 0 || (CurrentState.DashPressed > 0 && CurrentState.Dir4 < DirInputTime))
+				if (CurrentState.DoubleDir6 > 0 || (CurrentState.DashPressed > 0 && CurrentState.Dir4 < DirInputTime && CurrentState.Dir1 < DirInputTime && CurrentState.Dir7 < DirInputTime))
 				{
 					CurrentState.DoubleDir6 = 0;
 					CurrentState.DashPressed = 0;
@@ -2208,7 +2208,7 @@ bool ABTCharacterBase::ActiveTransitions() //Transitions controlled by player in
 					return EnterNewAnimation(AirDashForwardIn);
 				}
 
-				if (CurrentState.DoubleDir4 > 0 || (CurrentState.DashPressed > 0 && CurrentState.Dir4 == DirInputTime))
+				if (CurrentState.DoubleDir4 > 0 || (CurrentState.DashPressed > 0 && (CurrentState.Dir1 == DirInputTime || CurrentState.Dir4 == DirInputTime || CurrentState.Dir7 == DirInputTime)))
 				{
 					CurrentState.DoubleDir4 = 0;
 					CurrentState.DashPressed = 0;
@@ -3198,18 +3198,22 @@ void ABTCharacterBase::AttackCalculation(FHitbox Hitbox, FVector2D HurtboxCenter
 
 	DamageToApply = FMath::FloorToInt(DamageToApply * ComboProration / 10);
 
-	if (Hitbox.BaseDamage > 0 && RoundManager->CurrentState.RoundTimer > 0)
+	if (Hitbox.BaseDamage > 0 && (RoundManager->CurrentState.RoundTimer > 0 || RoundManager->CurrentState.bSuddenDeath))
 	{
 		if (Hitbox.AttackProperties & IsSuper)
 			DamageToApply = FMath::Max(FMath::FloorToInt(OpponentValor * Hitbox.BaseDamage / 4), DamageToApply); //Supers will always deal a minimum of 25% their base damage affected by valor
 
 		DamageToApply = FMath::Max(1, DamageToApply); //non-super attacks will always deal a minimum of one damage
 
-		Opponent->CurrentState.Health -= FMath::Min(DamageToApply, Opponent->CurrentState.Health);
+		if (RoundManager->CurrentState.bSuddenDeath)
+			Opponent->CurrentState.Health = 0;
+		else
+			Opponent->CurrentState.Health -= FMath::Min(DamageToApply, Opponent->CurrentState.Health);
+
 		//Opponent->CurrentState.Health = 0;
 		if (Opponent->CurrentState.Health == 0)
 		{
-			if (Hitbox.AttackProperties & NonFatal)
+			if (Hitbox.AttackProperties & NonFatal && !RoundManager->CurrentState.bSuddenDeath)
 				Opponent->CurrentState.Health = 1;
 			else if (!CurrentState.bPlayedKOSpark)
 			{
@@ -3376,6 +3380,12 @@ void ABTCharacterBase::ContactThrow(FHitbox Hitbox, int32 ThrowType)
 		{
 			CurrentState.bClash = true;
 			Opponent->CurrentState.bClash = true;
+
+			CurrentState.bIsRunning = false;
+			Opponent->CurrentState.bIsRunning = false;
+
+			Opponent->CurrentState.Velocity = FVector2D(0);
+			CurrentState.Velocity = FVector2D(0);
 
 			if (Opponent->CurrentState.bTouchingWall)
 				CurrentState.KnockBack = FVector2D(4.5, 0);
@@ -4026,7 +4036,7 @@ void ABTCharacterBase::ProcessBlitz()
 
 					if (Opponent)
 					{
-						FVector2D EffectCenter = FVector2D(FMath::Lerp(Opponent->CurrentState.Position.X, CurrentState.Position.X, .25f), FMath::Lerp(Opponent->CurrentState.Position.Y + Opponent->StandingPushBoxHeight, CurrentState.Position.Y + StandingPushBoxHeight, .25f));
+						FVector2D EffectCenter = FVector2D(FMath::Lerp(Opponent->CurrentState.Position.X, CurrentState.Position.X, .25f), FMath::Lerp(Opponent->CurrentState.Position.Y + Opponent->StandingPushBoxHeight, CurrentState.Position.Y + StandingPushBoxHeight, .5f));
 						if (SpecialVFX[0]->CurrentState.bIsActive)
 						{
 							Opponent->SpecialVFX[0]->Activate(EffectCenter, CurrentState.bFacingRight, 0, Deflect);
@@ -4314,6 +4324,9 @@ void ABTCharacterBase::CreateVariables() {}
 
 void ABTCharacterBase::ThrowSetup(FVector2D OpponentPosition, bool bIsNormalThrow)
 {
+	CurrentState.Velocity.X = 0;
+	Opponent->CurrentState.Velocity.X = 0;
+
 	if (bBackThrow && bIsNormalThrow)
 	{
 		CurrentState.bFacingRight = !CurrentState.bFacingRight;
