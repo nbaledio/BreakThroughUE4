@@ -248,6 +248,8 @@ struct FCharacterState
 		bool bTouchingOpponent = false;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 		int32 JustDefense = 5;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
+		uint8 WakeUpInvuln;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Battle Stats")
 	TArray<int32> SpecialVariables; //Store any unique character variables here

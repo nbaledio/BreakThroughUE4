@@ -231,6 +231,14 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 		else
 			CurrentState.CharacterHitState = 0;
 
+		if (CurrentState.WakeUpInvuln > 0 && CurrentState.CurrentAnimFrame.Invincibility < ThrowInvincible)
+		{
+			if (CurrentState.CurrentAnimFrame.Invincibility > 0)
+				CurrentState.CurrentAnimFrame.Invincibility = FullInvincible;
+			else
+				CurrentState.CurrentAnimFrame.Invincibility = ThrowInvincible;
+		}
+
 		//Checking PosePlayTime < PlayDuration, Changing Animations, and Anim Transitions based on read inputs
 		AnimationStateMachine();
 		
@@ -395,6 +403,12 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 			if (CurrentState.GravDefyTime == 0)
 				CurrentState.Velocity *= .55f;
 		}
+
+		if (CurrentState.WakeUpInvuln > 0)
+		{
+			CurrentState.WakeUpInvuln--;
+		}
+
 		BaseMesh->SetRelativeLocation(FVector(0));
 	}
 	else if (CurrentState.HitStop > 0)
@@ -2466,7 +2480,13 @@ bool ABTCharacterBase::ExitTimeTransitions()
 		IsCurrentAnimation(HitSLOut) || IsCurrentAnimation(HitSHOut) || IsCurrentAnimation(HitSLHeavyOut) || IsCurrentAnimation(HitSHHeavyOut) || IsCurrentAnimation(IdleStandBlink) ||
 		IsCurrentAnimation(StandIdleAction) || IsCurrentAnimation(Deflected) || IsCurrentAnimation(ThrowEscape) || IsCurrentAnimation(BlitzOutStanding) || IsCurrentAnimation(TurnAroundStand) ||
 		IsCurrentAnimation(ThrowAttempt) || IsCurrentAnimation(NormalThrow))
+	{
+		if (IsCurrentAnimation(WakeUpFaceDown) || IsCurrentAnimation(WakeUpFaceUp))
+		{
+			CurrentState.WakeUpInvuln = 5;
+		}
 		return EnterNewAnimation(IdleStand);
+	}
 
 	if (IsCurrentAnimation(CrouchDown) || IsCurrentAnimation(GuardLoOut) || IsCurrentAnimation(IdleCrouchBlink) || IsCurrentAnimation(CrouchIdleAction) ||
 		IsCurrentAnimation(HitCOut) || IsCurrentAnimation(HitCHeavyOut) || IsCurrentAnimation(TurnAroundCrouch))
