@@ -10,6 +10,12 @@ void UCharacterSelect::NativeConstruct()
 
 	//Set gamemode and sides here
 
+	//Set Foreground widget
+	FActorSpawnParameters SpawnParams;
+	Initializer = GetWorld()->SpawnActor<ACharacterSelectInit>(CharacterSelectInitBlueprint, FVector(0), FRotator(0), SpawnParams);
+	P1Cursor = Initializer->CharacterSelectForeground->P1Cursor;
+	P2Cursor = Initializer->CharacterSelectForeground->P2Cursor;
+
 	//Set Controllers
 	if (Gamemode == "CPU" || Gamemode == "Training") 
 	{
@@ -29,7 +35,7 @@ void UCharacterSelect::NativeConstruct()
 		if (P1Side == "Left" && P2Side == "Right")
 		{
 			P1Controller = UGameplayStatics::GetPlayerController(world, 0);
-			P2Controller = UGameplayStatics::GetPlayerController(world, 1);
+			P2Controller = UGameplayStatics::GetPlayerController(world, 0);
 		}
 		else if (P1Side == "Right" && P2Side == "Left")
 		{
@@ -52,6 +58,12 @@ void UCharacterSelect::NativeConstruct()
 	StageIcons.Add(DhaliaStageIcon);
 	StageIcons.Add(IzanagiCastleIcon);
 
+	TArray <AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AActor::StaticClass(), FoundActors);
+
+	P1Model = FoundActors[4];
+	P2Model = FoundActors[5];
+
 	UGameplayStatics::PlaySound2D(this, Announcer_CharSelectIntro);
 }
 
@@ -71,6 +83,7 @@ void UCharacterSelect::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
 		GetP2Inputs();
 	}
 
+	//Set Menu interactions based on gamemode
 	if (Gamemode == "CPU" || Gamemode == "Training") 
 	{
 		VsCPUMenuInteractions();
@@ -80,14 +93,46 @@ void UCharacterSelect::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
 		Vs2PMenuInteractions();
 	}
 
+	//Set stage select inputs if both players are ready
 	if(P1Ready && P2Ready)
 	{
 		StageSelectInputs();
 		StageSelectMenu->SetVisibility(ESlateVisibility::Visible);
+		P1Model->SetActorHiddenInGame(true);
+		P2Model->SetActorHiddenInGame(true);
+		P1Cursor->SetVisibility(ESlateVisibility::Hidden);
+		P2Cursor->SetVisibility(ESlateVisibility::Hidden);
 	}
 	else 
 	{
 		StageSelectMenu->SetVisibility(ESlateVisibility::Hidden);
+
+		if (Gamemode == "VS") 
+		{
+			P1Cursor->SetVisibility(ESlateVisibility::Visible);
+			P2Cursor->SetVisibility(ESlateVisibility::Visible);
+		}
+
+		//Delay models by one frame to prevent t-pose from showing
+		if (P1ModelDelay)
+		{
+			P1ModelDelay = false;
+			P1Model->SetActorHiddenInGame(true);
+		}
+		else
+		{
+			P1Model->SetActorHiddenInGame(false);
+		}
+
+		if (P2ModelDelay)
+		{
+			P2ModelDelay = false;
+			P2Model->SetActorHiddenInGame(true);
+		}
+		else
+		{
+			P2Model->SetActorHiddenInGame(false);
+		}
 	}
 }
 
@@ -330,14 +375,15 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			{
 				StopAllAnimations();
 				PlayAnimation(P1CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
+				SetP1Model(P1Character);
 			}
 			else if (P1Side == "Right")
 			{
 				StopAllAnimations();
 				PlayAnimation(P2CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
+				SetP2Model(P1Character);
 			}
 			P1AcceptConfirmInput = false;
-			//Display P1 Character Model
 		}
 		else if (!P1AcceptConfirmInput) 
 		{
@@ -393,13 +439,14 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			{
 				StopAllAnimations();
 				PlayAnimation(P1CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
+				SetP1Model(-1);
 			}
 			else if (P1Side == "Right") 
 			{
 				StopAllAnimations();
 				PlayAnimation(P2CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
+				SetP2Model(-1);
 			}
-			//Hide P1 Character Model
 		}
 		else if (!P1_INPUT_BACK)
 		{
@@ -478,14 +525,15 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			{
 				StopAllAnimations();
 				PlayAnimation(P2CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
+				SetP2Model(P2Character);
 			}
 			else if (P2Side == "Left") 
 			{
 				StopAllAnimations();
 				PlayAnimation(P1CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
+				SetP1Model(P2Character);
 			}
 			P2AcceptConfirmInput = false;
-			//Display P2 Character Model
 		}
 		else if (!P1_INPUT_ACCEPT)
 		{
@@ -551,13 +599,14 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			{
 				StopAllAnimations();
 				PlayAnimation(P2CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
+				SetP2Model(-1);
 			}
 			else if (P2Side == "Left") 
 			{
 				StopAllAnimations();
 				PlayAnimation(P1CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
+				SetP1Model(-1);
 			}
-			//Hide P2 Character Model
 		}
 		else if (!P1_INPUT_BACK)
 		{
@@ -626,6 +675,8 @@ void UCharacterSelect::VsCPUMenuInteractions()
 		{
 			P2AcceptBackInput = false;
 			P2Ready = false;
+			P1Cursor->SetVisibility(ESlateVisibility::Visible);
+			P2Cursor->SetVisibility(ESlateVisibility::Visible);
 			if (P2Side == "Right") 
 			{
 				PlayAnimation(P2ColorSelectConfirm, 0.0f, 1, EUMGSequencePlayMode::Reverse, 9.0f, false);
@@ -661,7 +712,7 @@ void UCharacterSelect::Vs2PMenuInteractions()
 			StopAnimation(P1PortraitSlide);
 			StopAnimation(P1ColorSelectConfirm);
 			PlayAnimation(P1CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
-			//Display P1 Character Model
+			SetP1Model(P1Character);
 		}
 		else if (!P1_INPUT_ACCEPT)
 		{
@@ -704,7 +755,7 @@ void UCharacterSelect::Vs2PMenuInteractions()
 			StopAnimation(P1PortraitSlide);
 			StopAnimation(P1ColorSelectConfirm);
 			PlayAnimation(P1CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
-			//Hide P1 Character Model
+			SetP1Model(-1);
 		}
 		else if (!P1_INPUT_BACK)
 		{
@@ -794,7 +845,7 @@ void UCharacterSelect::Vs2PMenuInteractions()
 			StopAnimation(P2PortraitSlide);
 			StopAnimation(P2ColorSelectConfirm);
 			PlayAnimation(P2CharacterConfirm, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
-			//Display P2 Character Model
+			SetP2Model(P2Character);
 		}
 		else if (!P2_INPUT_ACCEPT)
 		{
@@ -838,7 +889,7 @@ void UCharacterSelect::Vs2PMenuInteractions()
 			StopAnimation(P2CharacterConfirm);
 			StopAnimation(P2ColorSelectConfirm);
 			PlayAnimation(P2CharacterDeselect, 0.0f, 1, EUMGSequencePlayMode::Forward, 9.0f, false);
-			//Hide P2 Character Model
+			SetP2Model(-1);
 		}
 		else if (!P2_INPUT_BACK)
 		{
@@ -1036,6 +1087,42 @@ void UCharacterSelect::SetP2CharacterPortrait(int CharacterCode)
 		P2CharacterPortrait->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 0.0f));
 		P2CharacterPortrait->SetBrushFromTexture(NULL);
 		P2CharacterName->SetText(FText::FromString(""));
+	}
+}
+
+void UCharacterSelect::SetP1Model(int CharacterCode) 
+{
+	switch (CharacterCode) 
+	{
+	case 0:
+		P1Model->FindComponentByClass<USkeletalMeshComponent>()->SetSkeletalMesh(AchealisModel);
+		P1Model->FindComponentByClass<USkeletalMeshComponent>()->PlayAnimation(AchealisIdle, true);
+		P1ModelDelay = true;
+		break;
+	case 1:
+		P1Model->FindComponentByClass<USkeletalMeshComponent>()->SetSkeletalMesh(NULL);
+		break;
+	default:
+		P1Model->FindComponentByClass<USkeletalMeshComponent>()->SetSkeletalMesh(NULL);
+		break;
+	}
+}
+
+void UCharacterSelect::SetP2Model(int CharacterCode)
+{
+	switch (CharacterCode)
+	{
+	case 0:
+		P2Model->FindComponentByClass<USkeletalMeshComponent>()->SetSkeletalMesh(AchealisModel);
+		P2Model->FindComponentByClass<USkeletalMeshComponent>()->PlayAnimation(AchealisIdle, true);
+		P2ModelDelay = true;
+		break;
+	case 1:
+		P2Model->FindComponentByClass<USkeletalMeshComponent>()->SetSkeletalMesh(NULL);
+		break;
+	default:
+		P2Model->FindComponentByClass<USkeletalMeshComponent>()->SetSkeletalMesh(NULL);
+		break;
 	}
 }
 

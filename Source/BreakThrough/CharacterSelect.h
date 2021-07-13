@@ -9,6 +9,7 @@
 #include "Components/PanelSlot.h"
 #include "Components/CanvasPanelSlot.h"
 #include "GameFramework/PlayerController.h"
+#include "CharacterSelectInit.h"
 #include "Components/CanvasPanel.h"
 #include "Kismet/GameplayStatics.h"
 #include "Slate.h"
@@ -52,6 +53,10 @@ public:
 	UPROPERTY(meta = (BindWidget))
 		class UImage* DHA_Headshot;
 
+	//Models
+	UPROPERTY(EditAnywhere)
+		class USkeletalMesh* AchealisModel;
+
 	//Stage Select Components
 	UPROPERTY(meta = (BindWidget))
 		class UCanvasPanel* StageSelectMenu;
@@ -86,6 +91,10 @@ public:
 	UPROPERTY(meta = (BindWidgetAnim))
 		UWidgetAnimation* P2ColorSelectConfirm;
 
+	//CharacterAnimations
+	UPROPERTY(EditAnywhere)
+		class UAnimationAsset* AchealisIdle;
+
 	//Announcer Sounds
 	UPROPERTY(EditAnywhere)
 		class USoundWave* Announcer_CharSelectIntro;
@@ -100,11 +109,20 @@ public:
 	UPROPERTY(EditAnywhere)
 		class UTexture2D* DhaliaPortrait;
 
+	//Init Actor
+	ACharacterSelectInit* Initializer;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Init")
+		TSubclassOf<ACharacterSelectInit> CharacterSelectInitBlueprint;
+
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 private:
+	//Model variables
+	AActor* P1Model;
+	AActor* P2Model;
+
 	//Materials
 	UPROPERTY(EditAnywhere)
 		UMaterialInterface* CharacterHighlight;
@@ -135,7 +153,7 @@ private:
 	bool P2_INPUT_START;
 
 	//Local Variables
-	FString Gamemode = "CPU";
+	FString Gamemode = "VS";
 	FString P1Side = "Left";
 	FString P2Side = "Right";
 
@@ -156,6 +174,8 @@ private:
 	bool P2AcceptConfirmInput;
 	bool P2AcceptBackInput;
 	bool P2AcceptScrollInput;
+	bool P1ModelDelay;
+	bool P2ModelDelay;
 
 	int P1HoveredCharacter;
 	int P2HoveredCharacter;
@@ -177,8 +197,10 @@ private:
 	void PlayAnnouncer(int CharacterCode);
 	int P1CursorCollisionDetection();
 	void SetP1CharacterPortrait(int CharacterCode);
+	void SetP1Model(int CharacterCode);
 	int P2CursorCollisionDetection();
 	void SetP2CharacterPortrait(int CharacterCode);
+	void SetP2Model(int CharacterCode);
 	int StageSelectCursorCollisionDetection();
 	void SetStagePreview(int StageCode);
 };
