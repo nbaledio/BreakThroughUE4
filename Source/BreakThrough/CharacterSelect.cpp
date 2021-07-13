@@ -44,26 +44,41 @@ void UCharacterSelect::NativeConstruct()
 		}
 	}
 
+	//Create highlight materials
 	P1HighlightMaterial = UMaterialInstanceDynamic::Create(CharacterHighlight, this);
 	P2HighlightMaterial = UMaterialInstanceDynamic::Create(CharacterHighlight, this);
 
+	//Set portraits/previews to empty
 	SetP1CharacterPortrait(-1);
 	SetP2CharacterPortrait(-1);
 	SetStagePreview(-1);
 
+	//Add headshots to array
 	Headshots.Add(ACH_Headshot);
 	Headshots.Add(DHA_Headshot);
 
+	//Add stage icons to array
 	StageIcons.Add(TrainingStageIcon);
 	StageIcons.Add(DhaliaStageIcon);
 	StageIcons.Add(IzanagiCastleIcon);
 
+	//Find model actors in scene and set them
 	TArray <AActor*> FoundActors;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AActor::StaticClass(), FoundActors);
 
-	P1Model = FoundActors[4];
-	P2Model = FoundActors[5];
+	for (int32 i = 0; i < FoundActors.Num(); i++) 
+	{
+		if (FoundActors[i]->GetName() == FString("P1Model")) 
+		{
+			P1Model = FoundActors[i];
+		}
+		else if (FoundActors[i]->GetName() == FString("P2Model"))
+		{
+			P2Model = FoundActors[i];
+		}
+	}
 
+	//Play announcer intro
 	UGameplayStatics::PlaySound2D(this, Announcer_CharSelectIntro);
 }
 
