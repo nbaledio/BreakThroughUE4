@@ -35,7 +35,7 @@ void UCharacterSelect::NativeConstruct()
 		if (P1Side == "Left" && P2Side == "Right")
 		{
 			P1Controller = UGameplayStatics::GetPlayerController(world, 0);
-			P2Controller = UGameplayStatics::GetPlayerController(world, 0);
+			P2Controller = UGameplayStatics::GetPlayerController(world, 1);
 		}
 		else if (P1Side == "Right" && P2Side == "Left")
 		{

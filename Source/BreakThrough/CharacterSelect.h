@@ -153,7 +153,7 @@ private:
 	bool P2_INPUT_START;
 
 	//Local Variables
-	FString Gamemode = "VS";
+	FString Gamemode = "CPU";
 	FString P1Side = "Left";
 	FString P2Side = "Right";
 
