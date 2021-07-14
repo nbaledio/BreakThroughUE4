@@ -338,13 +338,15 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 	{
 		if (CurrentState.SlowMoTime % 2 == 0) //animation speed is halved and stun values decrease at half speed while in slow motion or when shattered
 		{
-			if (CurrentState.HitStun > 0 && !IsCurrentAnimation(Sweep) && !IsCurrentAnimation(Tumble) && !IsCurrentAnimation(GroundBounce) && !IsCurrentAnimation(WallBounce))
+			if (CurrentState.HitStun > 0 && !IsCurrentAnimation(Sweep) && !(IsCurrentAnimation(Crumple) && CurrentState.CurrentAnimFrame.Invincibility == OTG) && !IsCurrentAnimation(Tumble) && !IsCurrentAnimation(GroundBounce) && !IsCurrentAnimation(WallBounce))
 			{
 				if (!CurrentState.bIsAirborne|| (CurrentState.ShatteredTime == 0 && CurrentState.bIsAirborne))
 					CurrentState.HitStun--;
 			}
 			if (CurrentState.BlockStun > 0)
+			{
 				CurrentState.BlockStun--;
+			}
 			if (CurrentState.WallBounceTime > 0)
 				CurrentState.WallBounceTime--;
 		}
@@ -404,7 +406,13 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 				CurrentState.Velocity *= .55f;
 		}
 
-		if (CurrentState.WakeUpInvuln > 0)
+		if (CurrentState.CurrentAnimFrame.Invincibility == OTG)
+			CurrentState.WakeUpInvuln = 8;
+		else if (CurrentState.HitStun > 0 || CurrentState.BlockStun > 0)
+			CurrentState.WakeUpInvuln = 5;
+
+		if (CurrentState.WakeUpInvuln > 0 && CurrentState.HitStun == 0 && CurrentState.BlockStun == 0 && CurrentState.CurrentAnimFrame.Invincibility != FaceDown && CurrentState.CurrentAnimFrame.Invincibility != FaceUp && 
+			CurrentState.CurrentAnimFrame.Invincibility != OTG && !IsCurrentAnimation(WakeUpFaceDown) && !IsCurrentAnimation(WakeUpFaceUp))
 		{
 			CurrentState.WakeUpInvuln--;
 		}
@@ -2481,10 +2489,6 @@ bool ABTCharacterBase::ExitTimeTransitions()
 		IsCurrentAnimation(StandIdleAction) || IsCurrentAnimation(Deflected) || IsCurrentAnimation(ThrowEscape) || IsCurrentAnimation(BlitzOutStanding) || IsCurrentAnimation(TurnAroundStand) ||
 		IsCurrentAnimation(ThrowAttempt) || IsCurrentAnimation(NormalThrow))
 	{
-		if (IsCurrentAnimation(WakeUpFaceDown) || IsCurrentAnimation(WakeUpFaceUp))
-		{
-			CurrentState.WakeUpInvuln = 5;
-		}
 		return EnterNewAnimation(IdleStand);
 	}
 

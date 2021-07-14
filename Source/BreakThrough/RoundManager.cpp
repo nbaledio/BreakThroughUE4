@@ -248,9 +248,9 @@ void ARoundManager::UpdateCameraPosition()
 		else if (Player1Base->CurrentState.bIsAirborne)
 			TargetPosition.Z = FMath::Lerp(Player2Base->CurrentState.Position.Y + .5f * Player2Base->CrouchingPushBoxHeight, Player1Base->CurrentState.Position.Y + Player1Base->AirPushboxVerticalOffset, .9);
 
-		if (Player1Base->CurrentState.ShatteredTime == 155)
+		if (Player1Base->CurrentState.ShatteredTime == 155 && !Player2Base->IsCurrentAnimation(Player2Base->ResoluteCounter) && !Player2Base->IsCurrentAnimation(Player2Base->AirResoluteCounter))
 			ShatterText->Activate(FVector2D(TargetPosition.X, TargetPosition.Z), Player2Base->CurrentState.bFacingRight);
-		else if (Player2Base->CurrentState.ShatteredTime == 155)
+		else if (Player2Base->CurrentState.ShatteredTime == 155 && !Player1Base->IsCurrentAnimation(Player1Base->ResoluteCounter) && !Player1Base->IsCurrentAnimation(Player1Base->AirResoluteCounter))
 			ShatterText->Activate(FVector2D(TargetPosition.X, TargetPosition.Z), Player1Base->CurrentState.bFacingRight);
 
 		if (TargetPosition.Z < ZPosMin - 10) //limit camera vertical position
@@ -394,7 +394,7 @@ void ARoundManager::UpdateCameraPosition()
 			CurrentState.Rotation = FMath::Lerp(CurrentState.Rotation, TargetRotation, .1f);
 		}
 	}
-	else if (Player1Base->CurrentState.CurrentAnimFrame.CameraLocation == FVector(0) && Player2Base->CurrentState.CurrentAnimFrame.CameraLocation == FVector(0))//otherwise normal gameplay camera
+	else //otherwise normal gameplay camera
 	{
 		if (CurrentState.KOFramePlayTime > 0 && !(Player1Base->CurrentState.Health == 0 && Player2Base->CurrentState.Health == 0))
 		{

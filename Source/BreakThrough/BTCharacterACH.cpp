@@ -121,7 +121,6 @@ void ABTCharacterACH::AnimationEvents()
 		if (CurrentState.AnimFrameIndex < 8)
 		{
 			Opponent->EnterNewAnimation(Opponent->HitSLIn);
-			//Opponent->CurrentState.HitStop = 1;
 		}
 	}
 
