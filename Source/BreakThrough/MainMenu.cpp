@@ -9,7 +9,7 @@ void UMainMenu::NativeConstruct()
 
 	//Set controllers
 	P1Controller = UGameplayStatics::GetPlayerController((UObject*)GetWorld(), 0);
-	P2Controller = UGameplayStatics::GetPlayerController((UObject*)GetWorld(), 0);
+	P2Controller = UGameplayStatics::GetPlayerController((UObject*)GetWorld(), 1);
 
 	//Play Animations
 	PlayAnimation(MarkerAnimation, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
@@ -230,6 +230,7 @@ void UMainMenu::MainMenuInteractions()
 			MainMenu->SetVisibility(ESlateVisibility::Hidden);
 			menuIndex = 1;
 			optionIndex = 0;
+			PlayAnimation(MarkerAnimation, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
 			break;
 		case 1:
 			//Enter online mode
@@ -239,6 +240,7 @@ void UMainMenu::MainMenuInteractions()
 			OptionsMenu->SetVisibility(ESlateVisibility::Visible);
 			MainMenu->SetVisibility(ESlateVisibility::Hidden);
 			optionIndex = 0;
+			PlayAnimation(MarkerAnimation, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
 			break;
 		case 3:
 			//Return to title
@@ -566,22 +568,82 @@ void UMainMenu::SideSelectMenuInteractions()
 
 void UMainMenu::SetMarker(int currentOptionIndex) 
 {
+	//Set marker position
 	switch (currentOptionIndex) 
 	{
 	case 0:
-		Cast<UCanvasPanelSlot>(Marker->Slot)->SetPosition(FVector2D(-500.0f, 50.0f));
+		Cast<UCanvasPanelSlot>(Marker->Slot)->SetPosition(FVector2D(-500.0f, 30.0f));
 		break;
 	case 1:
-		Cast<UCanvasPanelSlot>(Marker->Slot)->SetPosition(FVector2D(-500.0f, 140.0f));
+		Cast<UCanvasPanelSlot>(Marker->Slot)->SetPosition(FVector2D(-500.0f, 120.0f));
 		break;
 	case 2:
-		Cast<UCanvasPanelSlot>(Marker->Slot)->SetPosition(FVector2D(-500.0f, 230.0f));
+		Cast<UCanvasPanelSlot>(Marker->Slot)->SetPosition(FVector2D(-500.0f, 210.0f));
 		break;
 	case 3:
-		Cast<UCanvasPanelSlot>(Marker->Slot)->SetPosition(FVector2D(-500.0f, 320.0f));
+		Cast<UCanvasPanelSlot>(Marker->Slot)->SetPosition(FVector2D(-500.0f, 300.0f));
 		break;
 	case 4:
-		Cast<UCanvasPanelSlot>(Marker->Slot)->SetPosition(FVector2D(-500.0f, 410.0f));
+		Cast<UCanvasPanelSlot>(Marker->Slot)->SetPosition(FVector2D(-500.0f, 390.0f));
 		break;
+	}
+
+	//Set marker size
+	if (menuIndex == 0) 
+	{
+		switch (currentOptionIndex) 
+		{
+		case 0:
+			Marker->SetRenderTransform(FWidgetTransform(FVector2D(0.0f, 0.0f), FVector2D(0.5f, 0.5f), FVector2D(0.0f, 0.0f), 0.0f));
+			break;
+		case 1:
+			Marker->SetRenderTransform(FWidgetTransform(FVector2D(15.0f, 0.0f), FVector2D(0.55f, 0.5f), FVector2D(0.0f, 0.0f), 0.0f));
+			break;
+		case 2:
+			Marker->SetRenderTransform(FWidgetTransform(FVector2D(-50.0f, 0.0f), FVector2D(0.4f, 0.5f), FVector2D(0.0f, 0.0f), 0.0f));
+			break;
+		case 3:
+			Marker->SetRenderTransform(FWidgetTransform(FVector2D(-115.0f, 0.0f), FVector2D(0.25f, 0.5f), FVector2D(0.0f, 0.0f), 0.0f));
+			break;
+		}
+	}
+	else if (menuIndex == 1) 
+	{
+		switch (currentOptionIndex)
+		{
+		case 0:
+			Marker->SetRenderTransform(FWidgetTransform(FVector2D(15.0f, 0.0f), FVector2D(0.55f, 0.5f), FVector2D(0.0f, 0.0f), 0.0f));
+			break;
+		case 1:
+			Marker->SetRenderTransform(FWidgetTransform(FVector2D(-50.0f, 0.0f), FVector2D(0.4f, 0.5f), FVector2D(0.0f, 0.0f), 0.0f));
+			break;
+		case 2:
+			Marker->SetRenderTransform(FWidgetTransform(FVector2D(-50.0f, 0.0f), FVector2D(0.4f, 0.5f), FVector2D(0.0f, 0.0f), 0.0f));
+			break;
+		case 3:
+			Marker->SetRenderTransform(FWidgetTransform(FVector2D(-50.0f, 0.0f), FVector2D(0.4f, 0.5f), FVector2D(0.0f, 0.0f), 0.0f));
+			break;
+		case 4:
+			Marker->SetRenderTransform(FWidgetTransform(FVector2D(-115.0f, 0.0f), FVector2D(0.25f, 0.5f), FVector2D(0.0f, 0.0f), 0.0f));
+			break;
+		}
+	}
+	else if (menuIndex == 2) 
+	{
+		switch (currentOptionIndex)
+		{
+		case 0:
+			Marker->SetRenderTransform(FWidgetTransform(FVector2D(75.0f, 0.0f), FVector2D(0.7f, 0.5f), FVector2D(0.0f, 0.0f), 0.0f));
+			break;
+		case 1:
+			Marker->SetRenderTransform(FWidgetTransform(FVector2D(125.0f, 0.0f), FVector2D(0.8f, 0.5f), FVector2D(0.0f, 0.0f), 0.0f));
+			break;
+		case 2:
+			Marker->SetRenderTransform(FWidgetTransform(FVector2D(125.0f, 0.0f), FVector2D(0.8f, 0.5f), FVector2D(0.0f, 0.0f), 0.0f));
+			break;
+		case 3:
+			Marker->SetRenderTransform(FWidgetTransform(FVector2D(-115.0f, 0.0f), FVector2D(0.25f, 0.5f), FVector2D(0.0f, 0.0f), 0.0f));
+			break;
+		}
 	}
 }
