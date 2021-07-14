@@ -15,6 +15,10 @@ void UCharacterSelect::NativeConstruct()
 	Initializer = GetWorld()->SpawnActor<ACharacterSelectInit>(CharacterSelectInitBlueprint, FVector(0), FRotator(0), SpawnParams);
 	P1Cursor = Initializer->CharacterSelectForeground->P1Cursor;
 	P2Cursor = Initializer->CharacterSelectForeground->P2Cursor;
+	BackMenu = Initializer->CharacterSelectForeground->BackMenu;
+	BackMenuYesText = Initializer->CharacterSelectForeground->BackMenuYesText;
+	BackMenuNoText = Initializer->CharacterSelectForeground->BackMenuNoText;
+
 
 	//Set Controllers
 	if (Gamemode == "CPU" || Gamemode == "Training") 
@@ -361,8 +365,62 @@ void UCharacterSelect::GetP2Inputs()
 
 void UCharacterSelect::VsCPUMenuInteractions() 
 {
-	// P1 INPUTS // 
-	if (!P1CharacterSelected)
+	// P1 INPUTS //
+	if (backMenuActive && !loading) 
+	{
+		if ((P1_INPUT_LEFT || P1_INPUT_RIGHT) && P1AcceptScrollInput) 
+		{
+			P1AcceptScrollInput = false;
+			if (backMenuIndex == 0) 
+			{
+				backMenuIndex = 1;
+				BackMenuYesText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 0.0f, 0.0f, 1.0f)));
+				BackMenuNoText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)));
+			}
+			else 
+			{
+				backMenuIndex = 0;
+				BackMenuYesText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)));
+				BackMenuNoText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 0.0f, 0.0f, 1.0f)));
+			}
+		}
+		else if (!P1_INPUT_LEFT && !P1_INPUT_RIGHT) 
+		{
+			P1AcceptScrollInput = true;
+		}
+
+		if (P1_INPUT_ACCEPT && P1AcceptConfirmInput)
+		{
+			P1AcceptConfirmInput = false;
+			if (backMenuIndex == 0) 
+			{
+				Initializer->CharacterSelectForeground->PlayBackMenuSlideReverse();
+				backMenuActive = false;
+			}
+			else 
+			{
+				UGameplayStatics::OpenLevel(GetWorld(), "MainMenu");
+				loading = true;
+			}
+		}
+		else if (!P1_INPUT_ACCEPT)
+		{
+			P1AcceptConfirmInput = true;
+		}
+
+		if (P1_INPUT_BACK && P1AcceptBackInput) 
+		{
+			P1AcceptBackInput = false;
+			Initializer->CharacterSelectForeground->PlayBackMenuSlideReverse();
+			backMenuActive = false;
+		}
+		else if (!P1_INPUT_BACK)
+		{
+			P1AcceptBackInput = true;
+		}
+	}
+
+	if (!P1CharacterSelected && !backMenuActive)
 	{
 		//P1 Cursor Input
 		if (P1Side == "Left")
@@ -400,7 +458,7 @@ void UCharacterSelect::VsCPUMenuInteractions()
 			}
 			P1AcceptConfirmInput = false;
 		}
-		else if (!P1AcceptConfirmInput) 
+		else if (!P1_INPUT_ACCEPT) 
 		{
 			P1AcceptConfirmInput = true;
 		}
@@ -408,7 +466,12 @@ void UCharacterSelect::VsCPUMenuInteractions()
 		//Display return to main menu
 		if (P1_INPUT_BACK && P1AcceptBackInput)
 		{
-			
+			P1AcceptBackInput = false;
+			Initializer->CharacterSelectForeground->PlayBackMenuSlide();
+			backMenuActive = true;
+			backMenuIndex = 0;
+			BackMenuYesText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)));
+			BackMenuNoText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 0.0f, 0.0f, 1.0f)));
 		}
 		else if (!P1_INPUT_BACK)
 		{
@@ -686,7 +749,7 @@ void UCharacterSelect::VsCPUMenuInteractions()
 	if (P2Ready)
 	{
 		//Return to P2 Color Select
-		if (P1_INPUT_BACK)
+		if (P1_INPUT_BACK && !loading)
 		{
 			P2AcceptBackInput = false;
 			P2Ready = false;
@@ -707,7 +770,61 @@ void UCharacterSelect::VsCPUMenuInteractions()
 void UCharacterSelect::Vs2PMenuInteractions()
 {
 	// P1 INPUTS //
-	if (!P1CharacterSelected)
+	if (backMenuActive && !loading)
+	{
+		if ((P1_INPUT_LEFT || P1_INPUT_RIGHT) && P1AcceptScrollInput)
+		{
+			P1AcceptScrollInput = false;
+			if (backMenuIndex == 0)
+			{
+				backMenuIndex = 1;
+				BackMenuYesText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 0.0f, 0.0f, 1.0f)));
+				BackMenuNoText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)));
+			}
+			else
+			{
+				backMenuIndex = 0;
+				BackMenuYesText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)));
+				BackMenuNoText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 0.0f, 0.0f, 1.0f)));
+			}
+		}
+		else if (!P1_INPUT_LEFT && !P1_INPUT_RIGHT)
+		{
+			P1AcceptScrollInput = true;
+		}
+
+		if (P1_INPUT_ACCEPT && P1AcceptConfirmInput)
+		{
+			P1AcceptConfirmInput = false;
+			if (backMenuIndex == 0)
+			{
+				Initializer->CharacterSelectForeground->PlayBackMenuSlideReverse();
+				backMenuActive = false;
+			}
+			else
+			{
+				UGameplayStatics::OpenLevel(GetWorld(), "MainMenu");
+				loading = true;
+			}
+		}
+		else if (!P1_INPUT_ACCEPT)
+		{
+			P1AcceptConfirmInput = true;
+		}
+
+		if (P1_INPUT_BACK && P1AcceptBackInput)
+		{
+			P1AcceptBackInput = false;
+			Initializer->CharacterSelectForeground->PlayBackMenuSlideReverse();
+			backMenuActive = false;
+		}
+		else if (!P1_INPUT_BACK)
+		{
+			P1AcceptBackInput = true;
+		}
+	}
+
+	if (!P1CharacterSelected && !backMenuActive)
 	{
 		//P1 Cursor Input
 		FVector2D P1CursorCurrentPosition = Cast<UCanvasPanelSlot>(P1Cursor->Slot)->GetPosition();
@@ -737,6 +854,12 @@ void UCharacterSelect::Vs2PMenuInteractions()
 		if (P1_INPUT_BACK && P1AcceptBackInput)
 		{
 			//Display return to main menu
+			P1AcceptBackInput = false;
+			Initializer->CharacterSelectForeground->PlayBackMenuSlide();
+			backMenuActive = true;
+			backMenuIndex = 0;
+			BackMenuYesText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)));
+			BackMenuNoText->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 0.0f, 0.0f, 1.0f)));
 		}
 		else if (!P1_INPUT_BACK)
 		{
@@ -827,7 +950,7 @@ void UCharacterSelect::Vs2PMenuInteractions()
 
 	if (P1Ready)
 	{
-		if (P1_INPUT_BACK)
+		if (P1_INPUT_BACK && !loading)
 		{
 			P1AcceptBackInput = false;
 			P1Ready = false;
@@ -961,7 +1084,7 @@ void UCharacterSelect::Vs2PMenuInteractions()
 
 	if (P2Ready)
 	{
-		if (P2_INPUT_BACK)
+		if (P2_INPUT_BACK && !loading)
 		{
 			P2AcceptBackInput = false;
 			P2Ready = false;
@@ -981,6 +1104,18 @@ void UCharacterSelect::StageSelectInputs()
 
 	//Set stage preview
 	int stage = StageSelectCursorCollisionDetection();
+
+	if (P1_INPUT_ACCEPT && P1AcceptConfirmInput && stage != -1 && !loading) 
+	{
+		P1AcceptConfirmInput = false;
+		loading = true;
+		UGameplayStatics::OpenLevel(GetWorld(), "TestLevel");
+	}
+	else if (!P1_INPUT_ACCEPT) 
+	{
+		P1AcceptConfirmInput = true;
+	}
+
 }
 
 int UCharacterSelect::P1CursorCollisionDetection()
