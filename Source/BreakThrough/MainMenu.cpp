@@ -293,30 +293,47 @@ void UMainMenu::PlayLocalMenuInteractions()
 		switch (optionIndex)
 		{
 		case 0:
-			SideSelectMenu->SetVisibility(ESlateVisibility::Visible);
+			StopAnimation(SideSelectSlide);
+			PlayAnimation(SideSelectSlide, 0.0f, 1, EUMGSequencePlayMode::Forward, 8.0f, false);
 			P1ControllerIcon->SetVisibility(ESlateVisibility::Visible);
 			P2ControllerIcon->SetVisibility(ESlateVisibility::Visible);
 			P1CPUText->SetVisibility(ESlateVisibility::Hidden);
 			P2CPUText->SetVisibility(ESlateVisibility::Hidden);
+			StopAnimation(P1CToL);
+			StopAnimation(P1CToR);
+			StopAnimation(P2CToL);
+			StopAnimation(P2CToR);
 			PlayAnimation(ResetControllerPositions, 0.0f, 1, EUMGSequencePlayMode::Reverse, 1.0f, false);
-			Gamemode = "VS";
 			menuIndex = 3;
+			Gamemode = "VS";
 			break;
 		case 1:
-			SideSelectMenu->SetVisibility(ESlateVisibility::Visible);
+			StopAnimation(SideSelectSlide);
+			PlayAnimation(SideSelectSlide, 0.0f, 1, EUMGSequencePlayMode::Forward, 8.0f, false);
 			P1ControllerIcon->SetVisibility(ESlateVisibility::Visible);
 			P2ControllerIcon->SetVisibility(ESlateVisibility::Hidden);
 			P1CPUText->SetVisibility(ESlateVisibility::Visible);
 			P2CPUText->SetVisibility(ESlateVisibility::Visible);
+			StopAnimation(P1CToL);
+			StopAnimation(P1CToR);
+			StopAnimation(P2CToL);
+			StopAnimation(P2CToR);
+			PlayAnimation(ResetControllerPositions, 0.0f, 1, EUMGSequencePlayMode::Reverse, 1.0f, false);
 			menuIndex = 3;
 			Gamemode = "CPU";
 			break;
 		case 2:
-			SideSelectMenu->SetVisibility(ESlateVisibility::Visible);
+			StopAnimation(SideSelectSlide);
+			PlayAnimation(SideSelectSlide, 0.0f, 1, EUMGSequencePlayMode::Forward, 8.0f, false);
 			P1ControllerIcon->SetVisibility(ESlateVisibility::Visible);
 			P2ControllerIcon->SetVisibility(ESlateVisibility::Hidden);
 			P1CPUText->SetVisibility(ESlateVisibility::Visible);
 			P2CPUText->SetVisibility(ESlateVisibility::Visible);
+			StopAnimation(P1CToL);
+			StopAnimation(P1CToR);
+			StopAnimation(P2CToL);
+			StopAnimation(P2CToR);
+			PlayAnimation(ResetControllerPositions, 0.0f, 1, EUMGSequencePlayMode::Reverse, 1.0f, false);
 			menuIndex = 3;
 			Gamemode = "Training";
 			break;
@@ -537,7 +554,12 @@ void UMainMenu::SideSelectMenuInteractions()
 		{
 			P1AcceptConfirmInput = false;
 			loading = true;
-			UGameplayStatics::OpenLevel(GetWorld(), "CharacterSelect");
+			PlayAnimation(LoadingIconSpin, 0.0f, 0, EUMGSequencePlayMode::Forward, 0.75f, false);
+			PlayAnimation(LoadingScreenFadeIn, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
+			FLatentActionInfo LatentInfo;
+			//UGameplayStatics::LoadStreamLevel(this, FName("TestLevel"), true, true, LatentInfo);
+			//UGameplayStatics::UnloadStreamLevel(this, FName("MainMenu"), LatentInfo, true);
+			//UGameplayStatics::OpenLevel(GetWorld(), "CharacterSelect");
 		}
 	}
 	else if (!P1_INPUT_ACCEPT) 
@@ -553,8 +575,8 @@ void UMainMenu::SideSelectMenuInteractions()
 		StopAnimation(P1CToR);
 		StopAnimation(P2CToL);
 		StopAnimation(P2CToR);
-		SideSelectMenu->SetVisibility(ESlateVisibility::Hidden);
-		PlayAnimation(ResetControllerPositions, 0.0f, 1, EUMGSequencePlayMode::Reverse, 1.0f, false);
+		StopAnimation(SideSelectSlide);
+		PlayAnimation(SideSelectSlide, 0.0f, 1, EUMGSequencePlayMode::Reverse, 8.0f, false);
 		Gamemode = "";
 		P1Side = 0;
 		P2Side = 0;

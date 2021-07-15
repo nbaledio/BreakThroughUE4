@@ -56,6 +56,8 @@ private:
 	UPROPERTY(meta = (BindWidgetAnim))
 		UWidgetAnimation* CloudAnimation;
 	UPROPERTY(meta = (BindWidgetAnim))
+		UWidgetAnimation* SideSelectSlide;
+	UPROPERTY(meta = (BindWidgetAnim))
 		UWidgetAnimation* P1CToL;
 	UPROPERTY(meta = (BindWidgetAnim))
 		UWidgetAnimation* P1CToR;
@@ -65,6 +67,10 @@ private:
 		UWidgetAnimation* P2CToR;
 	UPROPERTY(meta = (BindWidgetAnim))
 		UWidgetAnimation* ResetControllerPositions;
+	UPROPERTY(meta = (BindWidgetAnim))
+		UWidgetAnimation* LoadingIconSpin;
+	UPROPERTY(meta = (BindWidgetAnim))
+		UWidgetAnimation* LoadingScreenFadeIn;
 
 	//Local Variables
 	int menuIndex = 0;
