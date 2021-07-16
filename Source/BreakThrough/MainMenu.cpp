@@ -556,10 +556,7 @@ void UMainMenu::SideSelectMenuInteractions()
 			loading = true;
 			PlayAnimation(LoadingIconSpin, 0.0f, 0, EUMGSequencePlayMode::Forward, 0.75f, false);
 			PlayAnimation(LoadingScreenFadeIn, 0.0f, 1, EUMGSequencePlayMode::Forward, 5.0f, false);
-			FLatentActionInfo LatentInfo;
-			//UGameplayStatics::LoadStreamLevel(this, FName("TestLevel"), true, true, LatentInfo);
-			//UGameplayStatics::UnloadStreamLevel(this, FName("MainMenu"), LatentInfo, true);
-			//UGameplayStatics::OpenLevel(GetWorld(), "CharacterSelect");
+			UGameplayStatics::OpenLevel(GetWorld(), "CharacterSelect");
 		}
 	}
 	else if (!P1_INPUT_ACCEPT) 
