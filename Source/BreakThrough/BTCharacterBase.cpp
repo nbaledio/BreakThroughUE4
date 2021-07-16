@@ -300,7 +300,13 @@ void ABTCharacterBase::UpdateCharacter(int32 CurrentInputs, int32 FrameNumber)
 	}
 	else
 	{
-		CurrentState.FillLightRotation = FMath::Lerp(CurrentState.FillLightRotation, DefaultFillLightRotation, .35f);
+		if (RoundManager)
+		{
+			FRotator TargetRotation = RoundManager->GetActorRotation() + DefaultFillLightRotation;
+			CurrentState.FillLightRotation = FMath::Lerp(CurrentState.FillLightRotation, TargetRotation, .35f);
+		}
+		else
+			CurrentState.FillLightRotation = FMath::Lerp(CurrentState.FillLightRotation, DefaultFillLightRotation, .35f);
 	}
 
 	if (CurrentState.StatusTimer > 0)
@@ -406,9 +412,7 @@ void ABTCharacterBase::UpdatePosition() //update character's location based on v
 				CurrentState.Velocity *= .55f;
 		}
 
-		if (CurrentState.CurrentAnimFrame.Invincibility == OTG)
-			CurrentState.WakeUpInvuln = 8;
-		else if (CurrentState.HitStun > 0 || CurrentState.BlockStun > 0)
+		if (CurrentState.HitStun > 0 || CurrentState.BlockStun > 0 || CurrentState.CurrentAnimFrame.Invincibility == OTG)
 			CurrentState.WakeUpInvuln = 5;
 
 		if (CurrentState.WakeUpInvuln > 0 && CurrentState.HitStun == 0 && CurrentState.BlockStun == 0 && CurrentState.CurrentAnimFrame.Invincibility != FaceDown && CurrentState.CurrentAnimFrame.Invincibility != FaceUp && 
