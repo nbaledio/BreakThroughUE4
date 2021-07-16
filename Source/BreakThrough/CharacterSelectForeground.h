@@ -19,4 +19,14 @@ public:
 		class UImage* P1Cursor;
 	UPROPERTY(meta = (BindWidget))
 		class UImage* P2Cursor;
+	UPROPERTY(meta = (BindWidget))
+		class UCanvasPanel* BackMenu;
+	UPROPERTY(meta = (BindWidget))
+		class UTextBlock* BackMenuYesText;
+	UPROPERTY(meta = (BindWidget))
+		class UTextBlock* BackMenuNoText;
+	UPROPERTY(meta = (BindWidgetAnim))
+		UWidgetAnimation* BackMenuSlide;
+	void PlayBackMenuSlide();
+	void PlayBackMenuSlideReverse();
 };

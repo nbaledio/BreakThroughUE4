@@ -53,6 +53,11 @@ public:
 	UPROPERTY(meta = (BindWidget))
 		class UImage* DHA_Headshot;
 
+	//Foreground objects
+	class UCanvasPanel* BackMenu;
+	class UTextBlock* BackMenuYesText;
+	class UTextBlock* BackMenuNoText;
+
 	//Models
 	UPROPERTY(EditAnywhere)
 		class USkeletalMesh* AchealisModel;
@@ -176,6 +181,8 @@ private:
 	bool P2AcceptScrollInput;
 	bool P1ModelDelay;
 	bool P2ModelDelay;
+	bool backMenuActive;
+	bool loading;
 
 	int P1HoveredCharacter;
 	int P2HoveredCharacter;
@@ -183,6 +190,7 @@ private:
 	int P1Color = 1;
 	int P2Character = -1;
 	int P2Color = 1;
+	int backMenuIndex;
 
 	//Controllers
 	APlayerController* P1Controller;
